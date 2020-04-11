@@ -1,0 +1,19 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "useBuiltIns": "entry",
+        "corejs": "3.6"
+      }
+    ],
+    "@babel/preset-typescript"
+  ],
+  "plugins": [
+    "@babel/proposal-class-properties",
+    "@babel/syntax-dynamic-import",
+    "@babel/proposal-object-rest-spread",
+    "@babel/transform-regenerator",
+    "@babel/transform-runtime"
+  ]
+}

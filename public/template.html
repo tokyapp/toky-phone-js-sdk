@@ -1,0 +1,122 @@
+<html>
+  <head>
+    <meta name="generator" content="" />
+    <title>Toky SDK Demo</title>
+    <meta charset="UTF-8" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <div class="columns">
+        <div class="column is-half">
+          <div class="field">
+            <label for="audioInput" class="label">Audio input:</label>
+            <div class="control select is-primary is-small">
+              <select id="audioInput"></select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="audioOutput" class="label">Audio output:</label>
+            <div class="control select is-primary is-small">
+              <select id="audioOutput"></select>
+            </div>
+          </div>
+
+          <button class="button is-small" id="play">Test output</button>
+          <button class="button is-small" id="startCall">Start Call</button>
+          <button class="button is-small" id="endCall" disabled>
+            End Call
+          </button>
+          <button class="button is-small" id="mute" disabled>Mute</button>
+          <button class="button is-small" id="hold" disabled>Hold</button>
+          <button class="button is-small" id="record" disabled>
+            Record
+          </button>
+          <button class="button is-small" id="transfer" disabled>
+            Make transfer
+          </button>
+
+          <div class="field">
+            <label for="agent" class="label">Agent:</label>
+            <div class="control">
+              <input
+                id="agent"
+                class="input is-small"
+                type="email"
+                placeholder="ex: carvallo@toky.co"
+              />
+            </div>
+          </div>
+
+          <div class="field has-addons">
+            <label for="apiKey" class="label">Toky API key:</label>
+            <div class="control is-expanded">
+              <input
+                id="apiKey"
+                class="input is-small"
+                type="password"
+                placeholder="XXXX"
+              />
+            </div>
+            <div class="control">
+              <a id="startBtn" class="button is-success is-small">
+                Start
+              </a>
+            </div>
+          </div>
+
+          <div class="field is-grouped">
+            <label class="label">Transfer options:</label>
+            <div class="field">
+              <div class="control">
+                <div class="select is-small">
+                  <select id="transferType">
+                    <option>Agent</option>
+                    <option>Group</option>
+                    <option>Number</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="control">
+                <input
+                  id="transferData"
+                  class="input is-small"
+                  type="email"
+                  placeholder="Transfer to..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tile">
+        <div class="tile is-parent is-vertical">
+          <article id="call-status" class="tile is-child notification">
+            <p class="title">Call status...</p>
+            <p id="call-status-sub" class="subtitle"></p>
+          </article>
+          <article id="device-status" class="tile is-child notification">
+            <p class="title">Devices...</p>
+            <p id="device-sub" class="subtitle"></p>
+          </article>
+        </div>
+
+        <div class="tile is-parent">
+          <article class="tile is-child notification is-info">
+            <p class="title">Toky JS SDK Demo</p>
+            <!-- <p class="subtitle">With an image</p> -->
+          </article>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

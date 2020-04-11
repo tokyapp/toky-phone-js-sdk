@@ -1,0 +1,55 @@
+<html>
+  <head>
+    <meta name="generator" content="" />
+    <title>Toky SDK Demo</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="field">
+        <label for="audioInput" class="label">Audio input:</label>
+        <div class="control select is-primary is-small">
+          <select id="audioInput"></select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="audioOutput" class="label">Audio output:</label>
+        <div class="control select is-primary is-small">
+          <select id="audioOutput"></select>
+        </div>
+      </div>
+
+      <audio id="remoteAudio"></audio>
+      <audio id="localAudio" muted></audio>
+
+      <button class="button is-small" id="play">Test output</button>
+      <button class="button is-small" id="startCall">Start Call</button>
+      <button class="button is-small" id="endCall">End Call</button>
+      <button class="button is-small" id="mute">Mute</button>
+
+      <div class="tile">
+        <div class="tile is-parent is-vertical">
+          <article id="call-status" class="tile is-child notification">
+            <p class="title">Call status...</p>
+            <p id="call-status-sub" class="subtitle"></p>
+          </article>
+          <article id="device-status" class="tile is-child notification">
+            <p class="title">Devices...</p>
+            <p id="device-sub" class="subtitle"></p>
+          </article>
+        </div>
+
+        <div class="tile is-parent">
+          <article class="tile is-child notification is-info">
+            <p class="title">Toky JS SDK Demo</p>
+            <!-- <p class="subtitle">With an image</p> -->
+          </article>
+        </div>
+      </div>
+    </div>
+    <script src="../dist/toky-sdk-alpha.min.js"></script>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
