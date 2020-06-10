@@ -41,6 +41,11 @@ export enum TransferEnum {
   NUMBER = 'number',
 }
 
+export enum TransferOptionsEnum {
+  BLIND = 'blind',
+  WARM = 'warm',
+}
+
 export declare interface ISessionImpl {
   callId: string
   pauseRecordingActivated: boolean
@@ -382,9 +387,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   public makeTransfer({
     type,
     destination,
+    option = TransferOptionsEnum.BLIND,
   }: {
     type: TransferEnum
     destination: string
+    option?: TransferOptionsEnum
   }): void {
     const extraHeaders = [
       `X-Referred-By-Agent: ${this._sipUsername}`,
@@ -402,6 +409,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     if (type === TransferEnum.NUMBER) {
       extraHeaders.push(`X-Referred-To-Number: outbound${destination}`)
+    }
+
+    if (option === TransferOptionsEnum.WARM) {
+      extraHeaders.push(`X-Warm: yes`)
     }
 
     const generatedId = Math.floor(Math.random() * 100000) + 1
@@ -428,12 +439,12 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       },
     }
 
-    const transferSession = this._currentSession.refer(
+    const transferContext = this._currentSession.refer(
       `sip:transfer-conf-${generatedId}@app.toky.co;transport=TCP;agent`,
       options
     )
 
-    // * TODO: not getting yet useful information from this event listener
+    // * TODO: we are not getting useful information yet from this event listener
     // transferSession.on(
     //   'referRequestRejected',
     //   (referServerContext: ReferServerContext) => {
