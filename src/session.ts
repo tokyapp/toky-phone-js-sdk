@@ -35,6 +35,12 @@ export enum SessionStatus {
   BYE = 'bye',
 }
 
+export enum TransferEnum {
+  AGENT = 'agent',
+  GROUP = 'group',
+  NUMBER = 'number',
+}
+
 export declare interface ISessionImpl {
   callId: string
   pauseRecordingActivated: boolean
@@ -377,7 +383,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     type,
     destination,
   }: {
-    type: 'agent' | 'number' | 'group'
+    type: TransferEnum
     destination: string
   }): void {
     const extraHeaders = [
@@ -386,11 +392,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     ]
 
     // TODO: maybe we can verify the agent existence
-    if (type === 'agent') {
+    if (type === TransferEnum.AGENT) {
       extraHeaders.push(`X-Referred-To-Agent: ${destination}`)
     }
 
-    if (type === 'group') {
+    if (type === TransferEnum.GROUP) {
       extraHeaders.push(`X-Referred-To-Group: ${destination}`)
     }
 
