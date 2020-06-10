@@ -18,7 +18,7 @@ const deviceStatusTile = document.querySelector('#device-status')
 const deviceStatusSub = document.querySelector('#device-sub')
 const testOutputBtn = document.querySelector('#play')
 
-const { TokyClient, ClientStatus, SessionStatus } = TokySDK
+const { TokyClient, ClientStatus, SessionStatus, TransferEnum } = TokySDK
 
 async function main() {
   let tokySession = null
@@ -257,14 +257,21 @@ async function main() {
     if (tokySession) {
       if (transferTypeSelected === 'Agent') {
         tokySession.makeTransfer({
-          type: 'agent',
+          type: TransferEnum.AGENT,
           destination: transferData.value,
         })
       }
 
       if (transferTypeSelected === 'Group') {
         tokySession.makeTransfer({
-          type: 'group',
+          type: TransferEnum.GROUP,
+          destination: transferData.value,
+        })
+      }
+
+      if (transferTypeSelected === 'Number') {
+        tokySession.makeTransfer({
+          type: TransferEnum.NUMBER,
           destination: transferData.value,
         })
       }
