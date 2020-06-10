@@ -5,6 +5,7 @@ const audioSelectOutput = document.querySelector('select#audioOutput')
 const audioSelectInput = document.querySelector('select#audioInput')
 const transferType = document.querySelector('select#transferType')
 const transferData = document.querySelector('#transferData')
+const warmOptionEl = document.querySelector('#warmOption')
 const apiKey = document.querySelector('#apiKey')
 const agent = document.querySelector('#agent')
 const startBtn = document.querySelector('#startBtn')
@@ -24,6 +25,7 @@ async function main() {
   let tokySession = null
   let Client = null
   let transferTypeSelected = transferType.value
+  let warmOption = false
 
   const ringAudio = 'https://carvallo.dev.toky.co/resources/audio/ringing.ogg'
   const errorAudio = 'https://carvallo.dev.toky.co/resources/audio/error.ogg'
@@ -136,6 +138,11 @@ async function main() {
   transferType.addEventListener('change', () => {
     console.log('selected value', transferType.value)
     transferTypeSelected = transferType.value
+  })
+
+  warmOptionEl.addEventListener('change', () => {
+    console.log('warm option updated')
+    warmOption = !warmOption
   })
 
   function setupSessionListeners() {
@@ -259,6 +266,7 @@ async function main() {
         tokySession.makeTransfer({
           type: TransferEnum.AGENT,
           destination: transferData.value,
+          option: warmOption && 'warm',
         })
       }
 
@@ -266,6 +274,7 @@ async function main() {
         tokySession.makeTransfer({
           type: TransferEnum.GROUP,
           destination: transferData.value,
+          option: warmOption && 'warm',
         })
       }
 
@@ -273,6 +282,7 @@ async function main() {
         tokySession.makeTransfer({
           type: TransferEnum.NUMBER,
           destination: transferData.value,
+          option: warmOption && 'warm',
         })
       }
     }
