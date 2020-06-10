@@ -390,6 +390,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       extraHeaders.push(`X-Referred-To-Agent: ${destination}`)
     }
 
+    if (type === 'group') {
+      extraHeaders.push(`X-Referred-To-Group: ${destination}`)
+    }
+
     const generatedId = Math.floor(Math.random() * 100000) + 1
 
     let constrainsDefault: MediaStreamConstraints = {

@@ -261,6 +261,13 @@ async function main() {
           destination: transferData.value,
         })
       }
+
+      if (transferTypeSelected === 'Group') {
+        tokySession.makeTransfer({
+          type: 'group',
+          destination: transferData.value,
+        })
+      }
     }
   })
 
