@@ -65,6 +65,10 @@ async function main() {
     }
 
     Client.on(ClientStatus.REGISTERED, () => {
+      startBtn.style.pointerEvents = 'none'
+      startBtn.style.cursor = 'default'
+      startBtn.classList.remove('is-success')
+
       callStatusTile.classList.add('is-warning')
       callStatusSub.textContent = 'Registered'
 

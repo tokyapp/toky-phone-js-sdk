@@ -84,7 +84,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._hold = false
     this._recording = true
 
-    this.setupSessionListeners(session)
+    this.setupSessionListeners(this._currentSession)
 
     this.emit(SessionStatus.CONNECTING)
   }
@@ -202,7 +202,16 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           this._media.remoteSource.play().then(console.log)
         }
 
-        if (response.status_code === 180) {
+        // * FIXME: not working
+        // if (response.statusCode === 400) {
+        //   this.emit(SessionStatus.FAILED, {
+        //     origin: 'failedEvent',
+        //     reason: 'Invalid destination of transference',
+        //   })
+        //   this._media.errorAudio.play().then(console.log)
+        // }
+
+        if (response.statusCode === 180) {
           try {
             const internalErrorCode = response.getHeader('X-Error-Code')
 
@@ -239,7 +248,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     })
 
     // When the target rejects the call.
-    session.once('rejected', () => {
+    session.once('rejected', (response: any) => {
+      console.log('reject for some reason', response)
       this.emit(SessionStatus.NOT_ACCEPTED, { origin: 'rejectedEvent' })
     })
   }
@@ -404,9 +414,17 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       },
     }
 
-    this._currentSession.refer(
+    const transferSession = this._currentSession.refer(
       `sip:transfer-conf-${generatedId}@app.toky.co;transport=TCP;agent`,
       options
     )
+
+    // * TODO: not getting yet useful information from this event listener
+    // transferSession.on(
+    //   'referRequestRejected',
+    //   (referServerContext: ReferServerContext) => {
+    //     console.log('refer sever context', referServerContext)
+    //   }
+    // )
   }
 }
