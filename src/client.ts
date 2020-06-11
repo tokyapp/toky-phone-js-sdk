@@ -15,9 +15,10 @@ import {
   appendMediaElements,
 } from './helpers'
 
-import { SessionUA, ISessionImpl } from './session'
+import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
 
 export enum ClientStatus {
+  INVITE = 'invite',
   REGISTERING = 'registering',
   REGISTRATION_FAILED = 'registration_failed',
   REGISTERED = 'registered',
@@ -314,6 +315,80 @@ export class Client extends EventEmitter implements IClientImpl {
       this.isRegistering = false
       this.emit(ClientStatus.REGISTRATION_FAILED)
     })
+
+    userAgent.on('invite', (incomingSession) => {
+      console.log('incoming session', incomingSession)
+
+      const transferredBy = incomingSession.request.getHeader('X-Transferred')
+
+      const transferredTo = incomingSession.request.getHeader(
+        'X-Transferred-To'
+      )
+      const referer = incomingSession.request.getHeader('X-Referer')
+
+      const isFromPSTN =
+        incomingSession.request.getHeader('X-PSTN') !== undefined &&
+        incomingSession.request.getHeader('X-PSTN') === 'yes'
+
+      const isIncomingWarmTransfer =
+        incomingSession.request.getHeader('X-Warm') !== undefined &&
+        incomingSession.request.getHeader('X-Warm') === 'yes'
+
+      const companyID = incomingSession.request.getHeader('X-Company')
+
+      const sectionId = incomingSession.request.getHeader('X-Section')
+
+      const sectionOptionId = incomingSession.request.getHeader('X-Option')
+
+      const ivrID = incomingSession.request.getHeader('X-IVR')
+
+      const ivrOptionPressed = incomingSession.request.getHeader(
+        'X-IVR-Option-Pressed'
+      )
+
+      const customerHasInfo =
+        incomingSession.request.getHeader('X-Has-Info') !== undefined
+
+      const customerUsername = incomingSession.request.getHeader(
+        'X-Toky-Username'
+      )
+      const customerUri = incomingSession.remoteIdentity.uri.user
+
+      const customerIsAnon = customerUri.indexOf('.invalid') > -1
+
+      const customerLocation = incomingSession.request.getHeader(
+        'X-Connection-Country'
+      )
+
+      const isFromAgent = incomingSession.request
+        .getHeader('From')
+        .includes(';agent')
+
+      if (isFromAgent) {
+        let currentSession = new SessionUA(
+          incomingSession,
+          this._media,
+          CallDirectionEnum.INBOUND,
+          {
+            agentId: this._account.user,
+            sipUsername: this._account.sipUsername,
+            companyId: this._companyId,
+            apiKey: this._apiKey,
+          },
+          {
+            uri: customerUri,
+            type: 'agent',
+          }
+        )
+
+        this.emit(ClientStatus.INVITE, currentSession)
+
+        currentSession.once('__session_terminated', () => {
+          this.sessionTerminatedHandler.bind(this)()
+          currentSession = null
+        })
+      }
+    })
   }
 
   /**
@@ -380,12 +455,17 @@ export class Client extends EventEmitter implements IClientImpl {
         options
       )
 
-      let currentSession = new SessionUA(uaSession, this._media, {
-        agentId: this._account.user,
-        sipUsername: this._account.sipUsername,
-        companyId: this._companyId,
-        apiKey: this._apiKey,
-      })
+      let currentSession = new SessionUA(
+        uaSession,
+        this._media,
+        CallDirectionEnum.OUTBOUND,
+        {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+          apiKey: this._apiKey,
+        }
+      )
 
       currentSession.once('__session_terminated', () => {
         this.sessionTerminatedHandler.bind(this)()
