@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events'
 
-import { Session, Web } from 'sip.js'
+import { Session, Web, ServerContext, InviteServerContext } from 'sip.js'
 
 import { stopAudio } from './helpers'
 
@@ -12,6 +12,7 @@ import {
   RecordingActionEnum,
   HoldActionEnum,
 } from './toky-services'
+import { SIPExtension } from 'sip.js/lib/api/user-agent-options'
 
 export interface IGetConnection {
   pc: RTCPeerConnection
@@ -46,6 +47,11 @@ export enum TransferOptionsEnum {
   WARM = 'warm',
 }
 
+export enum CallDirectionEnum {
+  INBOUND = 'inbound',
+  OUTBOUND = 'outbound',
+}
+
 export declare interface ISessionImpl {
   callId: string
   pauseRecordingActivated: boolean
@@ -60,7 +66,7 @@ export declare interface ISessionImpl {
 export class SessionUA extends EventEmitter implements ISessionImpl {
   private _callId: string
   private _peerConnection: RTCPeerConnection
-  private _currentSession: Session
+  private _currentSession: Session | InviteServerContext
   private _media: IMediaAttribute
   private _localStream: MediaStream
   private _senderEnabled: boolean
@@ -69,17 +75,23 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _agentId: string
   private _sipUsername: string
   private _companyId: string
+  private _callDirection: CallDirectionEnum
   private _recordingFeatureActivated = false
   private _recording = true
 
   constructor(
-    session: Session,
+    session: Session | InviteServerContext,
     media: IMediaAttribute,
+    direction: CallDirectionEnum,
     tokySettings: {
       agentId: string
       apiKey: string
       sipUsername: string
       companyId: string
+    },
+    inboundData?: {
+      uri: string
+      type: 'agent' | 'anon'
     }
   ) {
     super()
@@ -94,6 +106,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._senderEnabled = true
     this._hold = false
     this._recording = true
+
+    this._callDirection = direction
 
     this.setupSessionListeners(this._currentSession)
 
@@ -137,12 +151,23 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       this._localStream = stream
 
-      this._peerConnection.getSenders().forEach((sender) => {
-        this._localStream.addTrack(sender.track)
-      })
+      if (this._callDirection === CallDirectionEnum.OUTBOUND) {
+        this._peerConnection.getSenders().forEach((sender) => {
+          this._localStream.addTrack(sender.track)
+        })
 
-      this._media.localSource.srcObject = this._localStream
-      this._media.localSource.play().then(console.log)
+        this._media.localSource.srcObject = this._localStream
+        this._media.localSource.play().then(console.log)
+      }
+
+      if (this._callDirection === CallDirectionEnum.INBOUND) {
+        this._peerConnection.getReceivers().forEach((receiver) => {
+          this._localStream.addTrack(receiver.track)
+        })
+
+        this._media.remoteSource.srcObject = this._localStream
+        this._media.remoteSource.play().then(console.log)
+      }
     })
 
     sessionDescriptionHandler.on('userMediaRequest', (constraints) => {
@@ -281,7 +306,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     } else return null
   }
 
-  mute(): void {
+  public mute(): void {
     try {
       this._senderEnabled = !this._senderEnabled
 
@@ -299,7 +324,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     }
   }
 
-  async hold(): Promise<void> {
+  public async hold(): Promise<void> {
     let action: HoldActionEnum = HoldActionEnum.HOLD
 
     try {
@@ -331,7 +356,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     }
   }
 
-  async record(): Promise<void> {
+  public async record(): Promise<void> {
     try {
       if (this._recordingFeatureActivated) {
         let action: RecordingActionEnum = RecordingActionEnum.REC_PAUSE
@@ -382,6 +407,33 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     stopAudio(this._media.ringAudio)
 
     this.cleanupMedia()
+  }
+
+  public acceptCall(): void {
+    const incomingSession = this._currentSession as InviteServerContext
+
+    let constrainsDefault: MediaStreamConstraints = {
+      audio: true,
+      video: false,
+    }
+
+    if (typeof Storage !== 'undefined') {
+      if (sessionStorage.getItem('toky_default_input')) {
+        const defaultDeviceId = sessionStorage.getItem('toky_default_input')
+        constrainsDefault = {
+          audio: { deviceId: defaultDeviceId },
+          video: false,
+        }
+      }
+    }
+
+    const options = {
+      sessionDescriptionHandlerOptions: {
+        constraints: constrainsDefault,
+      },
+    }
+
+    incomingSession.accept(options)
   }
 
   public makeTransfer({

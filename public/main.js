@@ -81,6 +81,13 @@ async function main() {
       muteBtn.classList.add('is-light')
     })
 
+    Client.on(ClientStatus.INVITE, (incomingSession) => {
+      startCallBtn.textContent = 'Answer Call'
+      endCallBtn.textContent = 'Reject Call'
+
+      tokySession = incomingSession
+    })
+
     Media.on('ready', () => {
       audioSelectOutput.addEventListener('change', () => {
         Media.setOutputDevice(audioSelectOutput.value).then((response) => {
@@ -145,8 +152,8 @@ async function main() {
     warmOption = !warmOption
   })
 
-  function setupSessionListeners() {
-    tokySession.on(SessionStatus.ACCEPTED, () => {
+  function setupSessionListeners(currentSession) {
+    currentSession.on(SessionStatus.ACCEPTED, () => {
       callStatusTile.classList.remove('is-info')
       callStatusTile.classList.add('is-success')
       callStatusSub.textContent = 'In call'
@@ -158,7 +165,7 @@ async function main() {
       recordBtn.textContent = 'Pause recording'
     })
 
-    tokySession.on(SessionStatus.RINGING, () => {
+    currentSession.on(SessionStatus.RINGING, () => {
       callStatusTile.classList.remove('is-warning')
       callStatusTile.classList.add('is-info')
       callStatusSub.textContent = 'Ringing'
@@ -166,16 +173,17 @@ async function main() {
       endCallBtn.disabled = false
     })
 
-    tokySession.on(SessionStatus.FAILED, () => {
+    currentSession.on(SessionStatus.FAILED, () => {
       console.error('-- connection failed')
     })
 
-    tokySession.on(SessionStatus.BYE, () => {
+    currentSession.on(SessionStatus.BYE, () => {
       console.warn('-- call ended:', SessionStatus.BYE)
       callStatusTile.classList.remove('is-success')
 
       // * We recommend you to remove the instance of your session after the call
       tokySession = null
+      currentSession = null
 
       muteBtn.disabled = true
       holdBtn.disabled = true
@@ -185,38 +193,44 @@ async function main() {
       recordBtn.textContent = 'Record'
     })
 
-    tokySession.on(SessionStatus.MUTED, () => {
+    currentSession.on(SessionStatus.MUTED, () => {
       muteBtn.innerText = 'Unmute'
     })
 
-    tokySession.on(SessionStatus.UNMUTED, () => {
+    currentSession.on(SessionStatus.UNMUTED, () => {
       muteBtn.innerText = 'Mute'
     })
 
-    tokySession.on(SessionStatus.HOLD, () => {
+    currentSession.on(SessionStatus.HOLD, () => {
       holdBtn.innerText = 'Unhold'
     })
 
-    tokySession.on(SessionStatus.UNHOLD, () => {
+    currentSession.on(SessionStatus.UNHOLD, () => {
       holdBtn.innerText = 'hold'
     })
 
-    tokySession.on(SessionStatus.RECORDING, () => {
+    currentSession.on(SessionStatus.RECORDING, () => {
       recordBtn.innerText = 'Pause recording'
     })
 
-    tokySession.on(SessionStatus.NOT_RECORDING, () => {
+    currentSession.on(SessionStatus.NOT_RECORDING, () => {
       recordBtn.innerText = 'Record call'
     })
   }
 
   startCallBtn.addEventListener('click', () => {
-    tokySession = Client.startCall({
-      phoneNumber: '+595991123123',
-      callerId: '+13344413569',
-    })
+    if (!tokySession) {
+      tokySession = Client.startCall({
+        phoneNumber: '+595991123123',
+        callerId: '+13344413569',
+      })
+      setupSessionListeners(tokySession)
+    }
 
-    setupSessionListeners()
+    if (tokySession) {
+      tokySession.acceptCall()
+      setupSessionListeners(tokySession)
+    }
   })
 
   endCallBtn.addEventListener(
