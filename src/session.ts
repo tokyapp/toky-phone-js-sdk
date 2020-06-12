@@ -141,6 +141,69 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       })
   }
 
+  private trackAddedHandler(): void {
+    // We need to check the peer peerConnection to determine which track was added
+    const sdh = this._currentSession
+      .sessionDescriptionHandler as Web.SessionDescriptionHandler
+
+    this._peerConnection = sdh.peerConnection
+
+    this.setupSessionDescriptionHandlerListeners(sdh)
+  }
+
+  private progressHandler(response: any): void {
+    console.warn('--- Call in progress response', response)
+
+    this._callId = response.callId
+
+    if (response.statusCode) {
+      if (/100/.test(response.statusCode)) {
+        this.emit(SessionStatus.CONNECTING)
+      }
+
+      if (/(183|180)/.test(response.statusCode)) {
+        this.emit(SessionStatus.RINGING)
+      }
+
+      if (response.statusCode === 183) {
+        console.warn('--- stop audio?')
+        // this.stopAudio(this._media.ringAudio)
+
+        // Gets remote tracks
+        const remoteStream = new MediaStream()
+
+        this._peerConnection.getReceivers().forEach((receiver) => {
+          remoteStream.addTrack(receiver.track)
+        })
+
+        this._media.remoteSource.srcObject = remoteStream
+        this._media.remoteSource.play().then(console.log)
+      }
+
+      // * FIXME: not working
+      // if (response.statusCode === 400) {
+      //   this.emit(SessionStatus.FAILED, {
+      //     origin: 'failedEvent',
+      //     reason: 'Invalid destination of transference',
+      //   })
+      //   this._media.errorAudio.play().then(console.log)
+      // }
+
+      if (response.statusCode === 180) {
+        try {
+          const internalErrorCode = response.getHeader('X-Error-Code')
+
+          if (internalErrorCode !== undefined && internalErrorCode == 998) {
+            // simultaneous usage of agents
+            this.emit(SessionStatus.FAILED)
+          }
+        } catch (e) {
+          console.error(e)
+        }
+      }
+    }
+  }
+
   private setupSessionDescriptionHandlerListeners(
     sessionDescriptionHandler: Web.SessionDescriptionHandler
   ): void {
@@ -183,16 +246,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     })
   }
 
-  private trackAddedHandler(): void {
-    // We need to check the peer peerConnection to determine which track was added
-    const sdh = this._currentSession
-      .sessionDescriptionHandler as Web.SessionDescriptionHandler
-
-    this._peerConnection = sdh.peerConnection
-
-    this.setupSessionDescriptionHandlerListeners(sdh)
-  }
-
   private setupSessionListeners(session: Session): void {
     /**
      * Success operations
@@ -209,58 +262,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
      */
 
     // When the call is accepted by the sip server and in progress.
-    session.on('progress', (response: any) => {
-      console.warn('--- Call in progress response', response)
-
-      this._callId = response.callId
-
-      if (response.statusCode) {
-        if (/100/.test(response.statusCode)) {
-          this.emit(SessionStatus.CONNECTING)
-        }
-
-        if (/(183|180)/.test(response.statusCode)) {
-          this.emit(SessionStatus.RINGING)
-        }
-
-        if (response.statusCode === 183) {
-          console.warn('--- stop audio?')
-          // this.stopAudio(this._media.ringAudio)
-
-          // Gets remote tracks
-          const remoteStream = new MediaStream()
-
-          this._peerConnection.getReceivers().forEach((receiver) => {
-            remoteStream.addTrack(receiver.track)
-          })
-
-          this._media.remoteSource.srcObject = remoteStream
-          this._media.remoteSource.play().then(console.log)
-        }
-
-        // * FIXME: not working
-        // if (response.statusCode === 400) {
-        //   this.emit(SessionStatus.FAILED, {
-        //     origin: 'failedEvent',
-        //     reason: 'Invalid destination of transference',
-        //   })
-        //   this._media.errorAudio.play().then(console.log)
-        // }
-
-        if (response.statusCode === 180) {
-          try {
-            const internalErrorCode = response.getHeader('X-Error-Code')
-
-            if (internalErrorCode !== undefined && internalErrorCode == 998) {
-              // simultaneous usage of agents
-              this.emit(SessionStatus.FAILED)
-            }
-          } catch (e) {
-            console.error(e)
-          }
-        }
-      }
-    })
+    session.on('progress', this.progressHandler.bind(this))
 
     /**
      * Failed operations
