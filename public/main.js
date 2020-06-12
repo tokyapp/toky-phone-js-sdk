@@ -75,7 +75,9 @@ async function main() {
       callStatusSub.textContent = 'Registered'
 
       startCallBtn.classList.add('is-success')
+      startBtn.textContent = 'Start Call'
       endCallBtn.classList.add('is-danger')
+      endCallBtn.textContent = 'End Call'
 
       testOutputBtn.classList.add('is-info')
       muteBtn.classList.add('is-light')
@@ -84,6 +86,8 @@ async function main() {
     Client.on(ClientStatus.INVITE, (incomingSession) => {
       startCallBtn.textContent = 'Answer Call'
       endCallBtn.textContent = 'Reject Call'
+
+      endCallBtn.disabled = false
 
       tokySession = incomingSession
     })
@@ -157,6 +161,8 @@ async function main() {
       callStatusTile.classList.remove('is-info')
       callStatusTile.classList.add('is-success')
       callStatusSub.textContent = 'In call'
+
+      endCallBtn.textContent = 'End Call'
 
       muteBtn.disabled = false
       holdBtn.disabled = false
