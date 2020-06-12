@@ -75,7 +75,7 @@ async function main() {
       callStatusSub.textContent = 'Registered'
 
       startCallBtn.classList.add('is-success')
-      startBtn.textContent = 'Start Call'
+      startCallBtn.textContent = 'Start Call'
       endCallBtn.classList.add('is-danger')
       endCallBtn.textContent = 'End Call'
 
