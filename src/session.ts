@@ -109,6 +109,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     this._callDirection = direction
 
+    if (direction === CallDirectionEnum.INBOUND) {
+      const incomingSession = session as InviteServerContext
+      this._callId = incomingSession.request.getHeader('Call-ID')
+    }
+
     this.setupSessionListeners(this._currentSession)
 
     this.emit(SessionStatus.CONNECTING)
