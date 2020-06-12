@@ -381,10 +381,6 @@ export class Client extends EventEmitter implements IClientImpl {
           }
         )
 
-        currentSession.on('progress', (response: any) => {
-          console.info('in progress session', response)
-        })
-
         this.emit(ClientStatus.INVITE, currentSession)
 
         currentSession.once('__session_terminated', () => {
