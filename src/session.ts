@@ -12,7 +12,6 @@ import {
   RecordingActionEnum,
   HoldActionEnum,
 } from './toky-services'
-import { SIPExtension } from 'sip.js/lib/api/user-agent-options'
 
 export interface IGetConnection {
   pc: RTCPeerConnection
