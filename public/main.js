@@ -225,16 +225,16 @@ async function main() {
   }
 
   startCallBtn.addEventListener('click', () => {
+    if (tokySession) {
+      tokySession.acceptCall()
+      setupSessionListeners(tokySession)
+    }
+
     if (!tokySession) {
       tokySession = Client.startCall({
         phoneNumber: '+595991123123',
         callerId: '+13344413569',
       })
-      setupSessionListeners(tokySession)
-    }
-
-    if (tokySession) {
-      tokySession.acceptCall()
       setupSessionListeners(tokySession)
     }
   })
