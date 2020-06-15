@@ -319,10 +319,14 @@ export class Client extends EventEmitter implements IClientImpl {
     userAgent.on('invite', (incomingSession) => {
       console.log('incoming session', incomingSession)
 
-      const transferredBy = incomingSession.request.getHeader('X-Transferred')
+      const transferred = incomingSession.request.getHeader('X-Transferred')
 
       const transferredTo = incomingSession.request.getHeader(
         'X-Transferred-To'
+      )
+
+      const transferredBy = incomingSession.request.getHeader(
+        'X-Transferred-By'
       )
       const referer = incomingSession.request.getHeader('X-Referer')
 
@@ -364,8 +368,10 @@ export class Client extends EventEmitter implements IClientImpl {
         .getHeader('From')
         .includes(';agent')
 
+      let currentSession = null
+
       if (isFromAgent) {
-        let currentSession = new SessionUA(
+        currentSession = new SessionUA(
           incomingSession,
           this._media,
           CallDirectionEnum.INBOUND,
@@ -387,6 +393,29 @@ export class Client extends EventEmitter implements IClientImpl {
           this.sessionTerminatedHandler.bind(this)()
           currentSession = null
         })
+      }
+
+      /**
+       * This case in when in a rejected blind transferred call, we have to automatically accept the call
+       */
+      if (transferredBy === this._account.sipUsername) {
+        currentSession = new SessionUA(
+          incomingSession,
+          this._media,
+          CallDirectionEnum.INBOUND,
+          {
+            agentId: this._account.user,
+            sipUsername: this._account.sipUsername,
+            companyId: this._companyId,
+            apiKey: this._apiKey,
+          },
+          {
+            uri: customerUri,
+            type: 'agent',
+            transferredType: 'blind',
+            cause: 'rejected',
+          }
+        )
       }
     })
   }
@@ -468,6 +497,7 @@ export class Client extends EventEmitter implements IClientImpl {
       )
 
       currentSession.once('__session_terminated', () => {
+        console.warn('-- session killed')
         this.sessionTerminatedHandler.bind(this)()
         currentSession = null
       })

@@ -91,6 +91,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     inboundData?: {
       uri: string
       type: 'agent' | 'anon'
+      transferredType?: 'blind' | 'warm'
+      cause?: 'rejected'
     }
   ) {
     super()
@@ -110,7 +112,39 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     if (direction === CallDirectionEnum.INBOUND) {
       const incomingSession = session as InviteServerContext
+
       this._callId = incomingSession.request.getHeader('Call-ID')
+
+      if (inboundData.transferredType === 'blind') {
+        if (inboundData.cause === 'rejected') {
+          let constrainsDefault: MediaStreamConstraints = {
+            audio: true,
+            video: false,
+          }
+
+          if (typeof Storage !== 'undefined') {
+            if (sessionStorage.getItem('toky_default_input')) {
+              const defaultDeviceId = sessionStorage.getItem(
+                'toky_default_input'
+              )
+              constrainsDefault = {
+                audio: { deviceId: defaultDeviceId },
+                video: false,
+              }
+            }
+          }
+
+          const options = {
+            sessionDescriptionHandlerOptions: {
+              constraints: constrainsDefault,
+            },
+          }
+
+          console.warn('options', options)
+
+          incomingSession.accept(options)
+        }
+      }
     }
 
     this.setupSessionListeners(this._currentSession)
@@ -416,30 +450,36 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   }
 
   public acceptCall(): void {
-    const incomingSession = this._currentSession as InviteServerContext
+    if (this._callDirection === CallDirectionEnum.INBOUND) {
+      const incomingSession = this._currentSession as InviteServerContext
 
-    let constrainsDefault: MediaStreamConstraints = {
-      audio: true,
-      video: false,
-    }
+      let constrainsDefault: MediaStreamConstraints = {
+        audio: true,
+        video: false,
+      }
 
-    if (typeof Storage !== 'undefined') {
-      if (sessionStorage.getItem('toky_default_input')) {
-        const defaultDeviceId = sessionStorage.getItem('toky_default_input')
-        constrainsDefault = {
-          audio: { deviceId: defaultDeviceId },
-          video: false,
+      if (typeof Storage !== 'undefined') {
+        if (sessionStorage.getItem('toky_default_input')) {
+          const defaultDeviceId = sessionStorage.getItem('toky_default_input')
+          constrainsDefault = {
+            audio: { deviceId: defaultDeviceId },
+            video: false,
+          }
         }
       }
-    }
 
-    const options = {
-      sessionDescriptionHandlerOptions: {
-        constraints: constrainsDefault,
-      },
-    }
+      const options = {
+        sessionDescriptionHandlerOptions: {
+          constraints: constrainsDefault,
+        },
+      }
 
-    incomingSession.accept(options)
+      incomingSession.accept(options)
+    } else {
+      throw new Error(
+        `.acceptCall() is valid for ${CallDirectionEnum.OUTBOUND} calls`
+      )
+    }
   }
 
   public makeTransfer({
