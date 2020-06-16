@@ -134,7 +134,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             }
           }
 
-          const options = {
+          const options: InviteServerContext.Options = {
             sessionDescriptionHandlerOptions: {
               constraints: constrainsDefault,
             },
