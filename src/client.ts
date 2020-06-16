@@ -8,12 +8,7 @@ import { Media, HTMLMediaElementExp } from './media'
 
 import packageJson from '../package.json'
 
-import {
-  browserSpecs,
-  isFirefox,
-  isDevelopment,
-  appendMediaElements,
-} from './helpers'
+import { browserSpecs, isDevelopment, appendMediaElements } from './helpers'
 
 import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
 
@@ -235,7 +230,7 @@ export class Client extends EventEmitter implements IClientImpl {
         rel100: C.supported.REQUIRED,
         displayName: `${this._appName} - Toky SDK`,
         sessionDescriptionHandlerFactoryOptions: {
-          alwaysAcquireMediaFirst: isFirefox,
+          alwaysAcquireMediaFirst: true,
           peerConnectionOptions: {
             rtcConfiguration: {
               iceServers,
