@@ -110,44 +110,13 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     this._callDirection = direction
 
+    this.setupSessionListeners(this._currentSession)
+
     if (direction === CallDirectionEnum.INBOUND) {
       const incomingSession = session as InviteServerContext
 
       this._callId = incomingSession.request.getHeader('Call-ID')
-
-      if (inboundData.transferredType === 'blind') {
-        if (inboundData.cause === 'rejected') {
-          let constrainsDefault: MediaStreamConstraints = {
-            audio: true,
-            video: false,
-          }
-
-          if (typeof Storage !== 'undefined') {
-            if (sessionStorage.getItem('toky_default_input')) {
-              const defaultDeviceId = sessionStorage.getItem(
-                'toky_default_input'
-              )
-              constrainsDefault = {
-                audio: { deviceId: defaultDeviceId },
-                video: false,
-              }
-            }
-          }
-
-          const options: InviteServerContext.Options = {
-            sessionDescriptionHandlerOptions: {
-              constraints: constrainsDefault,
-            },
-          }
-
-          console.warn('options', options)
-
-          incomingSession.accept(options)
-        }
-      }
     }
-
-    this.setupSessionListeners(this._currentSession)
 
     this.emit(SessionStatus.CONNECTING)
   }
@@ -160,23 +129,32 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     return this._recordingFeatureActivated
   }
 
-  private acceptedHandler(): void {
+  private acceptedHandler(response): void {
+    console.warn('response on acceptedHandler()', response)
+
     stopAudio(this._media.ringAudio)
 
     this.emit(SessionStatus.ACCEPTED)
 
-    callRecording({
-      callId: this._callId,
-      action: RecordingActionEnum.REC_STATUS,
-      apiKey: this._apiKey,
-      agentId: this._agentId,
-    })
-      .then(() => {
-        this._recordingFeatureActivated = true
+    if (response.statusCode === 200) {
+      callRecording({
+        callId: this._callId,
+        action: RecordingActionEnum.REC_STATUS,
+        apiKey: this._apiKey,
+        agentId: this._agentId,
       })
-      .catch(() => {
-        this._recordingFeatureActivated = false
-      })
+        .then(() => {
+          this._recordingFeatureActivated = true
+        })
+        .catch(() => {
+          this._recordingFeatureActivated = false
+        })
+    } else {
+      console.error(
+        'Unexpected response on accepted session listener, response:',
+        response
+      )
+    }
   }
 
   private trackAddedHandler(): void {
@@ -186,13 +164,37 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     this._peerConnection = sdh.peerConnection
 
+    if (this._callDirection === CallDirectionEnum.INBOUND) {
+      if (this._peerConnection.getReceivers().length) {
+        const remoteStream = new MediaStream()
+
+        this._peerConnection.getReceivers().forEach((receiver) => {
+          remoteStream.addTrack(receiver.track)
+        })
+
+        this._media.remoteSource.srcObject = remoteStream
+
+        this._media.remoteSource.play().then(() => {
+          console.warn('-- remote audio played succesfully...')
+        })
+      } else {
+        console.error('Peer connection has not available receivers')
+      }
+    }
+
     this.setupSessionDescriptionHandlerListeners(sdh)
   }
 
   private progressHandler(response: any): void {
     console.warn('--- Call in progress response', response)
 
-    this._callId = response.callId
+    /**
+     * At the moment this is triggered only for outbound calls
+     */
+
+    if (response.callId) {
+      this._callId = response.callId
+    }
 
     if (response.statusCode) {
       if (/100/.test(response.statusCode)) {
@@ -204,9 +206,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       }
 
       if (response.statusCode === 183) {
-        console.warn('--- stop audio?')
-        // this.stopAudio(this._media.ringAudio)
-
         // Gets remote tracks
         const remoteStream = new MediaStream()
 
@@ -239,6 +238,13 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           console.error(e)
         }
       }
+      /**
+       * SDK-26 - On a invite response a rejected transfer by other agent or maybe group
+       * the @param response is different, and we have to parse the string the get
+       * the incoming session data
+       */
+    } else {
+      console.warn('call in progress response is a different type:', response)
     }
   }
 
@@ -252,23 +258,12 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       this._localStream = stream
 
-      if (this._callDirection === CallDirectionEnum.OUTBOUND) {
-        this._peerConnection.getSenders().forEach((sender) => {
-          this._localStream.addTrack(sender.track)
-        })
+      this._peerConnection.getSenders().forEach((sender) => {
+        this._localStream.addTrack(sender.track)
+      })
 
-        this._media.localSource.srcObject = this._localStream
-        this._media.localSource.play().then(console.log)
-      }
-
-      if (this._callDirection === CallDirectionEnum.INBOUND) {
-        this._peerConnection.getReceivers().forEach((receiver) => {
-          this._localStream.addTrack(receiver.track)
-        })
-
-        this._media.remoteSource.srcObject = this._localStream
-        this._media.remoteSource.play().then(console.log)
-      }
+      this._media.localSource.srcObject = this._localStream
+      this._media.localSource.play().then(console.log)
     })
 
     sessionDescriptionHandler.on('userMediaRequest', (constraints) => {
@@ -321,6 +316,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         cause,
         origin: 'terminatedEvent',
       })
+
+      this.cleanupMedia()
     })
 
     // When the target rejects the call.
@@ -331,6 +328,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   }
 
   private cleanupMedia(): void {
+    console.warn('-- media clean up')
+
     this._media.remoteSource.srcObject = null
     this._media.remoteSource.pause()
     this._media.localSource.srcObject = null
@@ -425,10 +424,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             this.emit(SessionStatus.RECORDING)
           }
         } else {
-          throw new Error('Unexpected behaviour.')
+          throw new Error('Unexpected behaviour at call recording action.')
         }
       } else {
-        throw new Error('Agent is not authorized to perform this action')
+        throw new Error('Agent is not authorized to perform this action.')
       }
     } catch (err) {
       console.error('Error at hold action', err)
@@ -445,8 +444,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     })
 
     stopAudio(this._media.ringAudio)
-
-    this.cleanupMedia()
   }
 
   public acceptCall(): void {

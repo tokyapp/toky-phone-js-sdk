@@ -391,7 +391,7 @@ export class Client extends EventEmitter implements IClientImpl {
       }
 
       /**
-       * This case in when in a rejected blind transferred call, we have to automatically accept the call
+       * This case in when in a rejected blind transferred call
        */
       if (transferredBy === this._account.sipUsername) {
         currentSession = new SessionUA(
@@ -411,6 +411,13 @@ export class Client extends EventEmitter implements IClientImpl {
             cause: 'rejected',
           }
         )
+
+        this.emit(ClientStatus.INVITE, currentSession)
+
+        currentSession.once('__session_terminated', () => {
+          this.sessionTerminatedHandler.bind(this)()
+          currentSession = null
+        })
       }
     })
   }
