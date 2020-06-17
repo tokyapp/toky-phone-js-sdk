@@ -35,14 +35,15 @@ export const browserSpecs = ((): any => {
 
 export function appendMediaElements(): void {
   const remoteAudio = document.createElement('audio')
+
   remoteAudio.setAttribute('id', '__tokyRemoteAudio')
-  // remoteAudio.hidden = true
+  remoteAudio.hidden = true
 
   const localAudio = document.createElement('audio')
 
   localAudio.setAttribute('id', '__tokyLocalAudio')
   localAudio.muted = true
-  // localAudio.hidden = true
+  localAudio.hidden = true
 
   document.body.appendChild(remoteAudio)
   document.body.appendChild(localAudio)
