@@ -1,4 +1,12 @@
-import { UA as UserAgent, C, Session } from 'sip.js'
+import {
+  UserAgent,
+  Session,
+  SIPExtension,
+  Invitation,
+  Inviter,
+  UserAgentOptions,
+  Registerer,
+} from 'sip.js'
 
 import { EventEmitter } from 'events'
 
@@ -213,21 +221,21 @@ export class Client extends EventEmitter implements IClientImpl {
 
       this.serverUri = paramsData.sip.uri
 
-      const options = {
-        uri: paramsData.sip.uri,
+      const uri = UserAgent.makeURI(paramsData.sip.uri)
+
+      const options: UserAgentOptions = {
+        uri,
         transportOptions: {
-          wsServers: wsServersConf,
+          server: wsServersConf[0].wsUri,
           traceSip: isDevelopment ? true : false,
         },
-        authorizationUser: this._account.sipUsername,
-        password: paramsData.sip.password,
+        authorizationUsername: this._account.sipUsername,
+        authorizationPassword: paramsData.sip.password,
         userAgentString: `toky/${packageJson.name}-${packageJson.version}/${browserSpecs.name}-${browserSpecs.version}`,
-        log: {
-          builtinEnabled: true,
-          level: 3,
-        },
+        logBuiltinEnabled: true,
+        logLevel: 'debug',
         allowLegacyNotifications: true,
-        rel100: C.supported.REQUIRED,
+        sipExtension100rel: SIPExtension.Supported,
         displayName: `${this._appName} - Toky SDK`,
         sessionDescriptionHandlerFactoryOptions: {
           alwaysAcquireMediaFirst: true,
@@ -251,7 +259,136 @@ export class Client extends EventEmitter implements IClientImpl {
       /**
        * SIP js Listeners
        */
-      this.setupUserAgentListeners(this._sipJsUA)
+      // this.setupUserAgentListeners(this._sipJsUA)
+
+      this._sipJsUA.delegate = {
+        onRegister(): void {
+          this.emit(ClientStatus.REGISTERED)
+
+          this.isRegistering = false
+          this.isRegistered = true
+
+          console.log(
+            '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
+            'background: blue; color: white; font-size: small'
+          )
+        },
+        onInvite(invitation: Invitation): void {
+          const incomingSession = invitation
+
+          const transferred = incomingSession.request.getHeader('X-Transferred')
+
+          const transferredTo = incomingSession.request.getHeader(
+            'X-Transferred-To'
+          )
+
+          const transferredBy = incomingSession.request.getHeader(
+            'X-Transferred-By'
+          )
+          const referer = incomingSession.request.getHeader('X-Referer')
+
+          const isFromPSTN =
+            incomingSession.request.getHeader('X-PSTN') !== undefined &&
+            incomingSession.request.getHeader('X-PSTN') === 'yes'
+
+          const isIncomingWarmTransfer =
+            incomingSession.request.getHeader('X-Warm') !== undefined &&
+            incomingSession.request.getHeader('X-Warm') === 'yes'
+
+          const companyID = incomingSession.request.getHeader('X-Company')
+
+          const sectionId = incomingSession.request.getHeader('X-Section')
+
+          const sectionOptionId = incomingSession.request.getHeader('X-Option')
+
+          const ivrID = incomingSession.request.getHeader('X-IVR')
+
+          const ivrOptionPressed = incomingSession.request.getHeader(
+            'X-IVR-Option-Pressed'
+          )
+
+          const customerHasInfo =
+            incomingSession.request.getHeader('X-Has-Info') !== undefined
+
+          const customerUsername = incomingSession.request.getHeader(
+            'X-Toky-Username'
+          )
+          const customerUri = incomingSession.remoteIdentity.uri.user
+
+          const customerIsAnon = customerUri.indexOf('.invalid') > -1
+
+          const customerLocation = incomingSession.request.getHeader(
+            'X-Connection-Country'
+          )
+
+          const isFromAgent = incomingSession.request
+            .getHeader('From')
+            .includes(';agent')
+
+          let currentSession = null
+
+          if (isFromAgent) {
+            currentSession = new SessionUA(
+              incomingSession,
+              this._media,
+              CallDirectionEnum.INBOUND,
+              {
+                agentId: this._account.user,
+                sipUsername: this._account.sipUsername,
+                companyId: this._companyId,
+                apiKey: this._apiKey,
+              },
+              {
+                uri: customerUri,
+                type: 'agent',
+              }
+            )
+
+            this.emit(ClientStatus.INVITE, currentSession)
+
+            currentSession.once('__session_terminated', () => {
+              this.sessionTerminatedHandler.bind(this)()
+              currentSession = null
+            })
+          }
+
+          /**
+           * This case in when in a rejected blind transferred call
+           */
+          if (transferredBy === this._account.sipUsername) {
+            currentSession = new SessionUA(
+              incomingSession,
+              this._media,
+              CallDirectionEnum.INBOUND,
+              {
+                agentId: this._account.user,
+                sipUsername: this._account.sipUsername,
+                companyId: this._companyId,
+                apiKey: this._apiKey,
+              },
+              {
+                uri: customerUri,
+                type: 'agent',
+                transferredType: 'blind',
+                cause: 'rejected',
+              }
+            )
+
+            this.emit(ClientStatus.INVITE, currentSession)
+
+            currentSession.once('__session_terminated', () => {
+              this.sessionTerminatedHandler.bind(this)()
+              currentSession = null
+            })
+          }
+        },
+      }
+
+      const registerer = new Registerer(this._sipJsUA, {
+        registrar: UserAgent.makeURI(wsServersConf[0].wsUri),
+      })
+
+      registerer.register()
     }
     return { Media }
   }
@@ -291,135 +428,27 @@ export class Client extends EventEmitter implements IClientImpl {
     // })
   }
 
+  private onRegistered() {
+    this.emit(ClientStatus.REGISTERED)
+
+    this.isRegistering = false
+    this.isRegistered = true
+
+    console.log(
+      '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
+      'background: blue; color: white; font-size: small'
+    )
+
+    // this.subscribeToTransport(userAgent)
+  }
+
   private setupUserAgentListeners(userAgent: UserAgent): void {
-    userAgent.once('registered', () => {
-      this.emit(ClientStatus.REGISTERED)
-
-      this.isRegistering = false
-      this.isRegistered = true
-
-      console.log(
-        '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
-        'background: blue; color: white; font-size: small'
-      )
-
-      this.subscribeToTransport(userAgent)
-    })
-
-    userAgent.once('registrationFailed', () => {
-      this.isRegistering = false
-      this.emit(ClientStatus.REGISTRATION_FAILED)
-    })
-
-    userAgent.on('invite', (incomingSession) => {
-      console.log('incoming session', incomingSession)
-
-      const transferred = incomingSession.request.getHeader('X-Transferred')
-
-      const transferredTo = incomingSession.request.getHeader(
-        'X-Transferred-To'
-      )
-
-      const transferredBy = incomingSession.request.getHeader(
-        'X-Transferred-By'
-      )
-      const referer = incomingSession.request.getHeader('X-Referer')
-
-      const isFromPSTN =
-        incomingSession.request.getHeader('X-PSTN') !== undefined &&
-        incomingSession.request.getHeader('X-PSTN') === 'yes'
-
-      const isIncomingWarmTransfer =
-        incomingSession.request.getHeader('X-Warm') !== undefined &&
-        incomingSession.request.getHeader('X-Warm') === 'yes'
-
-      const companyID = incomingSession.request.getHeader('X-Company')
-
-      const sectionId = incomingSession.request.getHeader('X-Section')
-
-      const sectionOptionId = incomingSession.request.getHeader('X-Option')
-
-      const ivrID = incomingSession.request.getHeader('X-IVR')
-
-      const ivrOptionPressed = incomingSession.request.getHeader(
-        'X-IVR-Option-Pressed'
-      )
-
-      const customerHasInfo =
-        incomingSession.request.getHeader('X-Has-Info') !== undefined
-
-      const customerUsername = incomingSession.request.getHeader(
-        'X-Toky-Username'
-      )
-      const customerUri = incomingSession.remoteIdentity.uri.user
-
-      const customerIsAnon = customerUri.indexOf('.invalid') > -1
-
-      const customerLocation = incomingSession.request.getHeader(
-        'X-Connection-Country'
-      )
-
-      const isFromAgent = incomingSession.request
-        .getHeader('From')
-        .includes(';agent')
-
-      let currentSession = null
-
-      if (isFromAgent) {
-        currentSession = new SessionUA(
-          incomingSession,
-          this._media,
-          CallDirectionEnum.INBOUND,
-          {
-            agentId: this._account.user,
-            sipUsername: this._account.sipUsername,
-            companyId: this._companyId,
-            apiKey: this._apiKey,
-          },
-          {
-            uri: customerUri,
-            type: 'agent',
-          }
-        )
-
-        this.emit(ClientStatus.INVITE, currentSession)
-
-        currentSession.once('__session_terminated', () => {
-          this.sessionTerminatedHandler.bind(this)()
-          currentSession = null
-        })
-      }
-
-      /**
-       * This case in when in a rejected blind transferred call
-       */
-      if (transferredBy === this._account.sipUsername) {
-        currentSession = new SessionUA(
-          incomingSession,
-          this._media,
-          CallDirectionEnum.INBOUND,
-          {
-            agentId: this._account.user,
-            sipUsername: this._account.sipUsername,
-            companyId: this._companyId,
-            apiKey: this._apiKey,
-          },
-          {
-            uri: customerUri,
-            type: 'agent',
-            transferredType: 'blind',
-            cause: 'rejected',
-          }
-        )
-
-        this.emit(ClientStatus.INVITE, currentSession)
-
-        currentSession.once('__session_terminated', () => {
-          this.sessionTerminatedHandler.bind(this)()
-          currentSession = null
-        })
-      }
-    })
+    // userAgent.delegate.onRegister = this.onRegistered
+    // userAgent.once('registrationFailed', () => {
+    //   this.isRegistering = false
+    //   this.emit(ClientStatus.REGISTRATION_FAILED)
+    // })
+    // userAgent.delegate.onInvite = this.onInvite
   }
 
   /**
@@ -427,11 +456,12 @@ export class Client extends EventEmitter implements IClientImpl {
    */
 
   private sessionTerminatedHandler(): void {
-    if (this._sipJsUA.isRegistered()) {
-      this.emit(ClientStatus.REGISTERED)
-    } else {
-      this.isRegistered = false
-    }
+    this.isRegistered = false
+    // if (this._sipJsUA.isRegistered()) {
+    //   this.emit(ClientStatus.REGISTERED)
+    // } else {
+    //   this.isRegistered = false
+    // }
   }
 
   /**
@@ -481,10 +511,13 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      const uaSession = this._sipJsUA.invite(
-        this.outboundCallURI(phoneNumber),
-        options
-      )
+      const uri = UserAgent.makeURI(this.outboundCallURI(phoneNumber))
+
+      if (!uri) {
+        throw new Error('Failed to create target URI.')
+      }
+
+      const uaSession = new Inviter(this._sipJsUA, uri, options)
 
       let currentSession = new SessionUA(
         uaSession,
