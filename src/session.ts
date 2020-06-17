@@ -155,20 +155,13 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         response
       )
     }
-  }
-
-  private trackAddedHandler(): void {
-    // We need to check the peer peerConnection to determine which track was added
-    const sdh = this._currentSession
-      .sessionDescriptionHandler as Web.SessionDescriptionHandler
-
-    this._peerConnection = sdh.peerConnection
 
     if (this._callDirection === CallDirectionEnum.INBOUND) {
       if (this._peerConnection.getReceivers().length) {
         const remoteStream = new MediaStream()
 
         this._peerConnection.getReceivers().forEach((receiver) => {
+          console.log('remote receivers', receiver)
           remoteStream.addTrack(receiver.track)
         })
 
@@ -178,9 +171,17 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           console.warn('-- remote audio played succesfully...')
         })
       } else {
-        console.error('Peer connection has not available receivers')
+        console.error('Peer connection has not available receivers.')
       }
     }
+  }
+
+  private trackAddedHandler(): void {
+    // We need to check the peer peerConnection to determine which track was added
+    const sdh = this._currentSession
+      .sessionDescriptionHandler as Web.SessionDescriptionHandler
+
+    this._peerConnection = sdh.peerConnection
 
     this.setupSessionDescriptionHandlerListeners(sdh)
   }
@@ -191,7 +192,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     /**
      * At the moment this is triggered only for outbound calls
      */
-
     if (response.callId) {
       this._callId = response.callId
     }
