@@ -161,8 +161,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         const remoteStream = new MediaStream()
 
         this._peerConnection.getReceivers().forEach((receiver) => {
-          console.log('remote receivers', receiver)
-          remoteStream.addTrack(receiver.track)
+          if (receiver.track) {
+            remoteStream.addTrack(receiver.track)
+          }
         })
 
         this._media.remoteSource.srcObject = remoteStream
