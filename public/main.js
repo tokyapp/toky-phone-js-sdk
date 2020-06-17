@@ -248,7 +248,6 @@ async function main() {
   )
 
   muteBtn.addEventListener('click', () => {
-    console.log('toky session', tokySession)
     if (tokySession) {
       tokySession.mute()
     }
