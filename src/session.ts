@@ -8,6 +8,8 @@ import {
   Inviter,
   UserAgent,
   SessionReferOptions,
+  Invitation,
+  InvitationAcceptOptions,
 } from 'sip.js'
 
 import { IncomingResponse, OutgoingReferRequest } from 'sip.js/lib/core'
@@ -123,32 +125,34 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._currentSession.stateChange.addListener((newState: SessionState) => {
       switch (newState) {
         case SessionState.Establishing: {
-          this._media.ringAudio.play().then(() => {
-            console.warn('... play audio on establishing state')
-          })
+          if (this._callDirection === CallDirectionEnum.OUTBOUND) {
+            this._media.ringAudio.play().then(() => {
+              console.warn('... play audio on establishing state')
+            })
 
-          this._localStream = new MediaStream()
+            this._localStream = new MediaStream()
 
-          // * set as <any> this is a bug from ts or SIP.js
-          // * .sessionDescriptionHandler says that does not have peerConnection
-          // * but in the SIP.js examples they are using this way
-          // * see: https://sipjs.com/guides/attach-media/
-          const sessionDescriptionHandler = this._currentSession
-            .sessionDescriptionHandler as any
+            // * set as <any> this is a bug from ts or SIP.js
+            // * .sessionDescriptionHandler says that does not have peerConnection
+            // * but in the SIP.js examples they are using this way
+            // * see: https://sipjs.com/guides/attach-media/
+            const sessionDescriptionHandler = this._currentSession
+              .sessionDescriptionHandler as any
 
-          this._peerConnection = sessionDescriptionHandler.peerConnection
+            this._peerConnection = sessionDescriptionHandler.peerConnection
 
-          this._peerConnection.getSenders().forEach((sender) => {
-            if (sender.track) {
-              this._localStream.addTrack(sender.track)
-            }
-          })
+            this._peerConnection.getSenders().forEach((sender) => {
+              if (sender.track) {
+                this._localStream.addTrack(sender.track)
+              }
+            })
 
-          this._media.localSource.srcObject = this._localStream
+            this._media.localSource.srcObject = this._localStream
 
-          this._media.localSource.play().then(() => {
-            console.warn('-- local audio played succesfully...')
-          })
+            this._media.localSource.play().then(() => {
+              console.warn('-- local audio played succesfully...')
+            })
+          }
 
           break
         }
@@ -201,21 +205,23 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       },
     }
 
-    this._currentSession
-      .invite(inviteOptions)
-      .then((request) => {
-        console.log('Successfully sent INVITE')
+    if (direction === CallDirectionEnum.OUTBOUND) {
+      this._currentSession
+        .invite(inviteOptions)
+        .then((request) => {
+          console.log('Successfully sent INVITE')
 
-        console.log('INVITE request = ' + request)
-      })
-      .catch((error: Error) => {
-        console.error('Failed to send INVITE', error)
-      })
+          console.log('INVITE request = ', request)
+        })
+        .catch((error: Error) => {
+          console.error('Failed to send INVITE', error)
+        })
+    }
 
     if (direction === CallDirectionEnum.INBOUND) {
-      const incomingSession = session
+      const incomingSession = session as Invitation
 
-      // this._callId = incomingSession.request.getHeader('Call-ID')
+      this._callId = incomingSession.request.getHeader('Call-ID')
     }
 
     this.emit(SessionStatus.CONNECTING)
@@ -486,41 +492,50 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   public endCall(): void {
     this._currentSession.bye()
 
-    // * preventing stream to stay open
-    this._localStream.getTracks().forEach((track) => {
-      track.stop()
-    })
+    if (this._localStream && this._localStream.getTracks.length) {
+      // * preventing stream to stay open
+      this._localStream.getTracks().forEach((track) => {
+        track.stop()
+      })
+    }
 
-    stopAudio(this._media.ringAudio)
+    if (this._callDirection === CallDirectionEnum.OUTBOUND) {
+      stopAudio(this._media.ringAudio)
+    } else {
+      // TODO: stop ringing audio
+    }
   }
 
   public acceptCall(): void {
-    // if (this._callDirection === CallDirectionEnum.INBOUND) {
-    //   const incomingSession = this._currentSession
-    //   let constrainsDefault: MediaStreamConstraints = {
-    //     audio: true,
-    //     video: false,
-    //   }
-    //   if (typeof Storage !== 'undefined') {
-    //     if (sessionStorage.getItem('toky_default_input')) {
-    //       const defaultDeviceId = sessionStorage.getItem('toky_default_input')
-    //       constrainsDefault = {
-    //         audio: { deviceId: defaultDeviceId },
-    //         video: false,
-    //       }
-    //     }
-    //   }
-    //   const options = {
-    //     sessionDescriptionHandlerOptions: {
-    //       constraints: constrainsDefault,
-    //     },
-    //   }
-    //   incomingSession.accept(options)
-    // } else {
-    //   throw new Error(
-    //     `.acceptCall() is valid for ${CallDirectionEnum.OUTBOUND} calls`
-    //   )
-    // }
+    if (this._callDirection === CallDirectionEnum.INBOUND) {
+      const incomingSession = this._currentSession as Invitation
+      let constrainsDefault: MediaStreamConstraints = {
+        audio: true,
+        video: false,
+      }
+
+      if (typeof Storage !== 'undefined') {
+        if (sessionStorage.getItem('toky_default_input')) {
+          const defaultDeviceId = sessionStorage.getItem('toky_default_input')
+          constrainsDefault = {
+            audio: { deviceId: defaultDeviceId },
+            video: false,
+          }
+        }
+      }
+
+      const options: InvitationAcceptOptions = {
+        sessionDescriptionHandlerOptions: {
+          constraints: constrainsDefault,
+        },
+      }
+
+      incomingSession.accept(options)
+    } else {
+      console.error(
+        `.acceptCall() is valid for ${CallDirectionEnum.OUTBOUND} calls`
+      )
+    }
   }
 
   public makeTransfer({
@@ -584,7 +599,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             console.warn('reason phrase', message.reasonPhrase)
 
             console.error(
-              'This is not happening, server response does not match as expected'
+              'This is not happening, server response does not match expected'
             )
           }
         },

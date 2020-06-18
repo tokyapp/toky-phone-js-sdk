@@ -269,7 +269,7 @@ export class Client extends EventEmitter implements IClientImpl {
       // this.setupUserAgentListeners(this._sipJsUA)
 
       this._sipJsUA.delegate = {
-        onRegister(): void {
+        onRegister: (): void => {
           this.emit(ClientStatus.REGISTERED)
 
           this.isRegistering = false
@@ -280,7 +280,7 @@ export class Client extends EventEmitter implements IClientImpl {
             'background: blue; color: white; font-size: small'
           )
         },
-        onInvite(invitation: Invitation): void {
+        onInvite: (invitation: Invitation): void => {
           const incomingSession = invitation
 
           const transferred = incomingSession.request.getHeader('X-Transferred')
@@ -424,7 +424,7 @@ export class Client extends EventEmitter implements IClientImpl {
             .register()
             .then((request) => {
               console.log('Successfully sent REGISTER')
-              console.log('Sent request = ' + request)
+              console.log('Sent request =', request)
             })
             .catch((error) => {
               console.error('Failed to send REGISTER', error)
