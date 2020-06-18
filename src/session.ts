@@ -176,6 +176,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             console.warn('-- remote audio played succesfully...')
           })
 
+          if (this._callDirection === CallDirectionEnum.INBOUND) {
+            this.emit(SessionStatus.ACCEPTED)
+          }
+
           break
         }
         case SessionState.Terminated: {
