@@ -1,6 +1,12 @@
 import { EventEmitter } from 'events'
 
-import { Session, Web, SessionState, InviterInviteOptions } from 'sip.js'
+import {
+  Session,
+  Web,
+  SessionState,
+  InviterInviteOptions,
+  Inviter,
+} from 'sip.js'
 
 import { stopAudio } from './helpers'
 
@@ -65,7 +71,7 @@ export declare interface ISessionImpl {
 export class SessionUA extends EventEmitter implements ISessionImpl {
   private _callId: string
   private _peerConnection: RTCPeerConnection
-  private _currentSession: Session
+  private _currentSession: Session | Inviter
   private _media: IMediaAttribute
   private _localStream: MediaStream
   private _senderEnabled: boolean
@@ -112,37 +118,85 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     this._currentSession.stateChange.addListener((newState: SessionState) => {
       switch (newState) {
-        case SessionState.Establishing:
-          console.log('Ringing')
+        case SessionState.Establishing: {
+          this.emit(SessionStatus.RINGING)
+
+          this._media.ringAudio.play().then(() => {
+            console.warn('... play audio establishing state')
+          })
+
+          this._localStream = new MediaStream()
+
+          // * set as <any> this is a bug from ts or SIP.js
+          // * .sessionDescriptionHandler says that does not have peerConnection
+          // * but in the SIP.js examples they are using this way
+          // * see: https://sipjs.com/guides/attach-media/
+          const sessionDescriptionHandler = this._currentSession
+            .sessionDescriptionHandler as any
+
+          this._peerConnection = sessionDescriptionHandler.peerConnection
+
+          this._peerConnection.getSenders().forEach((sender) => {
+            if (sender.track) {
+              this._localStream.addTrack(sender.track)
+            }
+          })
+
+          this._media.localSource.srcObject = this._localStream
+
+          this._media.localSource.play().then(() => {
+            console.warn('-- local audio played succesfully...')
+          })
+
           break
-        case SessionState.Established:
-          console.log('Answered')
+        }
+        case SessionState.Established: {
+          const remoteStream = new MediaStream()
+
+          const sessionDescriptionHandler = this._currentSession
+            .sessionDescriptionHandler as any
+
+          this._peerConnection = sessionDescriptionHandler.peerConnection
+
+          this._peerConnection.getReceivers().forEach((receiver) => {
+            if (receiver.track) {
+              remoteStream.addTrack(receiver.track)
+            }
+          })
+
+          this._media.remoteSource.srcObject = remoteStream
+
+          this._media.remoteSource.play().then(() => {
+            console.warn('-- remote audio played succesfully...')
+          })
+
           break
-        case SessionState.Terminated:
-          console.log('Ended')
+        }
+        case SessionState.Terminated: {
+          // * internal event
+          this.emit('__session_terminated')
+
+          this.emit(SessionStatus.BYE, {
+            origin: 'terminatedEvent',
+          })
+
+          this.cleanupMedia()
+
           break
+        }
       }
     })
 
     // Options including delegate to capture response messages
     const inviteOptions: InviterInviteOptions = {
       requestDelegate: {
-        onAccept: (response) => {
-          console.log('Positive response = ' + response)
-        },
-        onReject: (response) => {
-          console.log('Negative response = ' + response)
-        },
-      },
-      sessionDescriptionHandlerOptions: {
-        constraints: {
-          audio: true,
-          video: false,
-        },
+        onProgress: this.progressHandler.bind(this),
+        onAccept: this.acceptedHandler.bind(this),
+        onReject: this.onRejectHandler.bind(this),
       },
     }
 
-    session
+    this._currentSession
       .invite(inviteOptions)
       .then((request) => {
         console.log('Successfully sent INVITE')
@@ -167,6 +221,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
   get pauseRecordingActivated(): boolean {
     return this._recordingFeatureActivated
+  }
+
+  private onRejectHandler(response): void {
+    console.log('reject for some reason', response)
+    this.emit(SessionStatus.NOT_ACCEPTED, { origin: 'rejectedEvent' })
   }
 
   private acceptedHandler(response): void {
@@ -293,18 +352,15 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     sessionDescriptionHandler: Web.SessionDescriptionHandler
   ): void {
     sessionDescriptionHandler.on('userMedia', (stream) => {
-      this._media.ringAudio.play().then(() => {
-        console.warn('... play audio at user media')
-      })
-
-      this._localStream = stream
-
-      this._peerConnection.getSenders().forEach((sender) => {
-        this._localStream.addTrack(sender.track)
-      })
-
-      this._media.localSource.srcObject = this._localStream
-      this._media.localSource.play().then(console.log)
+      // this._media.ringAudio.play().then(() => {
+      //   console.warn('... play audio at user media')
+      // })
+      // this._localStream = stream
+      // this._peerConnection.getSenders().forEach((sender) => {
+      //   this._localStream.addTrack(sender.track)
+      // })
+      // this._media.localSource.srcObject = this._localStream
+      // this._media.localSource.play().then(console.log)
     })
 
     sessionDescriptionHandler.on('userMediaRequest', (constraints) => {
@@ -324,48 +380,36 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     /**
      * Success operations
      */
-
-    session.on('accepted', this.acceptedHandler.bind(this))
-
-    session.on('trackAdded', this.trackAddedHandler.bind(this))
-
+    // session.on('accepted', this.acceptedHandler.bind(this))
+    // session.on('trackAdded', this.trackAddedHandler.bind(this))
     /**
      * Typings: the @param response type comes from IncomingResponseMessage
      * but in SIP.js seems to have a bug or something and
      * we specify <any> to silence the compiler
      */
-
     // When the call is accepted by the sip server and in progress.
-    session.on('progress', this.progressHandler.bind(this))
-
+    // session.on('progress', this.progressHandler.bind(this))
     /**
      * Failed operations
      */
-
     // Maybe the destination does not exist.
-    session.on('failed', () => {
-      this.emit(SessionStatus.FAILED, { origin: 'failedEvent' })
-      this._media.errorAudio.play().then(console.log)
-    })
-
-    session.on('terminated', (message, cause) => {
-      // * internal event
-      this.emit('__session_terminated')
-
-      this.emit(SessionStatus.BYE, {
-        message,
-        cause,
-        origin: 'terminatedEvent',
-      })
-
-      this.cleanupMedia()
-    })
-
-    // When the target rejects the call.
-    session.once('rejected', (response: any) => {
-      console.log('reject for some reason', response)
-      this.emit(SessionStatus.NOT_ACCEPTED, { origin: 'rejectedEvent' })
-    })
+    // session.on('failed', () => {
+    //   this.emit(SessionStatus.FAILED, { origin: 'failedEvent' })
+    //   this._media.errorAudio.play().then(console.log)
+    // })
+    // session.on('terminated', (message, cause) => {
+    //   // * internal event
+    //   this.emit('__session_terminated')
+    //   this.emit(SessionStatus.BYE, {
+    //     message,
+    //     cause,
+    //     origin: 'terminatedEvent',
+    //   })
+    //   this.cleanupMedia()
+    // })
+    // // When the target rejects the call.
+    // session.once('rejected', (response: any) => {
+    // })
   }
 
   private cleanupMedia(): void {
@@ -477,7 +521,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   }
 
   public endCall(): void {
-    this._currentSession.terminate()
+    this._currentSession.bye()
 
     // * preventing stream to stay open
     this._localStream.getTracks().forEach((track) => {
@@ -488,36 +532,32 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   }
 
   public acceptCall(): void {
-    if (this._callDirection === CallDirectionEnum.INBOUND) {
-      const incomingSession = this._currentSession as InviteServerContext
-
-      let constrainsDefault: MediaStreamConstraints = {
-        audio: true,
-        video: false,
-      }
-
-      if (typeof Storage !== 'undefined') {
-        if (sessionStorage.getItem('toky_default_input')) {
-          const defaultDeviceId = sessionStorage.getItem('toky_default_input')
-          constrainsDefault = {
-            audio: { deviceId: defaultDeviceId },
-            video: false,
-          }
-        }
-      }
-
-      const options = {
-        sessionDescriptionHandlerOptions: {
-          constraints: constrainsDefault,
-        },
-      }
-
-      incomingSession.accept(options)
-    } else {
-      throw new Error(
-        `.acceptCall() is valid for ${CallDirectionEnum.OUTBOUND} calls`
-      )
-    }
+    // if (this._callDirection === CallDirectionEnum.INBOUND) {
+    //   const incomingSession = this._currentSession
+    //   let constrainsDefault: MediaStreamConstraints = {
+    //     audio: true,
+    //     video: false,
+    //   }
+    //   if (typeof Storage !== 'undefined') {
+    //     if (sessionStorage.getItem('toky_default_input')) {
+    //       const defaultDeviceId = sessionStorage.getItem('toky_default_input')
+    //       constrainsDefault = {
+    //         audio: { deviceId: defaultDeviceId },
+    //         video: false,
+    //       }
+    //     }
+    //   }
+    //   const options = {
+    //     sessionDescriptionHandlerOptions: {
+    //       constraints: constrainsDefault,
+    //     },
+    //   }
+    //   incomingSession.accept(options)
+    // } else {
+    //   throw new Error(
+    //     `.acceptCall() is valid for ${CallDirectionEnum.OUTBOUND} calls`
+    //   )
+    // }
   }
 
   public makeTransfer({
@@ -529,57 +569,47 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     destination: string
     option?: TransferOptionsEnum
   }): void {
-    const extraHeaders = [
-      `X-Referred-By-Agent: ${this._sipUsername}`,
-      `X-Company: ${this._companyId}`,
-    ]
-
-    // TODO: maybe we can verify the agent existence
-    if (type === TransferEnum.AGENT) {
-      extraHeaders.push(`X-Referred-To-Agent: ${destination}`)
-    }
-
-    if (type === TransferEnum.GROUP) {
-      extraHeaders.push(`X-Referred-To-Group: ${destination}`)
-    }
-
-    if (type === TransferEnum.NUMBER) {
-      extraHeaders.push(`X-Referred-To-Number: outbound${destination}`)
-    }
-
-    if (option === TransferOptionsEnum.WARM) {
-      extraHeaders.push(`X-Warm: yes`)
-    }
-
-    const generatedId = Math.floor(Math.random() * 100000) + 1
-
-    let constrainsDefault: MediaStreamConstraints = {
-      audio: true,
-      video: false,
-    }
-
-    if (typeof Storage !== 'undefined') {
-      if (sessionStorage.getItem('toky_default_input')) {
-        const defaultDeviceId = sessionStorage.getItem('toky_default_input')
-        constrainsDefault = {
-          audio: { deviceId: defaultDeviceId },
-          video: false,
-        }
-      }
-    }
-
-    const options = {
-      extraHeaders,
-      sessionDescriptionHandlerOptions: {
-        constraints: constrainsDefault,
-      },
-    }
-
-    const transferContext = this._currentSession.refer(
-      `sip:transfer-conf-${generatedId}@app.toky.co;transport=TCP;agent`,
-      options
-    )
-
+    // const extraHeaders = [
+    //   `X-Referred-By-Agent: ${this._sipUsername}`,
+    //   `X-Company: ${this._companyId}`,
+    // ]
+    // // TODO: maybe we can verify the agent existence
+    // if (type === TransferEnum.AGENT) {
+    //   extraHeaders.push(`X-Referred-To-Agent: ${destination}`)
+    // }
+    // if (type === TransferEnum.GROUP) {
+    //   extraHeaders.push(`X-Referred-To-Group: ${destination}`)
+    // }
+    // if (type === TransferEnum.NUMBER) {
+    //   extraHeaders.push(`X-Referred-To-Number: outbound${destination}`)
+    // }
+    // if (option === TransferOptionsEnum.WARM) {
+    //   extraHeaders.push(`X-Warm: yes`)
+    // }
+    // const generatedId = Math.floor(Math.random() * 100000) + 1
+    // let constrainsDefault: MediaStreamConstraints = {
+    //   audio: true,
+    //   video: false,
+    // }
+    // if (typeof Storage !== 'undefined') {
+    //   if (sessionStorage.getItem('toky_default_input')) {
+    //     const defaultDeviceId = sessionStorage.getItem('toky_default_input')
+    //     constrainsDefault = {
+    //       audio: { deviceId: defaultDeviceId },
+    //       video: false,
+    //     }
+    //   }
+    // }
+    // const options = {
+    //   extraHeaders,
+    //   sessionDescriptionHandlerOptions: {
+    //     constraints: constrainsDefault,
+    //   },
+    // }
+    // const transferContext = this._currentSession.refer(
+    //   `sip:transfer-conf-${generatedId}@app.toky.co;transport=TCP;agent`,
+    //   options
+    // )
     // * TODO: we are not getting useful information yet from this event listener
     // transferSession.on(
     //   'referRequestRejected',

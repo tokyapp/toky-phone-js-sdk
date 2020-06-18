@@ -556,14 +556,14 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      const uaSession = new Inviter(
+      const inviter = new Inviter(
         this._sipJsUA,
         this.outboundCallURI(phoneNumber),
         options
       )
 
       let currentSession = new SessionUA(
-        uaSession,
+        inviter,
         this._media,
         CallDirectionEnum.OUTBOUND,
         {
