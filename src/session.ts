@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events'
 
-import { Session, Web, ServerContext, InviteServerContext } from 'sip.js'
+import { Session, Web, SessionState, InviterInviteOptions } from 'sip.js'
 
 import { stopAudio } from './helpers'
 
@@ -65,7 +65,7 @@ export declare interface ISessionImpl {
 export class SessionUA extends EventEmitter implements ISessionImpl {
   private _callId: string
   private _peerConnection: RTCPeerConnection
-  private _currentSession: Session | InviteServerContext
+  private _currentSession: Session
   private _media: IMediaAttribute
   private _localStream: MediaStream
   private _senderEnabled: boolean
@@ -79,7 +79,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _recording = true
 
   constructor(
-    session: Session | InviteServerContext,
+    session: Session,
     media: IMediaAttribute,
     direction: CallDirectionEnum,
     tokySettings: {
@@ -110,12 +110,52 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     this._callDirection = direction
 
-    this.setupSessionListeners(this._currentSession)
+    this._currentSession.stateChange.addListener((newState: SessionState) => {
+      switch (newState) {
+        case SessionState.Establishing:
+          console.log('Ringing')
+          break
+        case SessionState.Established:
+          console.log('Answered')
+          break
+        case SessionState.Terminated:
+          console.log('Ended')
+          break
+      }
+    })
+
+    // Options including delegate to capture response messages
+    const inviteOptions: InviterInviteOptions = {
+      requestDelegate: {
+        onAccept: (response) => {
+          console.log('Positive response = ' + response)
+        },
+        onReject: (response) => {
+          console.log('Negative response = ' + response)
+        },
+      },
+      sessionDescriptionHandlerOptions: {
+        constraints: {
+          audio: true,
+          video: false,
+        },
+      },
+    }
+
+    session
+      .invite(inviteOptions)
+      .then((request) => {
+        console.log('Successfully sent INVITE')
+        console.log('INVITE request = ' + request)
+      })
+      .catch((error: Error) => {
+        console.log('Failed to send INVITE', error)
+      })
 
     if (direction === CallDirectionEnum.INBOUND) {
-      const incomingSession = session as InviteServerContext
+      const incomingSession = session
 
-      this._callId = incomingSession.request.getHeader('Call-ID')
+      // this._callId = incomingSession.request.getHeader('Call-ID')
     }
 
     this.emit(SessionStatus.CONNECTING)
