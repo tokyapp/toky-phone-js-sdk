@@ -7,6 +7,7 @@ import {
   UserAgentOptions,
   Registerer,
   URI,
+  RegistererState,
 } from 'sip.js'
 
 import { EventEmitter } from 'events'
@@ -222,6 +223,10 @@ export class Client extends EventEmitter implements IClientImpl {
 
       this.serverUri = UserAgent.makeURI(`sip:${paramsData.sip.uri}`)
 
+      if (!this.serverUri) {
+        throw new Error('Failed to create toky server uri.')
+      }
+
       const displayName = `${this._appName} - Toky SDK`
 
       const options: UserAgentOptions = {
@@ -385,19 +390,56 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      this._sipJsUA.start().then(() => {
-        const registerer = new Registerer(this._sipJsUA, {
-          registrar: this.serverUri,
-        })
+      this._sipJsUA
+        .start()
+        .then(() => {
+          const registerer = new Registerer(this._sipJsUA, {
+            registrar: this.serverUri,
+          })
 
-        registerer.register()
-      })
+          registerer.stateChange.addListener((newState) => {
+            switch (newState) {
+              case RegistererState.Registered:
+                this.emit(ClientStatus.REGISTERED)
+
+                this.isRegistering = false
+                this.isRegistered = true
+
+                console.log(
+                  '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
+                  'background: blue; color: white; font-size: small'
+                )
+                break
+              case RegistererState.Unregistered:
+                console.error('Unregistered')
+                break
+              case RegistererState.Terminated:
+                console.error('Terminated')
+                break
+            }
+          })
+
+          registerer
+            .register()
+            .then((request) => {
+              console.log('Successfully sent REGISTER')
+              console.log('Sent request = ' + request)
+            })
+            .catch((error) => {
+              console.error('Failed to send REGISTER', error)
+            })
+        })
+        .catch((error) => {
+          console.error('Failed to connect', error)
+        })
     }
     return { Media }
   }
 
-  private outboundCallURI = (phoneNumber: string): string =>
-    `service@${this._tokyDomain};company=${this._companyId};dnis=${phoneNumber}`
+  private outboundCallURI = (phoneNumber: string): URI =>
+    UserAgent.makeURI(
+      `sip:service@${this._tokyDomain};company=${this._companyId};dnis=${phoneNumber}`
+    )
 
   /**
    * Event listeners
@@ -514,13 +556,11 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      const uri = UserAgent.makeURI(this.outboundCallURI(phoneNumber))
-
-      if (!uri) {
-        throw new Error('Failed to create target URI.')
-      }
-
-      const uaSession = new Inviter(this._sipJsUA, uri, options)
+      const uaSession = new Inviter(
+        this._sipJsUA,
+        this.outboundCallURI(phoneNumber),
+        options
+      )
 
       let currentSession = new SessionUA(
         uaSession,
