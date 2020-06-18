@@ -7,7 +7,10 @@ import {
   InviterInviteOptions,
   Inviter,
   UserAgent,
+  SessionReferOptions,
 } from 'sip.js'
+
+import { IncomingResponse, OutgoingReferRequest } from 'sip.js/lib/core'
 
 import { stopAudio } from './helpers'
 
@@ -19,7 +22,6 @@ import {
   RecordingActionEnum,
   HoldActionEnum,
 } from './toky-services'
-import { IncomingResponse, OutgoingReferRequest } from 'sip.js/lib/core'
 
 export interface IGetConnection {
   pc: RTCPeerConnection
@@ -554,25 +556,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     const generatedId = Math.floor(Math.random() * 100000) + 1
 
-    let constrainsDefault: MediaStreamConstraints = {
-      audio: true,
-      video: false,
-    }
-    if (typeof Storage !== 'undefined') {
-      if (sessionStorage.getItem('toky_default_input')) {
-        const defaultDeviceId = sessionStorage.getItem('toky_default_input')
-        constrainsDefault = {
-          audio: { deviceId: defaultDeviceId },
-          video: false,
-        }
-      }
-    }
-
-    const options = {
+    const options: SessionReferOptions['requestOptions'] = {
       extraHeaders,
-      sessionDescriptionHandlerOptions: {
-        constraints: constrainsDefault,
-      },
     }
 
     const transferCallURI = UserAgent.makeURI(
@@ -585,21 +570,37 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     const transferContext = this._currentSession.refer(transferCallURI, {
       requestOptions: options,
+      requestDelegate: {
+        onAccept(response: IncomingResponse): void {
+          const message = response.message
+
+          if (
+            message.statusCode === 202 &&
+            message.reasonPhrase === 'Accepted'
+          ) {
+            console.log('--- transfer accepted by toky server', response)
+          } else {
+            console.warn('status code', message.statusCode)
+            console.warn('reason phrase', message.reasonPhrase)
+
+            console.error(
+              'This is not happening, server response does not match as expected'
+            )
+          }
+        },
+        onReject(response: IncomingResponse): void {
+          const message = response.message
+
+          if (message.statusCode === 400) {
+            console.error('Invalid destination of transfer.')
+          }
+        },
+      },
     })
 
     transferContext
       .then((response: OutgoingReferRequest) => {
         console.warn('--- transfer accepted by transport ', response)
-
-        // * Maybe this is SIP.js bug?
-        // response.delegate.onAccept = (response: IncomingResponse): void => {
-        //   console.log('--- transfer accepted', response)
-
-        //   const message = response.message
-
-        //   console.warn('status code', message.statusCode)
-        //   console.warn('reason phrase', message.reasonPhrase)
-        // }
       })
       .catch((err) => {
         console.error('Transfer failed for some reason', err)
