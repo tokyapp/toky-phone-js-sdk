@@ -225,19 +225,33 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     return this._recordingFeatureActivated
   }
 
-  private onRejectHandler(response): void {
+  private onRejectHandler(response: IncomingResponse): void {
     console.log('reject for some reason', response)
+    const message = response.message
+
+    if (
+      message.reasonPhrase === 'No credit left' ||
+      message.statusCode === 402
+    ) {
+      console.error('Not credit left')
+
+      this.emit('No credit left', { origin: 'rejectedEvent' })
+    }
     this.emit(SessionStatus.NOT_ACCEPTED, { origin: 'rejectedEvent' })
+
+    stopAudio(this._media.ringAudio)
   }
 
-  private acceptedHandler(response): void {
+  private acceptedHandler(response: IncomingResponse): void {
     console.warn('response on acceptedHandler()', response)
+
+    const message = response.message
 
     stopAudio(this._media.ringAudio)
 
     this.emit(SessionStatus.ACCEPTED)
 
-    if (response.statusCode === 200) {
+    if (message.statusCode === 200) {
       callRecording({
         callId: this._callId,
         action: RecordingActionEnum.REC_STATUS,
@@ -257,25 +271,25 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       )
     }
 
-    if (this._callDirection === CallDirectionEnum.INBOUND) {
-      if (this._peerConnection.getReceivers().length) {
-        const remoteStream = new MediaStream()
+    // if (this._callDirection === CallDirectionEnum.INBOUND) {
+    //   if (this._peerConnection.getReceivers().length) {
+    //     const remoteStream = new MediaStream()
 
-        this._peerConnection.getReceivers().forEach((receiver) => {
-          if (receiver.track) {
-            remoteStream.addTrack(receiver.track)
-          }
-        })
+    //     this._peerConnection.getReceivers().forEach((receiver) => {
+    //       if (receiver.track) {
+    //         remoteStream.addTrack(receiver.track)
+    //       }
+    //     })
 
-        this._media.remoteSource.srcObject = remoteStream
+    //     this._media.remoteSource.srcObject = remoteStream
 
-        this._media.remoteSource.play().then(() => {
-          console.warn('-- remote audio played succesfully...')
-        })
-      } else {
-        console.error('Peer connection has not available receivers.')
-      }
-    }
+    //     this._media.remoteSource.play().then(() => {
+    //       console.warn('-- remote audio played succesfully...')
+    //     })
+    //   } else {
+    //     console.error('Peer connection has not available receivers.')
+    //   }
+    // }
   }
 
   private progressHandler(response: IncomingResponse): void {
@@ -284,7 +298,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     const message = response.message
 
     if (message.callId) {
-      debugger
       this._callId = message.callId
     }
 
