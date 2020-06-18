@@ -226,7 +226,6 @@ async function main() {
 
   startCallBtn.addEventListener('click', () => {
     if (tokySession) {
-      debugger
       tokySession.acceptCall()
       setupSessionListeners(tokySession)
     }
