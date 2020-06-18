@@ -226,6 +226,7 @@ async function main() {
 
   startCallBtn.addEventListener('click', () => {
     if (tokySession) {
+      debugger
       tokySession.acceptCall()
       setupSessionListeners(tokySession)
     }
@@ -235,7 +236,10 @@ async function main() {
         phoneNumber: '+595991123123',
         callerId: '+13344413569',
       })
-      setupSessionListeners(tokySession)
+
+      if (tokySession) {
+        setupSessionListeners(tokySession)
+      }
     }
   })
 

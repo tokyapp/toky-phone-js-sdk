@@ -202,10 +202,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       .invite(inviteOptions)
       .then((request) => {
         console.log('Successfully sent INVITE')
+
         console.log('INVITE request = ' + request)
       })
       .catch((error: Error) => {
-        console.log('Failed to send INVITE', error)
+        console.error('Failed to send INVITE', error)
       })
 
     if (direction === CallDirectionEnum.INBOUND) {

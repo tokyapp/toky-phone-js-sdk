@@ -102,6 +102,7 @@ export class Client extends EventEmitter implements IClientImpl {
   _transportLib: 'sip.js' | 'jsSIP'
   _sipJsUA: UserAgent
   _userAgentSession: Session
+  _registerer: Registerer
 
   /** Related to States */
   isRegistering = false
@@ -393,11 +394,11 @@ export class Client extends EventEmitter implements IClientImpl {
       this._sipJsUA
         .start()
         .then(() => {
-          const registerer = new Registerer(this._sipJsUA, {
+          this._registerer = new Registerer(this._sipJsUA, {
             registrar: this.serverUri,
           })
 
-          registerer.stateChange.addListener((newState) => {
+          this._registerer.stateChange.addListener((newState) => {
             switch (newState) {
               case RegistererState.Registered:
                 this.emit(ClientStatus.REGISTERED)
@@ -419,7 +420,7 @@ export class Client extends EventEmitter implements IClientImpl {
             }
           })
 
-          registerer
+          this._registerer
             .register()
             .then((request) => {
               console.log('Successfully sent REGISTER')
@@ -502,11 +503,16 @@ export class Client extends EventEmitter implements IClientImpl {
 
   private sessionTerminatedHandler(): void {
     this.isRegistered = false
-    // if (this._sipJsUA.isRegistered()) {
-    //   this.emit(ClientStatus.REGISTERED)
-    // } else {
-    //   this.isRegistered = false
-    // }
+
+    const isRegistered =
+      this._registerer.state &&
+      this._registerer.state === RegistererState.Registered
+
+    if (isRegistered) {
+      this.emit(ClientStatus.REGISTERED)
+    } else {
+      this.isRegistered = false
+    }
   }
 
   /**
