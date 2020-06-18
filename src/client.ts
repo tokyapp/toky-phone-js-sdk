@@ -6,6 +6,7 @@ import {
   Inviter,
   UserAgentOptions,
   Registerer,
+  URI,
 } from 'sip.js'
 
 import { EventEmitter } from 'events'
@@ -108,7 +109,7 @@ export class Client extends EventEmitter implements IClientImpl {
   isTransportConnected = false
 
   subscription = undefined
-  serverUri = undefined
+  serverUri: URI = undefined
 
   constructor({
     apiKey,
@@ -219,12 +220,12 @@ export class Client extends EventEmitter implements IClientImpl {
         })
       )
 
-      this.serverUri = paramsData.sip.uri
+      this.serverUri = UserAgent.makeURI(`sip:${paramsData.sip.uri}`)
 
-      const uri = UserAgent.makeURI(paramsData.sip.uri)
+      const displayName = `${this._appName} - Toky SDK`
 
       const options: UserAgentOptions = {
-        uri,
+        uri: this.serverUri,
         transportOptions: {
           server: wsServersConf[0].wsUri,
           traceSip: isDevelopment ? true : false,
@@ -236,7 +237,7 @@ export class Client extends EventEmitter implements IClientImpl {
         logLevel: 'debug',
         allowLegacyNotifications: true,
         sipExtension100rel: SIPExtension.Supported,
-        displayName: `${this._appName} - Toky SDK`,
+        displayName,
         sessionDescriptionHandlerFactoryOptions: {
           alwaysAcquireMediaFirst: true,
           peerConnectionOptions: {
@@ -384,11 +385,13 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      const registerer = new Registerer(this._sipJsUA, {
-        registrar: UserAgent.makeURI(wsServersConf[0].wsUri),
-      })
+      this._sipJsUA.start().then(() => {
+        const registerer = new Registerer(this._sipJsUA, {
+          registrar: this.serverUri,
+        })
 
-      registerer.register()
+        registerer.register()
+      })
     }
     return { Media }
   }
