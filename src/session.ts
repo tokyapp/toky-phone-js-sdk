@@ -89,6 +89,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _callDirection: CallDirectionEnum
   private _recordingFeatureActivated = false
   private _recording = true
+  private _established = false
 
   constructor(
     session: Session,
@@ -179,6 +180,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           if (this._callDirection === CallDirectionEnum.INBOUND) {
             this.emit(SessionStatus.ACCEPTED)
           }
+
+          this._established = true
 
           break
         }
@@ -284,26 +287,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         response
       )
     }
-
-    // if (this._callDirection === CallDirectionEnum.INBOUND) {
-    //   if (this._peerConnection.getReceivers().length) {
-    //     const remoteStream = new MediaStream()
-
-    //     this._peerConnection.getReceivers().forEach((receiver) => {
-    //       if (receiver.track) {
-    //         remoteStream.addTrack(receiver.track)
-    //       }
-    //     })
-
-    //     this._media.remoteSource.srcObject = remoteStream
-
-    //     this._media.remoteSource.play().then(() => {
-    //       console.warn('-- remote audio played succesfully...')
-    //     })
-    //   } else {
-    //     console.error('Peer connection has not available receivers.')
-    //   }
-    // }
   }
 
   private progressHandler(response: IncomingResponse): void {
@@ -322,16 +305,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       if (message.statusCode === 183 || message.statusCode === 180) {
         this.emit(SessionStatus.RINGING)
-      }
-
-      if (message.statusCode === 183) {
-        // Gets remote tracks
-        // const remoteStream = new MediaStream()
-        // this._peerConnection.getReceivers().forEach((receiver) => {
-        //   remoteStream.addTrack(receiver.track)
-        // })
-        // this._media.remoteSource.srcObject = remoteStream
-        // this._media.remoteSource.play().then(console.log)
       }
 
       // * FIXME: not working
@@ -494,7 +467,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   }
 
   public endCall(): void {
-    this._currentSession.bye()
+    if (this._established) {
+      this._currentSession.bye()
+    } else {
+      ;(this._currentSession as Inviter).cancel()
+    }
 
     if (this._localStream && this._localStream.getTracks.length) {
       // * preventing stream to stay open
@@ -611,6 +588,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           const message = response.message
 
           if (message.statusCode === 400) {
+            console.log('--- transfer rejected by toky server', response)
+
             console.error('Invalid destination of transfer.')
           }
         },
