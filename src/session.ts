@@ -6,6 +6,7 @@ import {
   SessionState,
   InviterInviteOptions,
   Inviter,
+  UserAgent,
 } from 'sip.js'
 
 import { stopAudio } from './helpers'
@@ -18,7 +19,7 @@ import {
   RecordingActionEnum,
   HoldActionEnum,
 } from './toky-services'
-import { IncomingResponse } from 'sip.js/lib/core'
+import { IncomingResponse, OutgoingReferRequest } from 'sip.js/lib/core'
 
 export interface IGetConnection {
   pc: RTCPeerConnection
@@ -529,53 +530,79 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     destination: string
     option?: TransferOptionsEnum
   }): void {
-    // const extraHeaders = [
-    //   `X-Referred-By-Agent: ${this._sipUsername}`,
-    //   `X-Company: ${this._companyId}`,
-    // ]
-    // // TODO: maybe we can verify the agent existence
-    // if (type === TransferEnum.AGENT) {
-    //   extraHeaders.push(`X-Referred-To-Agent: ${destination}`)
-    // }
-    // if (type === TransferEnum.GROUP) {
-    //   extraHeaders.push(`X-Referred-To-Group: ${destination}`)
-    // }
-    // if (type === TransferEnum.NUMBER) {
-    //   extraHeaders.push(`X-Referred-To-Number: outbound${destination}`)
-    // }
-    // if (option === TransferOptionsEnum.WARM) {
-    //   extraHeaders.push(`X-Warm: yes`)
-    // }
-    // const generatedId = Math.floor(Math.random() * 100000) + 1
-    // let constrainsDefault: MediaStreamConstraints = {
-    //   audio: true,
-    //   video: false,
-    // }
-    // if (typeof Storage !== 'undefined') {
-    //   if (sessionStorage.getItem('toky_default_input')) {
-    //     const defaultDeviceId = sessionStorage.getItem('toky_default_input')
-    //     constrainsDefault = {
-    //       audio: { deviceId: defaultDeviceId },
-    //       video: false,
-    //     }
-    //   }
-    // }
-    // const options = {
-    //   extraHeaders,
-    //   sessionDescriptionHandlerOptions: {
-    //     constraints: constrainsDefault,
-    //   },
-    // }
-    // const transferContext = this._currentSession.refer(
-    //   `sip:transfer-conf-${generatedId}@app.toky.co;transport=TCP;agent`,
-    //   options
-    // )
-    // * TODO: we are not getting useful information yet from this event listener
-    // transferSession.on(
-    //   'referRequestRejected',
-    //   (referServerContext: ReferServerContext) => {
-    //     console.log('refer sever context', referServerContext)
-    //   }
-    // )
+    const extraHeaders = [
+      `X-Referred-By-Agent: ${this._sipUsername}`,
+      `X-Company: ${this._companyId}`,
+    ]
+
+    // TODO: maybe we can verify the agent existence
+    if (type === TransferEnum.AGENT) {
+      extraHeaders.push(`X-Referred-To-Agent: ${destination}`)
+    }
+
+    if (type === TransferEnum.GROUP) {
+      extraHeaders.push(`X-Referred-To-Group: ${destination}`)
+    }
+
+    if (type === TransferEnum.NUMBER) {
+      extraHeaders.push(`X-Referred-To-Number: outbound${destination}`)
+    }
+
+    if (option === TransferOptionsEnum.WARM) {
+      extraHeaders.push(`X-Warm: yes`)
+    }
+
+    const generatedId = Math.floor(Math.random() * 100000) + 1
+
+    let constrainsDefault: MediaStreamConstraints = {
+      audio: true,
+      video: false,
+    }
+    if (typeof Storage !== 'undefined') {
+      if (sessionStorage.getItem('toky_default_input')) {
+        const defaultDeviceId = sessionStorage.getItem('toky_default_input')
+        constrainsDefault = {
+          audio: { deviceId: defaultDeviceId },
+          video: false,
+        }
+      }
+    }
+
+    const options = {
+      extraHeaders,
+      sessionDescriptionHandlerOptions: {
+        constraints: constrainsDefault,
+      },
+    }
+
+    const transferCallURI = UserAgent.makeURI(
+      `sip:transfer-conf-${generatedId}@app.toky.co;transport=TCP;agent`
+    )
+
+    if (!transferCallURI) {
+      throw new Error('Failed to create transfer call uri.')
+    }
+
+    const transferContext = this._currentSession.refer(transferCallURI, {
+      requestOptions: options,
+    })
+
+    transferContext
+      .then((response: OutgoingReferRequest) => {
+        console.warn('--- transfer accepted by transport ', response)
+
+        // * Maybe this is SIP.js bug?
+        // response.delegate.onAccept = (response: IncomingResponse): void => {
+        //   console.log('--- transfer accepted', response)
+
+        //   const message = response.message
+
+        //   console.warn('status code', message.statusCode)
+        //   console.warn('reason phrase', message.reasonPhrase)
+        // }
+      })
+      .catch((err) => {
+        console.error('Transfer failed for some reason', err)
+      })
   }
 }
