@@ -18,6 +18,7 @@ import {
   RecordingActionEnum,
   HoldActionEnum,
 } from './toky-services'
+import { IncomingResponse } from 'sip.js/lib/core'
 
 export interface IGetConnection {
   pc: RTCPeerConnection
@@ -119,10 +120,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._currentSession.stateChange.addListener((newState: SessionState) => {
       switch (newState) {
         case SessionState.Establishing: {
-          this.emit(SessionStatus.RINGING)
-
           this._media.ringAudio.play().then(() => {
-            console.warn('... play audio establishing state')
+            console.warn('... play audio on establishing state')
           })
 
           this._localStream = new MediaStream()
@@ -193,6 +192,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         onProgress: this.progressHandler.bind(this),
         onAccept: this.acceptedHandler.bind(this),
         onReject: this.onRejectHandler.bind(this),
+        onTrying: (): void => {
+          // TODO: do something
+        },
       },
     }
 
@@ -276,49 +278,37 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     }
   }
 
-  private trackAddedHandler(): void {
-    // We need to check the peer peerConnection to determine which track was added
-    const sdh = this._currentSession
-      .sessionDescriptionHandler as Web.SessionDescriptionHandler
-
-    this._peerConnection = sdh.peerConnection
-
-    this.setupSessionDescriptionHandlerListeners(sdh)
-  }
-
-  private progressHandler(response: any): void {
+  private progressHandler(response: IncomingResponse): void {
     console.warn('--- Call in progress response', response)
 
-    /**
-     * At the moment this is triggered only for outbound calls
-     */
-    if (response.callId) {
-      this._callId = response.callId
+    const message = response.message
+
+    if (message.callId) {
+      debugger
+      this._callId = message.callId
     }
 
-    if (response.statusCode) {
-      if (/100/.test(response.statusCode)) {
+    if (message.statusCode) {
+      if (message.statusCode === 100) {
         this.emit(SessionStatus.CONNECTING)
       }
 
-      if (/(183|180)/.test(response.statusCode)) {
+      if (message.statusCode === 183 || message.statusCode === 180) {
         this.emit(SessionStatus.RINGING)
       }
 
-      if (response.statusCode === 183) {
+      if (message.statusCode === 183) {
         // Gets remote tracks
-        const remoteStream = new MediaStream()
-
-        this._peerConnection.getReceivers().forEach((receiver) => {
-          remoteStream.addTrack(receiver.track)
-        })
-
-        this._media.remoteSource.srcObject = remoteStream
-        this._media.remoteSource.play().then(console.log)
+        // const remoteStream = new MediaStream()
+        // this._peerConnection.getReceivers().forEach((receiver) => {
+        //   remoteStream.addTrack(receiver.track)
+        // })
+        // this._media.remoteSource.srcObject = remoteStream
+        // this._media.remoteSource.play().then(console.log)
       }
 
       // * FIXME: not working
-      // if (response.statusCode === 400) {
+      // if (message.statusCode === 400) {
       //   this.emit(SessionStatus.FAILED, {
       //     origin: 'failedEvent',
       //     reason: 'Invalid destination of transference',
@@ -326,11 +316,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       //   this._media.errorAudio.play().then(console.log)
       // }
 
-      if (response.statusCode === 180) {
+      if (message.statusCode === 180) {
         try {
-          const internalErrorCode = response.getHeader('X-Error-Code')
+          const internalErrorCode = message.getHeader('X-Error-Code')
 
-          if (internalErrorCode !== undefined && internalErrorCode == 998) {
+          if (internalErrorCode !== undefined && internalErrorCode === '998') {
             // simultaneous usage of agents
             this.emit(SessionStatus.FAILED)
           }
@@ -352,15 +342,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     sessionDescriptionHandler: Web.SessionDescriptionHandler
   ): void {
     sessionDescriptionHandler.on('userMedia', (stream) => {
-      // this._media.ringAudio.play().then(() => {
-      //   console.warn('... play audio at user media')
-      // })
-      // this._localStream = stream
-      // this._peerConnection.getSenders().forEach((sender) => {
-      //   this._localStream.addTrack(sender.track)
-      // })
-      // this._media.localSource.srcObject = this._localStream
-      // this._media.localSource.play().then(console.log)
+      // TODO: do something
     })
 
     sessionDescriptionHandler.on('userMediaRequest', (constraints) => {
@@ -374,42 +356,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     sessionDescriptionHandler.on('addTrack', (track) => {
       this.emit('addTrack', track)
     })
-  }
-
-  private setupSessionListeners(session: Session): void {
-    /**
-     * Success operations
-     */
-    // session.on('accepted', this.acceptedHandler.bind(this))
-    // session.on('trackAdded', this.trackAddedHandler.bind(this))
-    /**
-     * Typings: the @param response type comes from IncomingResponseMessage
-     * but in SIP.js seems to have a bug or something and
-     * we specify <any> to silence the compiler
-     */
-    // When the call is accepted by the sip server and in progress.
-    // session.on('progress', this.progressHandler.bind(this))
-    /**
-     * Failed operations
-     */
-    // Maybe the destination does not exist.
-    // session.on('failed', () => {
-    //   this.emit(SessionStatus.FAILED, { origin: 'failedEvent' })
-    //   this._media.errorAudio.play().then(console.log)
-    // })
-    // session.on('terminated', (message, cause) => {
-    //   // * internal event
-    //   this.emit('__session_terminated')
-    //   this.emit(SessionStatus.BYE, {
-    //     message,
-    //     cause,
-    //     origin: 'terminatedEvent',
-    //   })
-    //   this.cleanupMedia()
-    // })
-    // // When the target rejects the call.
-    // session.once('rejected', (response: any) => {
-    // })
   }
 
   private cleanupMedia(): void {
