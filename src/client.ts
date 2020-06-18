@@ -509,6 +509,7 @@ export class Client extends EventEmitter implements IClientImpl {
       this._registerer.state === RegistererState.Registered
 
     if (isRegistered) {
+      this.isRegistered = true
       this.emit(ClientStatus.REGISTERED)
     } else {
       this.isRegistered = false
