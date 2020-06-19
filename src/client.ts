@@ -304,7 +304,6 @@ export class Client extends EventEmitter implements IClientImpl {
             incomingSession.request.getHeader('X-PSTN') === 'yes'
 
           const isIncomingWarmTransfer =
-            incomingSession.request.getHeader('X-Warm') !== undefined &&
             incomingSession.request.getHeader('X-Warm') === 'yes'
 
           const companyID = incomingSession.request.getHeader('X-Company')
@@ -339,9 +338,11 @@ export class Client extends EventEmitter implements IClientImpl {
 
           let currentSession = null
 
-          this._media.incomingRingAudio.play().then(() => {
-            console.warn('-- audio play succeed on incoming session')
-          })
+          if (!isIncomingWarmTransfer) {
+            this._media.incomingRingAudio.play().then(() => {
+              console.warn('-- audio play succeed on incoming session')
+            })
+          }
 
           if (isFromAgent) {
             currentSession = new SessionUA(
@@ -371,7 +372,10 @@ export class Client extends EventEmitter implements IClientImpl {
           /**
            * This case in when in a rejected blind transferred call
            */
-          if (transferredBy === this._account.sipUsername) {
+          if (
+            transferredBy === this._account.sipUsername &&
+            !isIncomingWarmTransfer
+          ) {
             currentSession = new SessionUA(
               incomingSession,
               this._media,
@@ -393,7 +397,37 @@ export class Client extends EventEmitter implements IClientImpl {
             this.emit(ClientStatus.INVITE, currentSession)
 
             currentSession.once('__session_terminated', () => {
-              this.sessionTerminatedHandler.bind(this)()
+              this.sessionTerminatedHandler()
+              currentSession = null
+            })
+          }
+
+          if (
+            transferredBy === this._account.sipUsername &&
+            isIncomingWarmTransfer
+          ) {
+            currentSession = new SessionUA(
+              incomingSession,
+              this._media,
+              CallDirectionEnum.INBOUND,
+              {
+                agentId: this._account.user,
+                sipUsername: this._account.sipUsername,
+                companyId: this._companyId,
+                apiKey: this._apiKey,
+              },
+              {
+                uri: customerUri,
+                type: 'agent',
+                transferredType: 'warm',
+                cause: 'establish',
+              }
+            )
+
+            this.emit(ClientStatus.INVITE, currentSession)
+
+            currentSession.once('__session_terminated', () => {
+              this.sessionTerminatedHandler()
               currentSession = null
             })
           }
