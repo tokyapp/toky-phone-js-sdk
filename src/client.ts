@@ -183,8 +183,8 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   /**
-   * Init is where the Toky API is called to get call params
-   * to establish the communication with the server
+   * Init is where we call the Toky API to get call params
+   * and it establish communication with the Toky Server
    */
 
   public async init(): Promise<any> {
@@ -271,7 +271,6 @@ export class Client extends EventEmitter implements IClientImpl {
       /**
        * SIP js Listeners
        */
-      // this.setupUserAgentListeners(this._sipJsUA)
 
       this._sipJsUA.delegate = {
         onRegister: (): void => {
@@ -369,13 +368,18 @@ export class Client extends EventEmitter implements IClientImpl {
             })
           }
 
+          const isBlindTransfer =
+            transferredBy === this._account.sipUsername &&
+            !isIncomingWarmTransfer
+
+          const isWarmTransfer =
+            transferredBy === this._account.sipUsername &&
+            isIncomingWarmTransfer
+
           /**
            * This case in when in a rejected blind transferred call
            */
-          if (
-            transferredBy === this._account.sipUsername &&
-            !isIncomingWarmTransfer
-          ) {
+          if (isBlindTransfer) {
             currentSession = new SessionUA(
               incomingSession,
               this._media,
@@ -402,10 +406,7 @@ export class Client extends EventEmitter implements IClientImpl {
             })
           }
 
-          if (
-            transferredBy === this._account.sipUsername &&
-            isIncomingWarmTransfer
-          ) {
+          if (isWarmTransfer) {
             currentSession = new SessionUA(
               incomingSession,
               this._media,
@@ -517,29 +518,6 @@ export class Client extends EventEmitter implements IClientImpl {
     // })
   }
 
-  private onRegistered() {
-    this.emit(ClientStatus.REGISTERED)
-
-    this.isRegistering = false
-    this.isRegistered = true
-
-    console.log(
-      '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
-      'background: blue; color: white; font-size: small'
-    )
-
-    // this.subscribeToTransport(userAgent)
-  }
-
-  private setupUserAgentListeners(userAgent: UserAgent): void {
-    // userAgent.delegate.onRegister = this.onRegistered
-    // userAgent.once('registrationFailed', () => {
-    //   this.isRegistering = false
-    //   this.emit(ClientStatus.REGISTRATION_FAILED)
-    // })
-    // userAgent.delegate.onInvite = this.onInvite
-  }
-
   /**
    * Handlers for event listeners
    */
@@ -565,7 +543,7 @@ export class Client extends EventEmitter implements IClientImpl {
 
   /**
    * In Toky SDK this is done automatically in the constructor
-   * with the default register option set in the User Agent
+   * with the default register option set in the User Agent (* not anymore)
    */
   public register(): void {
     // TODO: implement later
