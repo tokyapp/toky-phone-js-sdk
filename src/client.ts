@@ -363,7 +363,7 @@ export class Client extends EventEmitter implements IClientImpl {
             this.emit(ClientStatus.INVITE, currentSession)
 
             currentSession.once('__session_terminated', () => {
-              this.sessionTerminatedHandler.bind(this)()
+              this.sessionTerminatedHandler()
               currentSession = null
             })
           }
