@@ -19,6 +19,11 @@ const deviceStatusTile = document.querySelector('#device-status')
 const deviceStatusSub = document.querySelector('#device-sub')
 const testOutputBtn = document.querySelector('#play')
 
+// prettier-ignore
+const incomingRingAudio = 'https://carvallo.dev.toky.co/resources/audio/piano-ring.ogg'
+const ringAudio = 'https://carvallo.dev.toky.co/resources/audio/ringing.ogg'
+const errorAudio = 'https://carvallo.dev.toky.co/resources/audio/error.ogg'
+
 const { TokyClient, ClientStatus, SessionStatus, TransferEnum } = TokySDK
 
 async function main() {
@@ -26,9 +31,6 @@ async function main() {
   let Client = null
   let transferTypeSelected = transferType.value
   let warmOption = false
-
-  const ringAudio = 'https://carvallo.dev.toky.co/resources/audio/ringing.ogg'
-  const errorAudio = 'https://carvallo.dev.toky.co/resources/audio/error.ogg'
 
   startBtn.addEventListener('click', async () => {
     Client = new TokyClient({
@@ -42,6 +44,7 @@ async function main() {
       media: {
         ringAudio: ringAudio,
         errorAudio: errorAudio,
+        incomingRingAudio: incomingRingAudio,
       },
     })
 
@@ -63,6 +66,90 @@ async function main() {
         option.value = device.id
         option.text = device.name
         audioSelectOutput.appendChild(option)
+      })
+    }
+
+    function setupSessionListeners(currentSession) {
+      currentSession.on(SessionStatus.ACCEPTED, () => {
+        callStatusTile.classList.remove('is-info')
+        callStatusTile.classList.add('is-success')
+        callStatusSub.textContent = 'In call'
+
+        endCallBtn.textContent = 'End Call'
+
+        muteBtn.disabled = false
+        holdBtn.disabled = false
+        recordBtn.disabled = false
+        transferBtn.disabled = false
+        recordBtn.textContent = 'Pause recording'
+      })
+
+      currentSession.on(SessionStatus.RINGING, () => {
+        callStatusTile.classList.remove('is-warning')
+        callStatusTile.classList.add('is-info')
+        callStatusSub.textContent = 'Ringing'
+
+        endCallBtn.disabled = false
+      })
+
+      currentSession.on(SessionStatus.FAILED, () => {
+        console.error('-- connection failed')
+      })
+
+      currentSession.on(SessionStatus.BYE, () => {
+        console.warn('-- call ended:', SessionStatus.BYE)
+        callStatusTile.classList.remove('is-success')
+
+        // * We recommend you to remove the instance of your session after the call
+        tokySession = null
+        currentSession = null
+
+        muteBtn.disabled = true
+        holdBtn.disabled = true
+        recordBtn.disabled = true
+        endCallBtn.disabled = true
+        transferBtn.disabled = true
+        recordBtn.textContent = 'Record'
+      })
+
+      currentSession.on(SessionStatus.REJECTED, () => {
+        console.warn('-- call rejected:', SessionStatus.REJECTED)
+        callStatusTile.classList.remove('is-success')
+
+        // * We recommend you to remove the instance of your session after the call
+        tokySession = null
+        currentSession = null
+
+        muteBtn.disabled = true
+        holdBtn.disabled = true
+        recordBtn.disabled = true
+        endCallBtn.disabled = true
+        transferBtn.disabled = true
+        recordBtn.textContent = 'Record'
+      })
+
+      currentSession.on(SessionStatus.MUTED, () => {
+        muteBtn.innerText = 'Unmute'
+      })
+
+      currentSession.on(SessionStatus.UNMUTED, () => {
+        muteBtn.innerText = 'Mute'
+      })
+
+      currentSession.on(SessionStatus.HOLD, () => {
+        holdBtn.innerText = 'Unhold'
+      })
+
+      currentSession.on(SessionStatus.UNHOLD, () => {
+        holdBtn.innerText = 'hold'
+      })
+
+      currentSession.on(SessionStatus.RECORDING, () => {
+        recordBtn.innerText = 'Pause recording'
+      })
+
+      currentSession.on(SessionStatus.NOT_RECORDING, () => {
+        recordBtn.innerText = 'Record call'
       })
     }
 
@@ -90,6 +177,7 @@ async function main() {
       endCallBtn.disabled = false
 
       tokySession = incomingSession
+      setupSessionListeners(tokySession)
     })
 
     Media.on('ready', () => {
@@ -156,78 +244,9 @@ async function main() {
     warmOption = !warmOption
   })
 
-  function setupSessionListeners(currentSession) {
-    currentSession.on(SessionStatus.ACCEPTED, () => {
-      callStatusTile.classList.remove('is-info')
-      callStatusTile.classList.add('is-success')
-      callStatusSub.textContent = 'In call'
-
-      endCallBtn.textContent = 'End Call'
-
-      muteBtn.disabled = false
-      holdBtn.disabled = false
-      recordBtn.disabled = false
-      transferBtn.disabled = false
-      recordBtn.textContent = 'Pause recording'
-    })
-
-    currentSession.on(SessionStatus.RINGING, () => {
-      callStatusTile.classList.remove('is-warning')
-      callStatusTile.classList.add('is-info')
-      callStatusSub.textContent = 'Ringing'
-
-      endCallBtn.disabled = false
-    })
-
-    currentSession.on(SessionStatus.FAILED, () => {
-      console.error('-- connection failed')
-    })
-
-    currentSession.on(SessionStatus.BYE, () => {
-      console.warn('-- call ended:', SessionStatus.BYE)
-      callStatusTile.classList.remove('is-success')
-
-      // * We recommend you to remove the instance of your session after the call
-      tokySession = null
-      currentSession = null
-
-      muteBtn.disabled = true
-      holdBtn.disabled = true
-      recordBtn.disabled = true
-      endCallBtn.disabled = true
-      transferBtn.disabled = true
-      recordBtn.textContent = 'Record'
-    })
-
-    currentSession.on(SessionStatus.MUTED, () => {
-      muteBtn.innerText = 'Unmute'
-    })
-
-    currentSession.on(SessionStatus.UNMUTED, () => {
-      muteBtn.innerText = 'Mute'
-    })
-
-    currentSession.on(SessionStatus.HOLD, () => {
-      holdBtn.innerText = 'Unhold'
-    })
-
-    currentSession.on(SessionStatus.UNHOLD, () => {
-      holdBtn.innerText = 'hold'
-    })
-
-    currentSession.on(SessionStatus.RECORDING, () => {
-      recordBtn.innerText = 'Pause recording'
-    })
-
-    currentSession.on(SessionStatus.NOT_RECORDING, () => {
-      recordBtn.innerText = 'Record call'
-    })
-  }
-
   startCallBtn.addEventListener('click', () => {
     if (tokySession) {
       tokySession.acceptCall()
-      setupSessionListeners(tokySession)
     }
 
     if (!tokySession) {

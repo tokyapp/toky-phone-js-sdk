@@ -47,6 +47,7 @@ interface IMediaSpec {
   /** Url of the ring audio that would be used */
   ringAudio: string
   errorAudio: string
+  incomingRingAudio: string
 }
 
 export interface IMediaAttribute {
@@ -55,6 +56,7 @@ export interface IMediaAttribute {
   localSource: HTMLAudioElement
   ringAudio: HTMLAudioElement
   errorAudio: HTMLAudioElement
+  incomingRingAudio: HTMLAudioElement
 }
 
 interface IIceServerAttribute {
@@ -162,16 +164,19 @@ export class Client extends EventEmitter implements IClientImpl {
 
     appendMediaElements()
 
-    const ringAudio = new Audio(media.ringAudio)
-    ringAudio.loop = true
-
+    const incomingRingAudio = new Audio(media.incomingRingAudio)
     const errorAudio = new Audio(media.errorAudio)
+    const ringAudio = new Audio(media.ringAudio)
+
+    ringAudio.loop = true
+    incomingRingAudio.loop = true
 
     this._media = {
       remoteSource: document.querySelector('#__tokyRemoteAudio'),
       localSource: document.querySelector('#__tokyLocalAudio'),
       ringAudio,
       errorAudio,
+      incomingRingAudio,
     }
 
     this.emit(ClientStatus.DEFAULT)
@@ -333,6 +338,10 @@ export class Client extends EventEmitter implements IClientImpl {
             .includes(';agent')
 
           let currentSession = null
+
+          this._media.incomingRingAudio.play().then(() => {
+            console.warn('-- audio play succeed on incoming session')
+          })
 
           if (isFromAgent) {
             currentSession = new SessionUA(
