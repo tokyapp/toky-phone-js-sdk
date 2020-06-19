@@ -74,6 +74,13 @@ export declare interface ISessionImpl {
   on: (event: SessionStatus, listener: () => void) => void
 }
 
+interface ICallData {
+  uri: string
+  type: 'agent' | 'anon'
+  transferredType?: 'blind' | 'warm'
+  cause?: 'rejected' | 'establish'
+}
+
 export class SessionUA extends EventEmitter implements ISessionImpl {
   private _callId: string
   private _peerConnection: RTCPeerConnection
@@ -90,6 +97,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _recordingFeatureActivated = false
   private _recording = true
   private _established = false
+  private _callData: ICallData
+  private _wantToWarmTransfer = false
 
   constructor(
     session: Session,
@@ -101,12 +110,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       sipUsername: string
       companyId: string
     },
-    inboundData?: {
-      uri: string
-      type: 'agent' | 'anon'
-      transferredType?: 'blind' | 'warm'
-      cause?: 'rejected'
-    }
+    inboundData?: ICallData
   ) {
     super()
 
@@ -116,6 +120,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._agentId = tokySettings.agentId
     this._sipUsername = tokySettings.sipUsername
     this._companyId = tokySettings.companyId
+    this._callData = inboundData
 
     this._senderEnabled = true
     this._hold = false
@@ -123,88 +128,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     this._callDirection = direction
 
-    this._currentSession.stateChange.addListener((newState: SessionState) => {
-      switch (newState) {
-        case SessionState.Establishing: {
-          if (this._callDirection === CallDirectionEnum.OUTBOUND) {
-            this._media.ringAudio.play().then(() => {
-              console.warn('-- audio play succeed on establishing state')
-            })
-
-            this._localStream = new MediaStream()
-
-            // * set as <any> this is a bug from ts or SIP.js
-            // * .sessionDescriptionHandler says that does not have peerConnection
-            // * but in the SIP.js examples they are using this way
-            // * see: https://sipjs.com/guides/attach-media/
-            const sessionDescriptionHandler = this._currentSession
-              .sessionDescriptionHandler as any
-
-            this._peerConnection = sessionDescriptionHandler.peerConnection
-
-            this._peerConnection.getSenders().forEach((sender) => {
-              if (sender.track) {
-                this._localStream.addTrack(sender.track)
-              }
-            })
-
-            this._media.localSource.srcObject = this._localStream
-
-            this._media.localSource.play().then(() => {
-              console.warn('-- local audio played succesfully...')
-            })
-          }
-
-          break
-        }
-        case SessionState.Established: {
-          if (this._callDirection === CallDirectionEnum.INBOUND)
-            stopAudio(this._media.incomingRingAudio)
-
-          const remoteStream = new MediaStream()
-
-          const sessionDescriptionHandler = this._currentSession
-            .sessionDescriptionHandler as any
-
-          this._peerConnection = sessionDescriptionHandler.peerConnection
-
-          this._peerConnection.getReceivers().forEach((receiver) => {
-            if (receiver.track) {
-              remoteStream.addTrack(receiver.track)
-            }
-          })
-
-          this._media.remoteSource.srcObject = remoteStream
-
-          this._media.remoteSource.play().then(() => {
-            console.warn('-- remote audio played succesfully...')
-          })
-
-          if (this._callDirection === CallDirectionEnum.INBOUND) {
-            this.emit(SessionStatus.ACCEPTED)
-          }
-
-          this._established = true
-
-          break
-        }
-        case SessionState.Terminated: {
-          // * internal event
-          this.emit('__session_terminated')
-
-          this.emit(SessionStatus.BYE, {
-            origin: 'terminatedEvent',
-          })
-
-          if (this._callDirection === CallDirectionEnum.INBOUND)
-            stopAudio(this._media.incomingRingAudio)
-
-          this.cleanupMedia()
-
-          break
-        }
-      }
-    })
+    this._currentSession.stateChange.addListener(
+      this.sessionStateListener.bind(this)
+    )
 
     // Options including delegate to capture response messages
     const inviteOptions: InviterInviteOptions = {
@@ -235,6 +161,38 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       const incomingSession = session as Invitation
 
       this._callId = incomingSession.request.getHeader('Call-ID')
+
+      /**
+       * Applied for Warm transfer
+       */
+      if (
+        inboundData.type === 'agent' &&
+        inboundData.transferredType === 'warm' &&
+        inboundData.cause === 'establish'
+      ) {
+        let constrainsDefault: MediaStreamConstraints = {
+          audio: true,
+          video: false,
+        }
+
+        if (typeof Storage !== 'undefined') {
+          if (sessionStorage.getItem('toky_default_input')) {
+            const defaultDeviceId = sessionStorage.getItem('toky_default_input')
+            constrainsDefault = {
+              audio: { deviceId: defaultDeviceId },
+              video: false,
+            }
+          }
+        }
+
+        const options: InvitationAcceptOptions = {
+          sessionDescriptionHandlerOptions: {
+            constraints: constrainsDefault,
+          },
+        }
+
+        incomingSession.accept(options)
+      }
     }
 
     this.emit(SessionStatus.CONNECTING)
@@ -246,6 +204,97 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
   get pauseRecordingActivated(): boolean {
     return this._recordingFeatureActivated
+  }
+
+  private sessionStateListener(newState: SessionState): void {
+    switch (newState) {
+      case SessionState.Establishing: {
+        if (this._callDirection === CallDirectionEnum.OUTBOUND) {
+          this._media.ringAudio.play().then(() => {
+            console.warn('-- audio play succeed on establishing state')
+          })
+
+          this._localStream = new MediaStream()
+
+          // * set as <any> this is a bug from ts or SIP.js
+          // * .sessionDescriptionHandler says that does not have peerConnection
+          // * but in the SIP.js examples they are using this way
+          // * see: https://sipjs.com/guides/attach-media/
+          const sessionDescriptionHandler = this._currentSession
+            .sessionDescriptionHandler as any
+
+          this._peerConnection = sessionDescriptionHandler.peerConnection
+
+          this._peerConnection.getSenders().forEach((sender) => {
+            if (sender.track) {
+              this._localStream.addTrack(sender.track)
+            }
+          })
+
+          this._media.localSource.srcObject = this._localStream
+
+          this._media.localSource.play().then(() => {
+            console.warn('-- local audio played succesfully...')
+          })
+        }
+
+        break
+      }
+      case SessionState.Established: {
+        if (this._callDirection === CallDirectionEnum.INBOUND)
+          stopAudio(this._media.incomingRingAudio)
+
+        const remoteStream = new MediaStream()
+
+        const sessionDescriptionHandler = this._currentSession
+          .sessionDescriptionHandler as any
+
+        this._peerConnection = sessionDescriptionHandler.peerConnection
+
+        this._peerConnection.getReceivers().forEach((receiver) => {
+          if (receiver.track) {
+            remoteStream.addTrack(receiver.track)
+          }
+        })
+
+        this._media.remoteSource.srcObject = remoteStream
+
+        this._media.remoteSource.play().then(() => {
+          console.warn('-- remote audio played succesfully...')
+        })
+
+        if (this._callDirection === CallDirectionEnum.INBOUND) {
+          this.emit(SessionStatus.ACCEPTED)
+        }
+
+        this._established = true
+
+        break
+      }
+      case SessionState.Terminated: {
+        console.warn('call direction', this._callDirection)
+        /**
+         * Warm case: this is because on outbound warm transfer call
+         * the server sends an INVITE and then a BYE message and
+         * we are "artificially" not notifying this to the consumer
+         */
+        if (this._wantToWarmTransfer === false) {
+          // * internal event
+          this.emit('__session_terminated')
+
+          this.emit(SessionStatus.BYE, {
+            origin: 'terminatedEvent',
+          })
+
+          if (this._callDirection === CallDirectionEnum.INBOUND)
+            stopAudio(this._media.incomingRingAudio)
+
+          this.cleanupMedia()
+        }
+
+        break
+      }
+    }
   }
 
   private onRejectHandler(response: IncomingResponse): void {
@@ -601,7 +650,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     const transferContext = this._currentSession.refer(transferCallURI, {
       requestOptions: options,
       requestDelegate: {
-        onAccept(response: IncomingResponse): void {
+        onAccept: (response: IncomingResponse): void => {
           const message = response.message
 
           if (
@@ -609,6 +658,14 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             message.reasonPhrase === 'Accepted'
           ) {
             console.log('--- transfer accepted by toky server', response)
+
+            this._currentSession.stateChange.removeListener(
+              this.sessionStateListener.bind(this)
+            )
+
+            if (option === TransferOptionsEnum.WARM) {
+              this._wantToWarmTransfer = true
+            }
           } else {
             console.warn('status code', message.statusCode)
             console.warn('reason phrase', message.reasonPhrase)
@@ -618,7 +675,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             )
           }
         },
-        onReject(response: IncomingResponse): void {
+        onReject: (response: IncomingResponse): void => {
           const message = response.message
 
           if (message.statusCode === 400) {
