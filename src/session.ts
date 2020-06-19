@@ -35,7 +35,7 @@ export enum SessionStatus {
   CONNECTING = 'connecting',
   RINGING = 'ringing',
   ACCEPTED = 'accepted',
-  NOT_ACCEPTED = 'not_accepted',
+  REJECTED = 'rejected',
   DISCONNECTED = 'disconnected',
   HOLD = 'hold',
   UNHOLD = 'unhold',
@@ -128,7 +128,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         case SessionState.Establishing: {
           if (this._callDirection === CallDirectionEnum.OUTBOUND) {
             this._media.ringAudio.play().then(() => {
-              console.warn('... play audio on establishing state')
+              console.warn('-- audio play succeed on establishing state')
             })
 
             this._localStream = new MediaStream()
@@ -158,6 +158,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           break
         }
         case SessionState.Established: {
+          if (this._callDirection === CallDirectionEnum.INBOUND)
+            stopAudio(this._media.incomingRingAudio)
+
           const remoteStream = new MediaStream()
 
           const sessionDescriptionHandler = this._currentSession
@@ -192,6 +195,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           this.emit(SessionStatus.BYE, {
             origin: 'terminatedEvent',
           })
+
+          if (this._callDirection === CallDirectionEnum.INBOUND)
+            stopAudio(this._media.incomingRingAudio)
 
           this.cleanupMedia()
 
@@ -254,7 +260,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       this.emit('No credit left', { origin: 'rejectedEvent' })
     }
-    this.emit(SessionStatus.NOT_ACCEPTED, { origin: 'rejectedEvent' })
+    this.emit(SessionStatus.REJECTED, { origin: 'rejectedEvent' })
 
     stopAudio(this._media.ringAudio)
   }
@@ -470,7 +476,35 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     if (this._established) {
       this._currentSession.bye()
     } else {
-      ;(this._currentSession as Inviter).cancel()
+      /**
+       * This is in a outgoing not already established call
+       */
+      if (this._callDirection === CallDirectionEnum.OUTBOUND) {
+        const incomingSession = this._currentSession as Inviter
+
+        incomingSession.cancel().catch((err) => {
+          console.error('Error on cancel inviter', err)
+          // TODO: maybe we can trying again to reject
+          console.warn('Maybe we can try once again...')
+        })
+        /**
+         * This case applies for incoming invitation
+         * we need to use .reject() from Invitation
+         */
+      } else {
+        const incomingSession = this._currentSession as Invitation
+
+        incomingSession
+          .reject()
+          .then(() => {
+            this.emit(SessionStatus.REJECTED, { origin: 'rejectedInvitation' })
+          })
+          .catch((err) => {
+            console.error('Error on reject invitation for some reason', err)
+            // TODO: maybe we can trying again to reject
+            console.warn('Maybe we can try once again...')
+          })
+      }
     }
 
     if (this._localStream && this._localStream.getTracks.length) {

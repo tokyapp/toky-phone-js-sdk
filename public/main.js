@@ -26,9 +26,94 @@ const errorAudio = 'https://carvallo.dev.toky.co/resources/audio/error.ogg'
 
 const { TokyClient, ClientStatus, SessionStatus, TransferEnum } = TokySDK
 
+let tokySession = null
+let Client = null
+
+function setupSessionListeners(currentSession) {
+  currentSession.on(SessionStatus.ACCEPTED, () => {
+    callStatusTile.classList.remove('is-info')
+    callStatusTile.classList.add('is-success')
+    callStatusSub.textContent = 'In call'
+
+    endCallBtn.textContent = 'End Call'
+
+    muteBtn.disabled = false
+    holdBtn.disabled = false
+    recordBtn.disabled = false
+    transferBtn.disabled = false
+    recordBtn.textContent = 'Pause recording'
+  })
+
+  currentSession.on(SessionStatus.RINGING, () => {
+    callStatusTile.classList.remove('is-warning')
+    callStatusTile.classList.add('is-info')
+    callStatusSub.textContent = 'Ringing'
+
+    endCallBtn.disabled = false
+  })
+
+  currentSession.on(SessionStatus.FAILED, () => {
+    console.error('-- connection failed')
+  })
+
+  currentSession.on(SessionStatus.BYE, () => {
+    console.warn('-- call ended:', SessionStatus.BYE)
+    callStatusTile.classList.remove('is-success')
+
+    // * We recommend you to remove the instance of your session after the call
+    tokySession = null
+    currentSession = null
+
+    muteBtn.disabled = true
+    holdBtn.disabled = true
+    recordBtn.disabled = true
+    endCallBtn.disabled = true
+    transferBtn.disabled = true
+    recordBtn.textContent = 'Record'
+  })
+
+  currentSession.on(SessionStatus.REJECTED, () => {
+    console.warn('-- call rejected:', SessionStatus.REJECTED)
+    callStatusTile.classList.remove('is-success')
+
+    // * We recommend you to remove the instance of your session after the call
+    tokySession = null
+    currentSession = null
+
+    muteBtn.disabled = true
+    holdBtn.disabled = true
+    recordBtn.disabled = true
+    endCallBtn.disabled = true
+    transferBtn.disabled = true
+    recordBtn.textContent = 'Record'
+  })
+
+  currentSession.on(SessionStatus.MUTED, () => {
+    muteBtn.innerText = 'Unmute'
+  })
+
+  currentSession.on(SessionStatus.UNMUTED, () => {
+    muteBtn.innerText = 'Mute'
+  })
+
+  currentSession.on(SessionStatus.HOLD, () => {
+    holdBtn.innerText = 'Unhold'
+  })
+
+  currentSession.on(SessionStatus.UNHOLD, () => {
+    holdBtn.innerText = 'hold'
+  })
+
+  currentSession.on(SessionStatus.RECORDING, () => {
+    recordBtn.innerText = 'Pause recording'
+  })
+
+  currentSession.on(SessionStatus.NOT_RECORDING, () => {
+    recordBtn.innerText = 'Record call'
+  })
+}
+
 async function main() {
-  let tokySession = null
-  let Client = null
   let transferTypeSelected = transferType.value
   let warmOption = false
 
@@ -66,90 +151,6 @@ async function main() {
         option.value = device.id
         option.text = device.name
         audioSelectOutput.appendChild(option)
-      })
-    }
-
-    function setupSessionListeners(currentSession) {
-      currentSession.on(SessionStatus.ACCEPTED, () => {
-        callStatusTile.classList.remove('is-info')
-        callStatusTile.classList.add('is-success')
-        callStatusSub.textContent = 'In call'
-
-        endCallBtn.textContent = 'End Call'
-
-        muteBtn.disabled = false
-        holdBtn.disabled = false
-        recordBtn.disabled = false
-        transferBtn.disabled = false
-        recordBtn.textContent = 'Pause recording'
-      })
-
-      currentSession.on(SessionStatus.RINGING, () => {
-        callStatusTile.classList.remove('is-warning')
-        callStatusTile.classList.add('is-info')
-        callStatusSub.textContent = 'Ringing'
-
-        endCallBtn.disabled = false
-      })
-
-      currentSession.on(SessionStatus.FAILED, () => {
-        console.error('-- connection failed')
-      })
-
-      currentSession.on(SessionStatus.BYE, () => {
-        console.warn('-- call ended:', SessionStatus.BYE)
-        callStatusTile.classList.remove('is-success')
-
-        // * We recommend you to remove the instance of your session after the call
-        tokySession = null
-        currentSession = null
-
-        muteBtn.disabled = true
-        holdBtn.disabled = true
-        recordBtn.disabled = true
-        endCallBtn.disabled = true
-        transferBtn.disabled = true
-        recordBtn.textContent = 'Record'
-      })
-
-      currentSession.on(SessionStatus.REJECTED, () => {
-        console.warn('-- call rejected:', SessionStatus.REJECTED)
-        callStatusTile.classList.remove('is-success')
-
-        // * We recommend you to remove the instance of your session after the call
-        tokySession = null
-        currentSession = null
-
-        muteBtn.disabled = true
-        holdBtn.disabled = true
-        recordBtn.disabled = true
-        endCallBtn.disabled = true
-        transferBtn.disabled = true
-        recordBtn.textContent = 'Record'
-      })
-
-      currentSession.on(SessionStatus.MUTED, () => {
-        muteBtn.innerText = 'Unmute'
-      })
-
-      currentSession.on(SessionStatus.UNMUTED, () => {
-        muteBtn.innerText = 'Mute'
-      })
-
-      currentSession.on(SessionStatus.HOLD, () => {
-        holdBtn.innerText = 'Unhold'
-      })
-
-      currentSession.on(SessionStatus.UNHOLD, () => {
-        holdBtn.innerText = 'hold'
-      })
-
-      currentSession.on(SessionStatus.RECORDING, () => {
-        recordBtn.innerText = 'Pause recording'
-      })
-
-      currentSession.on(SessionStatus.NOT_RECORDING, () => {
-        recordBtn.innerText = 'Record call'
       })
     }
 
