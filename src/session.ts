@@ -14,7 +14,7 @@ import {
 
 import { IncomingResponse, OutgoingReferRequest } from 'sip.js/lib/core'
 
-import { stopAudio } from './helpers'
+import { stopAudio, isProduction } from './helpers'
 
 import { IMediaAttribute } from './client'
 
@@ -24,6 +24,29 @@ import {
   RecordingActionEnum,
   HoldActionEnum,
 } from './toky-services'
+
+const tokyResourcesUrl = isProduction
+  ? process.env.TOKY_RESOURCES_URL
+  : process.env.TOKY_RESOURCES_URL_DEV
+
+if (!tokyResourcesUrl) {
+  throw new Error('Something went wrong trying to get audio resources url.')
+}
+
+const defatulDTMFAudio = {
+  0: `${tokyResourcesUrl}/resources/audio/dtmf/0.wav`,
+  1: `${tokyResourcesUrl}/resources/audio/dtmf/1.wav`,
+  2: `${tokyResourcesUrl}/resources/audio/dtmf/2.wav`,
+  3: `${tokyResourcesUrl}/resources/audio/dtmf/3.wav`,
+  4: `${tokyResourcesUrl}/resources/audio/dtmf/4.wav`,
+  5: `${tokyResourcesUrl}/resources/audio/dtmf/5.wav`,
+  6: `${tokyResourcesUrl}/resources/audio/dtmf/6.wav`,
+  7: `${tokyResourcesUrl}/resources/audio/dtmf/7.wav`,
+  8: `${tokyResourcesUrl}/resources/audio/dtmf/8.wav`,
+  9: `${tokyResourcesUrl}/resources/audio/dtmf/9.wav`,
+  pound: `${tokyResourcesUrl}/resources/audio/dtmf/pound.wav`,
+  star: `${tokyResourcesUrl}/resources/audio/dtmf/star.wav`,
+}
 
 export interface IGetConnection {
   pc: RTCPeerConnection
@@ -424,6 +447,46 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._media.remoteSource.pause()
     this._media.localSource.srcObject = null
     this._media.localSource.pause()
+  }
+
+  /**
+   * Send DTMF.
+   * @remarks
+   * Send an INFO request with content type application/dtmf-relay.
+   * @param tone - Tone to send.
+   */
+  public processDTMF(tone: string): Promise<void> {
+    console.log(`[${this._callId}] sending DTMF...`)
+
+    // Validate tone
+    if (!/^[0-9A-D#*,]$/.exec(tone)) {
+      return Promise.reject(new Error('Invalid DTMF tone.'))
+    }
+
+    if (!this._currentSession) {
+      return Promise.reject(new Error('Session does not exist.'))
+    }
+
+    console.log(`[${this._callId}] Sending DTMF tone: ${tone}`)
+
+    const toneAudio = new Audio(defatulDTMFAudio[tone])
+
+    toneAudio.play().then(() => {
+      console.log('successfully play DTMF tone', tone)
+    })
+
+    const dtmf = tone
+    const duration = 100
+    const body = {
+      contentDisposition: 'render',
+      contentType: 'application/dtmf-relay',
+      content: 'Signal=' + dtmf + '\r\nDuration=' + duration,
+    }
+    const requestOptions = { body }
+
+    return this._currentSession.info({ requestOptions }).then(() => {
+      return
+    })
   }
 
   public getConnection(): IGetConnection {
