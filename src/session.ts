@@ -312,6 +312,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this.emit(SessionStatus.REJECTED, { origin: 'rejectedEvent' })
 
     stopAudio(this._media.ringAudio)
+
+    if (this._callDirection === CallDirectionEnum.OUTBOUND) {
+      this._media.errorAudio.play()
+    }
   }
 
   private acceptedHandler(response: IncomingResponse): void {
