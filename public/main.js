@@ -1,3 +1,5 @@
+import { getButtons } from './demo-utils.js'
+
 const endCallBtn = document.getElementById('endCall')
 const startCallBtn = document.getElementById('startCall')
 
@@ -19,6 +21,8 @@ const deviceStatusTile = document.querySelector('#device-status')
 const deviceStatusSub = document.querySelector('#device-sub')
 const testOutputBtn = document.querySelector('#play')
 
+const keypad = getButtons('keypad')
+
 // prettier-ignore
 const incomingRingAudio = 'https://carvallo.dev.toky.co/resources/audio/piano-ring.ogg'
 const ringAudio = 'https://carvallo.dev.toky.co/resources/audio/ringing.ogg'
@@ -28,6 +32,11 @@ const { TokyClient, ClientStatus, SessionStatus, TransferEnum } = TokySDK
 
 let tokySession = null
 let Client = null
+
+// Keypad helper function
+const keypadDisabled = (disabled) => {
+  keypad.forEach((button) => (button.disabled = disabled))
+}
 
 function setupSessionListeners(currentSession) {
   currentSession.on(SessionStatus.ACCEPTED, () => {
@@ -42,6 +51,8 @@ function setupSessionListeners(currentSession) {
     recordBtn.disabled = false
     transferBtn.disabled = false
     recordBtn.textContent = 'Pause recording'
+
+    keypadDisabled(false)
   })
 
   currentSession.on(SessionStatus.RINGING, () => {
@@ -112,6 +123,19 @@ function setupSessionListeners(currentSession) {
     recordBtn.innerText = 'Record call'
   })
 }
+
+// Add click listeners to keypad buttons
+keypad.forEach((button) => {
+  button.addEventListener('click', () => {
+    console.log('button', button.textContent)
+    const tone = button.textContent
+    if (tone) {
+      tokySession.processDTMF(tone).then(() => {
+        console.info('-- succesfully process DTMF')
+      })
+    }
+  })
+})
 
 async function main() {
   let transferTypeSelected = transferType.value

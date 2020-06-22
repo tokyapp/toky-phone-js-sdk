@@ -299,7 +299,6 @@ export class Client extends EventEmitter implements IClientImpl {
           const referer = incomingSession.request.getHeader('X-Referer')
 
           const isFromPSTN =
-            incomingSession.request.getHeader('X-PSTN') !== undefined &&
             incomingSession.request.getHeader('X-PSTN') === 'yes'
 
           const isIncomingWarmTransfer =
