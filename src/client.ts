@@ -14,11 +14,15 @@ import { EventEmitter } from 'events'
 
 import { getCallParams, IWSServers } from './toky-services'
 
-import { Media, HTMLMediaElementExp } from './media'
-
 import packageJson from '../package.json'
 
-import { browserSpecs, isDevelopment, appendMediaElements } from './helpers'
+import {
+  browserSpecs,
+  isDevelopment,
+  appendMediaElements,
+  isChrome,
+  eqSet,
+} from './helpers'
 
 import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
 
@@ -65,6 +69,17 @@ interface IIceServerAttribute {
   credential?: string
 }
 
+interface IDeviceList {
+  id: string
+  name: string
+  kind: string
+}
+
+interface HTMLMediaElementExp extends HTMLMediaElement {
+  // Listed as experimental in https://developer.mozilla.org/es/docs/Web/API/HTMLMediaElement
+  setSinkId: any
+}
+
 declare interface IClientImpl {
   // * Private Methods
   /*
@@ -105,8 +120,11 @@ export class Client extends EventEmitter implements IClientImpl {
   _sipJsUA: UserAgent
   _userAgentSession: Session
   _registerer: Registerer
+  _localStream: MediaStream
+  _deviceList: IDeviceList[]
 
   /** Related to States */
+  hasMediaPermissions = false
   isRegistering = false
   isRegistered = false
   isTransportConnecting = false
@@ -193,11 +211,7 @@ export class Client extends EventEmitter implements IClientImpl {
       apiKey: this._apiKey,
     })
 
-    Media.init({
-      remoteSource: this._media.remoteSource as HTMLMediaElementExp,
-    })
-
-    Media.requestPermission()
+    this.mediaInit()
 
     const paramsData = response.data
 
@@ -271,18 +285,16 @@ export class Client extends EventEmitter implements IClientImpl {
       /**
        * SIP js Listeners
        */
-
       this._sipJsUA.delegate = {
         onRegister: (): void => {
-          this.emit(ClientStatus.REGISTERED)
-
-          this.isRegistering = false
-          this.isRegistered = true
-
-          console.log(
-            '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
-            'background: blue; color: white; font-size: small'
-          )
+          // * This in alpha in SIP.js not used yet
+          // this.emit(ClientStatus.REGISTERED)
+          // this.isRegistering = false
+          // this.isRegistered = true
+          // console.log(
+          //   '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
+          //   'background: blue; color: white; font-size: small'
+          // )
         },
         onInvite: (invitation: Invitation): void => {
           const incomingSession = invitation
@@ -477,7 +489,153 @@ export class Client extends EventEmitter implements IClientImpl {
           console.error('Failed to connect', error)
         })
     }
-    return { Media }
+  }
+
+  /**
+   * Media related methods, now mixed with Client class
+   * maybe later can exists in its own class
+   */
+
+  private async enumerateDevices(): Promise<MediaDeviceInfo[]> {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+
+    if (devices.length && devices[0].label) return devices
+
+    return undefined
+  }
+
+  private getDeviceList(): void {
+    const constraints = {
+      audio: true,
+      video: false,
+    }
+
+    navigator.mediaDevices
+      .getUserMedia(constraints)
+      .then(this.gotStream.bind(this))
+      .then(this.gotDevices.bind(this))
+      .finally(() => {
+        if (this._localStream) {
+          this.closeStream(this._localStream)
+        }
+
+        this.emit('devices_ready')
+      })
+      .catch(this.handleError.bind(this))
+  }
+
+  private async mediaInit(): Promise<void> {
+    if (this._localStream) {
+      this.closeStream(this._localStream)
+    }
+
+    let isGetUserMediaSupported = false
+
+    if (navigator.getUserMedia) {
+      isGetUserMediaSupported = true
+    } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      isGetUserMediaSupported = true
+    } else {
+      throw new Error(
+        '<< .getUserMedia() unsupported >> Browser not supported for SDK.'
+      )
+    }
+
+    if (isGetUserMediaSupported) {
+      navigator.mediaDevices.ondevicechange = async (): Promise<void> => {
+        const devicesInfo = await this.enumerateDevices()
+
+        if (devicesInfo) {
+          this.gotDevices(devicesInfo)
+        } else {
+          console.error('Permissions are not granted.')
+        }
+      }
+
+      if (isChrome) {
+        const permission = await navigator.permissions.query({
+          name: 'microphone',
+        })
+
+        if (permission.state === 'denied') {
+          console.error('-- ðŸ”¥ Mic access DENIED! Contact support@toky.co')
+
+          alert(
+            `❌ We couldn't access your microphone.\n\n
+            The microphone seems to be blocked. 
+            Please give Toky permission to use it or contact our support team to get help.\n\n
+            https://help.toky.co/how-tos/how-to-unblock-my-microphone-access-for-toky`
+          )
+
+          throw new Error('Permission denied')
+        }
+
+        if (permission.state === 'prompt') {
+          this.getDeviceList()
+        }
+
+        if (permission.state === 'granted') {
+          const devicesInfo = await this.enumerateDevices()
+
+          this.gotDevices(devicesInfo)
+        }
+
+        console.warn('permission state', permission.state)
+      } else {
+        this.getDeviceList()
+      }
+    }
+  }
+
+  private closeStream(stream: MediaStream): void {
+    stream.getTracks().forEach((track) => track.stop())
+  }
+
+  private gotStream(stream: MediaStream): Promise<MediaDeviceInfo[]> {
+    this._localStream = stream
+
+    return this.enumerateDevices()
+  }
+
+  private gotDevices(deviceInfos: MediaDeviceInfo[]): void {
+    const devicesMapped = deviceInfos
+      .map((d) => {
+        if (!d.label) return undefined
+        return {
+          id: d.deviceId,
+          name: d.label,
+          kind: d.kind,
+        }
+      })
+      .filter((d) => d !== undefined)
+
+    if (this._deviceList) {
+      const newIds = new Set(devicesMapped.map((d) => d.id))
+
+      const oldIds = new Set(this._deviceList.map((d) => d.id))
+
+      if (!eqSet(newIds, oldIds)) {
+        this._deviceList = devicesMapped
+
+        this.emit('devices_changed')
+
+        return
+      }
+    }
+
+    this._deviceList = devicesMapped
+
+    this.hasMediaPermissions = true
+
+    this.emit('devices_ready')
+  }
+
+  private handleError(error): void {
+    console.log(
+      'navigator.MediaDevices.getUserMedia error: ',
+      error.message,
+      error.name
+    )
   }
 
   private outboundCallURI = (phoneNumber: string): URI =>
@@ -539,6 +697,111 @@ export class Client extends EventEmitter implements IClientImpl {
   /**
    * PUBLIC METHODS
    */
+
+  get devices(): any {
+    return this._deviceList
+  }
+
+  get inputs(): any {
+    return this._deviceList.filter((d) => d.kind === 'audioinput')
+  }
+
+  get outputs(): any {
+    return this._deviceList.filter((d) => d.kind === 'audiooutput')
+  }
+
+  public async setOutputDevice(
+    id: string
+  ): Promise<{ success: boolean; err?: any }> {
+    if ('sinkId' in HTMLMediaElement.prototype) {
+      const remoteSource = this._media.remoteSource as HTMLMediaElementExp
+
+      return remoteSource
+        .setSinkId(id)
+        .then(() => {
+          console.warn(`Success, audio output device attached: ${id}`)
+          return { success: true }
+        })
+        .catch((err) => {
+          console.error(err)
+          return {
+            success: false,
+            message: err,
+          }
+        })
+    } else {
+      console.warn('Browser does not support output device selection.')
+    }
+  }
+
+  public async setInputDevice(id: string, connection = null): Promise<any> {
+    if (connection) {
+      try {
+        const pc = connection.pc
+        const currentStream = connection.localStream
+
+        currentStream.getTracks().forEach((track) => {
+          track.stop()
+        })
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: id },
+          video: false,
+        })
+
+        const track = stream.getAudioTracks()[0]
+
+        const sender = pc.getSenders().find(function (s) {
+          return s.track.kind === track.kind
+        })
+
+        sender.replaceTrack(track)
+
+        console.warn(`Success, audio input device attached: ${id}`)
+        return {
+          success: true,
+        }
+      } catch (err) {
+        if (isDevelopment) {
+          console.error(err)
+        }
+        return {
+          success: false,
+          message: err,
+        }
+      }
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: id },
+          video: false,
+        })
+
+        if (typeof Storage === 'undefined') {
+          console.warn('Local Storage is not supported in this browser')
+        }
+
+        sessionStorage.setItem('toky_default_input', id)
+
+        console.warn(`Success, audio input device attached: ${id}`)
+
+        // Close the stream
+        this.closeStream(stream)
+
+        return {
+          success: true,
+        }
+      } catch (err) {
+        if (isDevelopment) {
+          console.error(err)
+        }
+        return {
+          success: false,
+          message: err,
+        }
+      }
+    }
+  }
 
   /**
    * In Toky SDK this is done automatically in the constructor
