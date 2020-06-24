@@ -202,6 +202,8 @@ async function main() {
     })
 
     Client.on(ClientStatus.INVITE, (incomingSession) => {
+      console.log('incomingSession', incomingSession)
+
       startCallBtn.textContent = 'Answer Call'
       endCallBtn.textContent = 'Reject Call'
 

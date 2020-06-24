@@ -58,3 +58,11 @@ export function stopAudio(sound: HTMLAudioElement): void {
 export function eqSet<T>(a: Set<T>, b: Set<T>): boolean {
   return a.size === b.size && [...a].every(b.has.bind(b))
 }
+
+export function getAudio(id: string): HTMLAudioElement {
+  const el = document.getElementById(id)
+  if (!(el instanceof HTMLAudioElement)) {
+    throw new Error(`Element "${id}" not found or not an audio element.`)
+  }
+  return el
+}

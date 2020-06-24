@@ -8,6 +8,7 @@ import {
   Registerer,
   URI,
   RegistererState,
+  version,
 } from 'sip.js'
 
 import { EventEmitter } from 'events'
@@ -22,6 +23,7 @@ import {
   appendMediaElements,
   isChrome,
   eqSet,
+  getAudio,
 } from './helpers'
 
 import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
@@ -126,7 +128,7 @@ export class Client extends EventEmitter implements IClientImpl {
   _media: IMediaAttribute
 
   _transportLib: 'sip.js' | 'jsSIP'
-  _sipJsUA: UserAgent
+  _userAgent: UserAgent
   _userAgentSession: Session
   _registerer: Registerer
   _localStream: MediaStream
@@ -184,6 +186,10 @@ export class Client extends EventEmitter implements IClientImpl {
       throw new Error(errorMessage)
     }
 
+    if (version !== '0.16.1') {
+      throw new Error(`SIP.js ${version} not supported, required 0.16.1`)
+    }
+
     this._apiKey = apiKey
     this._account = account
     this._appName = account.name
@@ -199,8 +205,8 @@ export class Client extends EventEmitter implements IClientImpl {
     incomingRingAudio.loop = true
 
     this._media = {
-      remoteSource: document.querySelector('#__tokyRemoteAudio'),
-      localSource: document.querySelector('#__tokyLocalAudio'),
+      remoteSource: getAudio('__tokyRemoteAudio'),
+      localSource: getAudio('__tokyLocalAudio'),
       ringAudio,
       errorAudio,
       incomingRingAudio,
@@ -283,7 +289,7 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      this._sipJsUA = new UserAgent(options)
+      this._userAgent = new UserAgent(options)
 
       this.emit(ClientStatus.READY)
 
@@ -294,7 +300,7 @@ export class Client extends EventEmitter implements IClientImpl {
       /**
        * SIP js Listeners
        */
-      this._sipJsUA.delegate = {
+      this._userAgent.delegate = {
         onRegister: (): void => {
           // * This in alpha in SIP.js not used yet
           // this.emit(ClientStatus.REGISTERED)
@@ -389,10 +395,12 @@ export class Client extends EventEmitter implements IClientImpl {
           }
 
           const isBlindTransfer =
+            transferred &&
             transferredBy === this._account.sipUsername &&
             !isIncomingWarmTransfer
 
           const isWarmTransfer =
+            transferred &&
             transferredBy === this._account.sipUsername &&
             isIncomingWarmTransfer
 
@@ -455,10 +463,10 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      this._sipJsUA
+      this._userAgent
         .start()
         .then(() => {
-          this._registerer = new Registerer(this._sipJsUA, {
+          this._registerer = new Registerer(this._userAgent, {
             registrar: this.serverUri,
           })
 
@@ -876,7 +884,7 @@ export class Client extends EventEmitter implements IClientImpl {
       }
 
       const inviter = new Inviter(
-        this._sipJsUA,
+        this._userAgent,
         this.outboundCallURI(phoneNumber),
         options
       )
@@ -890,6 +898,11 @@ export class Client extends EventEmitter implements IClientImpl {
           sipUsername: this._account.sipUsername,
           companyId: this._companyId,
           apiKey: this._apiKey,
+        },
+        {
+          uri: this.outboundCallURI(phoneNumber),
+          type: 'contact',
+          phone: phoneNumber,
         }
       )
 
