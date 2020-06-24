@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const path = require('path')
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer')
+  .BundleAnalyzerPlugin
 
 module.exports = () => ({
   plugins: [
+    new BundleAnalyzerPlugin(),
     new HtmlWebpackPlugin({
       // target template to copy the structure from
       template: 'public/template.html',
