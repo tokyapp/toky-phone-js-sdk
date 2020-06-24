@@ -36,6 +36,15 @@ export enum ClientStatus {
   DISCONNECTED = 'disconnected',
 }
 
+export enum MediaStatus {
+  READY = 'ready',
+  UPDATED = 'updated',
+  ERROR = 'error',
+  UNSUPPORTED = 'unsupported',
+  PERMISSION_GRANTED = 'permission_granted',
+  PERMISSION_REVOKED = 'permission_revoked',
+}
+
 interface IAccountAttribute {
   /** Agent id registered in Toky */
   user: string
@@ -492,6 +501,7 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   /**
+   * @remarks
    * Media related methods, now mixed with Client class
    * maybe later can exists in its own class
    */
@@ -499,7 +509,11 @@ export class Client extends EventEmitter implements IClientImpl {
   private async enumerateDevices(): Promise<MediaDeviceInfo[]> {
     const devices = await navigator.mediaDevices.enumerateDevices()
 
+    // * If label info is not available is a sign
+    // * that devices permission are denied
     if (devices.length && devices[0].label) return devices
+
+    this.emit(MediaStatus.PERMISSION_REVOKED)
 
     return undefined
   }
@@ -519,7 +533,7 @@ export class Client extends EventEmitter implements IClientImpl {
           this.closeStream(this._localStream)
         }
 
-        this.emit('devices_ready')
+        this.emit(MediaStatus.READY)
       })
       .catch(this.handleError.bind(this))
   }
@@ -536,6 +550,8 @@ export class Client extends EventEmitter implements IClientImpl {
     } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       isGetUserMediaSupported = true
     } else {
+      this.emit(MediaStatus.UNSUPPORTED)
+
       throw new Error(
         '<< .getUserMedia() unsupported >> Browser not supported for SDK.'
       )
@@ -547,8 +563,6 @@ export class Client extends EventEmitter implements IClientImpl {
 
         if (devicesInfo) {
           this.gotDevices(devicesInfo)
-        } else {
-          console.error('Permissions are not granted.')
         }
       }
 
@@ -567,7 +581,7 @@ export class Client extends EventEmitter implements IClientImpl {
             https://help.toky.co/how-tos/how-to-unblock-my-microphone-access-for-toky`
           )
 
-          throw new Error('Permission denied')
+          this.emit(MediaStatus.PERMISSION_REVOKED)
         }
 
         if (permission.state === 'prompt') {
@@ -577,10 +591,16 @@ export class Client extends EventEmitter implements IClientImpl {
         if (permission.state === 'granted') {
           const devicesInfo = await this.enumerateDevices()
 
-          this.gotDevices(devicesInfo)
-        }
+          if (devicesInfo) {
+            this.emit(MediaStatus.PERMISSION_GRANTED)
 
-        console.warn('permission state', permission.state)
+            this.gotDevices(devicesInfo)
+          } else {
+            this.emit(MediaStatus.ERROR)
+
+            throw new Error('Media error: We should not be here.')
+          }
+        }
       } else {
         this.getDeviceList()
       }
@@ -594,40 +614,48 @@ export class Client extends EventEmitter implements IClientImpl {
   private gotStream(stream: MediaStream): Promise<MediaDeviceInfo[]> {
     this._localStream = stream
 
+    this.emit(MediaStatus.PERMISSION_GRANTED)
+
     return this.enumerateDevices()
   }
 
   private gotDevices(deviceInfos: MediaDeviceInfo[]): void {
-    const devicesMapped = deviceInfos
-      .map((d) => {
-        if (!d.label) return undefined
-        return {
-          id: d.deviceId,
-          name: d.label,
-          kind: d.kind,
+    if (deviceInfos) {
+      const devicesMapped = deviceInfos
+        .map((d) => {
+          if (!d.label) return undefined
+          return {
+            id: d.deviceId,
+            name: d.label,
+            kind: d.kind,
+          }
+        })
+        .filter((d) => d !== undefined)
+
+      if (this._deviceList) {
+        const newIds = new Set(devicesMapped.map((d) => d.id))
+
+        const oldIds = new Set(this._deviceList.map((d) => d.id))
+
+        if (!eqSet(newIds, oldIds)) {
+          this._deviceList = devicesMapped
+
+          this.emit(MediaStatus.UPDATED)
+
+          return
         }
-      })
-      .filter((d) => d !== undefined)
-
-    if (this._deviceList) {
-      const newIds = new Set(devicesMapped.map((d) => d.id))
-
-      const oldIds = new Set(this._deviceList.map((d) => d.id))
-
-      if (!eqSet(newIds, oldIds)) {
-        this._deviceList = devicesMapped
-
-        this.emit('devices_changed')
-
-        return
       }
+
+      this._deviceList = devicesMapped
+
+      this.hasMediaPermissions = true
+
+      this.emit(MediaStatus.READY)
+    } else {
+      // * We can inform this to a service error
+      console.error(`This can't be happening, device info is not present.`)
+      this.emit(MediaStatus.ERROR)
     }
-
-    this._deviceList = devicesMapped
-
-    this.hasMediaPermissions = true
-
-    this.emit('devices_ready')
   }
 
   private handleError(error): void {
@@ -636,6 +664,7 @@ export class Client extends EventEmitter implements IClientImpl {
       error.message,
       error.name
     )
+    this.emit(MediaStatus.ERROR)
   }
 
   private outboundCallURI = (phoneNumber: string): URI =>

@@ -28,7 +28,13 @@ const incomingRingAudio = 'https://carvallo.dev.toky.co/resources/audio/piano-ri
 const ringAudio = 'https://carvallo.dev.toky.co/resources/audio/ringing.ogg'
 const errorAudio = 'https://carvallo.dev.toky.co/resources/audio/error.ogg'
 
-const { TokyClient, ClientStatus, SessionStatus, TransferEnum } = TokySDK
+const {
+  TokyClient,
+  ClientStatus,
+  SessionStatus,
+  TransferEnum,
+  MediaStatus,
+} = TokySDK
 
 let tokySession = null
 let Client = null
@@ -205,7 +211,7 @@ async function main() {
       setupSessionListeners(tokySession)
     })
 
-    Client.on('devices_ready', () => {
+    Client.on(MediaStatus.READY, () => {
       audioSelectOutput.addEventListener('change', () => {
         Client.setOutputDevice(audioSelectOutput.value).then(() => {
           console.log('Output device updated successfully!')
@@ -229,17 +235,17 @@ async function main() {
       createDeviceOptions(Client.inputs, Client.outputs)
     })
 
-    Client.on('devices_changed', () => {
+    Client.on(MediaStatus.UPDATED, () => {
       createDeviceOptions(Client.inputs, Client.outputs)
     })
 
-    Client.on('permission_not_granted', () => {
+    Client.on(MediaStatus.PERMISSION_REVOKED, () => {
       console.error('-- Microphone permission not granted')
       deviceStatusTile.classList.add('is-danger')
       deviceStatusSub.textContent = 'Permission not granted'
     })
 
-    Client.on('permission_granted', () => {
+    Client.on(MediaStatus.PERMISSION_GRANTED, () => {
       console.warn('-- Microphone permission granted')
       deviceStatusTile.classList.add('is-primary')
       deviceStatusSub.textContent = 'Permission granted'
