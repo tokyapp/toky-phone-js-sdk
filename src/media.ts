@@ -22,15 +22,17 @@ export class MediaSingleton extends EventEmitter {
 
     this._remoteSource = remoteSource
 
-    const updateDeviceList = this.updateDeviceList.bind(this)
+    // const updateDeviceList = this.updateDeviceList.bind(this)
 
-    updateDeviceList()
+    // updateDeviceList()
 
-    navigator.mediaDevices.ondevicechange = updateDeviceList
+    // navigator.mediaDevices.ondevicechange = updateDeviceList
   }
 
   private async enumerateDevices(): Promise<MediaDeviceInfo[]> {
     const devices = await navigator.mediaDevices.enumerateDevices()
+
+    console.warn('devices on enumerate devices', devices)
 
     if (devices.length && devices[0].label) return devices
 
@@ -82,6 +84,8 @@ export class MediaSingleton extends EventEmitter {
   private async updatePermissions(): Promise<void> {
     const devices = await this.enumerateDevices()
     const havePermission = devices !== undefined
+
+    console.log('devices', devices)
 
     if (havePermission) {
       if (!this.hadPermission) {
@@ -158,6 +162,29 @@ export class MediaSingleton extends EventEmitter {
         ) {
           this.emit('permission_not_granted')
         }
+
+        if (
+          err.name === 'TypeError' &&
+          err.message.includes('PermissionDescriptor') &&
+          err.message.includes('microphone')
+        ) {
+          console.warn('Handling Firefox media implementation.')
+
+          navigator.mediaDevices
+            .getUserMedia({
+              audio: true,
+              video: false,
+            })
+            .then((stream) => {
+              this.closeStream(stream)
+
+              this.updatePermissions().then(() => {
+                console.warn('--- update permissions success')
+                resolve()
+              })
+            })
+        }
+
         reject(err)
       } finally {
         delete this.requestPermissionPromise

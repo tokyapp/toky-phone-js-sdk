@@ -157,20 +157,20 @@ async function main() {
       },
     })
 
-    const { Media } = await Client.init()
+    await Client.init()
 
-    function createDeviceOptions() {
+    function createDeviceOptions(inputs, outputs) {
       audioSelectOutput.options.length = 0
       audioSelectInput.options.length = 0
 
-      Media.inputs.forEach((device) => {
+      inputs.forEach((device) => {
         const option = document.createElement('option')
         option.value = device.id
         option.text = device.name
         audioSelectInput.appendChild(option)
       })
 
-      Media.outputs.forEach((device) => {
+      outputs.forEach((device) => {
         const option = document.createElement('option')
         option.value = device.id
         option.text = device.name
@@ -205,42 +205,41 @@ async function main() {
       setupSessionListeners(tokySession)
     })
 
-    Media.on('ready', () => {
+    Client.on('devices_ready', () => {
       audioSelectOutput.addEventListener('change', () => {
-        Media.setOutputDevice(audioSelectOutput.value).then((response) => {
-          if (response.success)
-            console.log('Output device updated successfully!')
+        Client.setOutputDevice(audioSelectOutput.value).then(() => {
+          console.log('Output device updated successfully!')
         })
       })
+
       audioSelectInput.addEventListener('change', () => {
         const inputSelected = audioSelectInput.value
         if (tokySession) {
           const connection = tokySession.getConnection()
-          Media.setInputDevice(inputSelected, connection).then((response) => {
-            if (response.success)
-              console.log('Input device updated successfully!')
+          Client.setInputDevice(inputSelected, connection).then(() => {
+            console.log('Input device updated successfully!')
           })
         } else {
-          Media.setInputDevice(inputSelected).then((response) => {
-            if (response.success)
-              console.log('Input device updated successfully!')
+          Client.setInputDevice(inputSelected).then(() => {
+            console.log('Input device updated successfully!')
           })
         }
       })
-      createDeviceOptions()
+
+      createDeviceOptions(Client.inputs, Client.outputs)
     })
 
-    Media.on('devices_changed', () => {
-      createDeviceOptions()
+    Client.on('devices_changed', () => {
+      createDeviceOptions(Client.inputs, Client.outputs)
     })
 
-    Media.on('permission_not_granted', () => {
+    Client.on('permission_not_granted', () => {
       console.error('-- Microphone permission not granted')
       deviceStatusTile.classList.add('is-danger')
       deviceStatusSub.textContent = 'Permission not granted'
     })
 
-    Media.on('permission_granted', () => {
+    Client.on('permission_granted', () => {
       console.warn('-- Microphone permission granted')
       deviceStatusTile.classList.add('is-primary')
       deviceStatusSub.textContent = 'Permission granted'
