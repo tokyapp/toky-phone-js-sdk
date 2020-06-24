@@ -12,7 +12,7 @@ import {
   InvitationAcceptOptions,
 } from 'sip.js'
 
-import { IncomingResponse, OutgoingReferRequest } from 'sip.js/lib/core'
+import { IncomingResponse, OutgoingReferRequest, URI } from 'sip.js/lib/core'
 
 import { stopAudio, isProduction } from './helpers'
 
@@ -98,10 +98,31 @@ export declare interface ISessionImpl {
 }
 
 interface ICallData {
-  uri: string
-  type: 'agent' | 'anon'
+  /** URI Data can be Agent SIP Username, in an outbound call
+   * can be the URI generated for the Invitation
+   */
+  uri: string | URI
+  /** Type of user involved in the call */
+  type: 'agent' | 'anon' | 'contact'
+  /**
+   * Applicable for outbound calls or maybe inbound calls
+   * with phone data
+   */
+  phone?: string
+  /** Transferred Types Blind or Warm */
   transferredType?: 'blind' | 'warm'
+  /** Applicable for Transferred calls, cause by a rejected blind transferred
+   * or an Invite from a Warm transferred that requires to establish the call
+   * inmediately
+   */
   cause?: 'rejected' | 'establish'
+}
+
+interface ISettings {
+  agentId: string
+  apiKey: string
+  sipUsername: string
+  companyId: string
 }
 
 export class SessionUA extends EventEmitter implements ISessionImpl {
@@ -122,17 +143,14 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _established = false
   private _callData: ICallData
   private _wantToWarmTransfer = false
+  private _to = undefined
+  private _from = undefined
 
   constructor(
     session: Session,
     media: IMediaAttribute,
     direction: CallDirectionEnum,
-    tokySettings: {
-      agentId: string
-      apiKey: string
-      sipUsername: string
-      companyId: string
-    },
+    tokySettings: ISettings,
     inboundData?: ICallData
   ) {
     super()
@@ -190,7 +208,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
        */
       if (
         inboundData.type === 'agent' &&
-        inboundData.transferredType === 'warm' &&
+        inboundData.transferredType === TransferOptionsEnum.WARM &&
         inboundData.cause === 'establish'
       ) {
         let constrainsDefault: MediaStreamConstraints = {
@@ -227,6 +245,14 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
   get pauseRecordingActivated(): boolean {
     return this._recordingFeatureActivated
+  }
+
+  get to(): any {
+    return this._to
+  }
+
+  get from(): any {
+    return this._from
   }
 
   private sessionStateListener(newState: SessionState): void {
