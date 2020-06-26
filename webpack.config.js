@@ -44,7 +44,7 @@ module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
        * SIP.js would be treated as a peer dependency
        * to reduce bundle size
        */
-      externals: ['sip.js'],
+      // externals: ['sip.js'],
     },
     modeConfig(mode)
   )
