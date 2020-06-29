@@ -4,6 +4,7 @@
   "description": "Toky Dialer SDK v1",
   "main": "dist/toky-sdk-alpha.js",
   "module": "dist/toky-sdk-alpha.js",
+  "typings": "dist/types/index.d.ts",
   "author": "Toky team",
   "directories": {
     "example": "example",
@@ -13,8 +14,9 @@
     "webpack": "webpack",
     "webpack-dev-server": "webpack-dev-server",
     "debug": "node --inspect --inspect-brk ./node_modules/webpack/bin/webpack.js",
-    "prod": "npm run webpack -- --env.mode production",
+    "build": "npm run webpack -- --env.mode production",
     "dev": "npm run webpack-dev-server -- --env.mode development",
+    "build:types": "tsc --emitDeclarationOnly",
     "prod:debug": "npm run debug -- --env.mode production",
     "dev:debug": "npm run debug -- --env.mode development",
     "test": "echo \"Error: no test specified\" && exit 1",

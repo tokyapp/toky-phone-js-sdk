@@ -37,7 +37,7 @@ export function appendMediaElements(): void {
   const remoteAudio = document.createElement('audio')
 
   remoteAudio.setAttribute('id', '__tokyRemoteAudio')
-  // remoteAudio.hidden = true
+  remoteAudio.hidden = true
   remoteAudio.controls = true
 
   const localAudio = document.createElement('audio')
