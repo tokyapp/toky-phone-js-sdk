@@ -840,6 +840,28 @@ export class Client extends EventEmitter implements IClientImpl {
     }
   }
 
+  get defaultInputDevice(): any {
+    return this._deviceList
+      .filter((d) => d.kind === 'audioinput')
+      .find((d) => d.id === 'default')
+  }
+
+  get defaultOutputDevice(): any {
+    return this._deviceList
+      .filter((d) => d.kind === 'audiooutput')
+      .find((d) => d.id === 'default')
+  }
+
+  get selectedInputDevice(): any {
+    if (typeof Storage !== 'undefined') {
+      if (sessionStorage.getItem('toky_default_input')) {
+        return sessionStorage.getItem('toky_default_input')
+      }
+    } else {
+      throw new Error('Browser does not support session storage.')
+    }
+  }
+
   /**
    * In Toky SDK this is done automatically in the constructor
    * with the default register option set in the User Agent (* not anymore)
