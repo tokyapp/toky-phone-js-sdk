@@ -45,6 +45,8 @@ export enum MediaStatus {
   UNSUPPORTED = 'unsupported',
   PERMISSION_GRANTED = 'permission_granted',
   PERMISSION_REVOKED = 'permission_revoked',
+  INPUT_UPDATED = 'input_updated',
+  OUTPUT_UPDATED = 'output_updated',
 }
 
 interface IAccountAttribute {
@@ -735,16 +737,40 @@ export class Client extends EventEmitter implements IClientImpl {
    * PUBLIC METHODS
    */
 
-  get devices(): any {
+  get devices(): IDeviceList[] {
     return this._deviceList
   }
 
-  get inputs(): any {
-    return this._deviceList.filter((d) => d.kind === 'audioinput')
+  get inputs(): IDeviceList[] {
+    const inputDevices = this._deviceList.filter((d) => d.kind === 'audioinput')
+
+    if (this.selectedInputDevice) {
+      return [
+        this._deviceList.find((d) => d.id === this.selectedInputDevice),
+        ...inputDevices.filter((d) => d.id !== this.selectedInputDevice),
+      ]
+    } else {
+      return inputDevices
+    }
   }
 
-  get outputs(): any {
-    return this._deviceList.filter((d) => d.kind === 'audiooutput')
+  get outputs(): IDeviceList[] {
+    const outputDevices = this._deviceList.filter(
+      (d) => d.kind === 'audiooutput'
+    )
+
+    if (this.selectedOutputDevice) {
+      return [
+        this._deviceList.find((d) => d.id === this.selectedOutputDevice),
+        ...outputDevices.filter((d) => d.id !== this.selectedOutputDevice),
+      ]
+    } else {
+      return outputDevices
+    }
+  }
+
+  public getDeviceById(id: string): IDeviceList {
+    return this._deviceList.find((d) => d.id === id)
   }
 
   public async setOutputDevice(
@@ -763,6 +789,8 @@ export class Client extends EventEmitter implements IClientImpl {
           }
 
           sessionStorage.setItem('toky_default_output', id)
+
+          this.emit(MediaStatus.OUTPUT_UPDATED)
 
           return { success: true }
         })
@@ -803,6 +831,15 @@ export class Client extends EventEmitter implements IClientImpl {
         sender.replaceTrack(track)
 
         console.warn(`Success, audio input device attached: ${id}`)
+
+        if (typeof Storage === 'undefined') {
+          console.warn('Local Storage is not supported in this browser')
+        }
+
+        sessionStorage.setItem('toky_default_input', id)
+
+        this.emit(MediaStatus.INPUT_UPDATED)
+
         return {
           success: true,
         }
@@ -830,6 +867,8 @@ export class Client extends EventEmitter implements IClientImpl {
 
         console.warn(`Success, audio input device attached: ${id}`)
 
+        this.emit(MediaStatus.INPUT_UPDATED)
+
         // Close the stream
         this.closeStream(stream)
 
@@ -854,30 +893,30 @@ export class Client extends EventEmitter implements IClientImpl {
       .find((d) => d.id === 'default')
   }
 
-  get defaultOutputDevice(): any {
+  get defaultOutputDevice(): IDeviceList {
     return this._deviceList
       .filter((d) => d.kind === 'audiooutput')
       .find((d) => d.id === 'default')
   }
 
-  get selectedInputDevice(): any {
+  get selectedInputDevice(): string {
     if (typeof Storage !== 'undefined') {
       if (sessionStorage.getItem('toky_default_input')) {
         return sessionStorage.getItem('toky_default_input')
       } else {
-        return this.defaultInputDevice
+        return this.defaultInputDevice.id
       }
     } else {
       throw new Error('Browser does not support session storage.')
     }
   }
 
-  get selectedOutputDevice(): any {
+  get selectedOutputDevice(): string {
     if (typeof Storage !== 'undefined') {
       if (sessionStorage.getItem('toky_default_output')) {
         return sessionStorage.getItem('toky_default_output')
       } else {
-        return this.defaultOutputDevice
+        return this.defaultOutputDevice.id
       }
     } else {
       throw new Error('Browser does not support session storage.')
