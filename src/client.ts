@@ -757,10 +757,18 @@ export class Client extends EventEmitter implements IClientImpl {
         .setSinkId(id)
         .then(() => {
           console.warn(`Success, audio output device attached: ${id}`)
+
+          if (typeof Storage === 'undefined') {
+            console.warn('Local Storage is not supported in this browser')
+          }
+
+          sessionStorage.setItem('toky_default_output', id)
+
           return { success: true }
         })
         .catch((err) => {
           console.error(err)
+
           return {
             success: false,
             message: err,
@@ -856,6 +864,20 @@ export class Client extends EventEmitter implements IClientImpl {
     if (typeof Storage !== 'undefined') {
       if (sessionStorage.getItem('toky_default_input')) {
         return sessionStorage.getItem('toky_default_input')
+      } else {
+        return this.defaultInputDevice
+      }
+    } else {
+      throw new Error('Browser does not support session storage.')
+    }
+  }
+
+  get selectedOutputDevice(): any {
+    if (typeof Storage !== 'undefined') {
+      if (sessionStorage.getItem('toky_default_output')) {
+        return sessionStorage.getItem('toky_default_output')
+      } else {
+        return this.defaultOutputDevice
       }
     } else {
       throw new Error('Browser does not support session storage.')
