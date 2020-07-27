@@ -661,6 +661,8 @@ export class Client extends EventEmitter implements IClientImpl {
       this.hasMediaPermissions = true
 
       this.emit(MediaStatus.READY)
+
+      this.setOutputDevice(this.selectedOutputDevice)
     } else {
       // * We can inform this to a service error
       console.error(`This can't be happening, device info is not present.`)
@@ -745,9 +747,11 @@ export class Client extends EventEmitter implements IClientImpl {
     const inputDevices = this._deviceList.filter((d) => d.kind === 'audioinput')
 
     if (this.selectedInputDevice) {
+      const _selectedInputDevice = this.selectedInputDevice
+
       return [
-        this._deviceList.find((d) => d.id === this.selectedInputDevice),
-        ...inputDevices.filter((d) => d.id !== this.selectedInputDevice),
+        this._deviceList.find((d) => d.id === _selectedInputDevice),
+        ...inputDevices.filter((d) => d.id !== _selectedInputDevice),
       ]
     } else {
       return inputDevices
@@ -760,9 +764,11 @@ export class Client extends EventEmitter implements IClientImpl {
     )
 
     if (this.selectedOutputDevice) {
+      const _selectedOutputDevice = this.selectedOutputDevice
+
       return [
-        this._deviceList.find((d) => d.id === this.selectedOutputDevice),
-        ...outputDevices.filter((d) => d.id !== this.selectedOutputDevice),
+        this._deviceList.find((d) => d.id === _selectedOutputDevice),
+        ...outputDevices.filter((d) => d.id !== _selectedOutputDevice),
       ]
     } else {
       return outputDevices
@@ -894,6 +900,7 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   get defaultOutputDevice(): IDeviceList {
+    debugger
     return this._deviceList
       .filter((d) => d.kind === 'audiooutput')
       .find((d) => d.id === 'default')
