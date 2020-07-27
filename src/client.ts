@@ -900,7 +900,6 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   get defaultOutputDevice(): IDeviceList {
-    debugger
     return this._deviceList
       .filter((d) => d.kind === 'audiooutput')
       .find((d) => d.id === 'default')
