@@ -781,33 +781,50 @@ export class Client extends EventEmitter implements IClientImpl {
 
   public async setOutputDevice(
     id: string
-  ): Promise<{ success: boolean; err?: any }> {
+  ): Promise<{ success: boolean; message?: any }> {
     if ('sinkId' in HTMLMediaElement.prototype) {
-      const remoteSource = this._media.remoteSource as HTMLMediaElementExp
+      const _remoteSource = this._media.remoteSource as HTMLMediaElementExp
+      const _ringAudio = this._media.ringAudio as HTMLMediaElementExp
+      const _errorAudio = this._media.errorAudio as HTMLMediaElementExp
+      // prettier-ignore
+      const _incomingRingAudio = this._media.incomingRingAudio as HTMLMediaElementExp
 
-      return remoteSource
-        .setSinkId(id)
-        .then(() => {
-          console.warn(`Success, audio output device attached: ${id}`)
+      try {
+        await _remoteSource.setSinkId(id)
 
-          if (typeof Storage === 'undefined') {
-            console.warn('Local Storage is not supported in this browser')
-          }
+        console.warn('successfully set sink id for remote audio')
 
-          sessionStorage.setItem('toky_default_output', id)
+        await _ringAudio.setSinkId(id)
 
-          this.emit(MediaStatus.OUTPUT_UPDATED)
+        console.warn('successfully set sink id for ring audio')
 
-          return { success: true }
-        })
-        .catch((err) => {
-          console.error(err)
+        await _errorAudio.setSinkId(id)
 
-          return {
-            success: false,
-            message: err,
-          }
-        })
+        console.warn('successfully set sink id for error audio')
+
+        await _incomingRingAudio.setSinkId(id)
+
+        console.warn('successfully set sink id for incoming ring audio')
+
+        console.warn(`Success, audio output device attached: ${id}`)
+
+        if (typeof Storage === 'undefined') {
+          throw new Error('Local Storage is not supported in this browser')
+        }
+
+        sessionStorage.setItem('toky_default_output', id)
+
+        this.emit(MediaStatus.OUTPUT_UPDATED)
+
+        return { success: true }
+      } catch (err) {
+        console.error(err)
+
+        return {
+          success: false,
+          message: err,
+        }
+      }
     } else {
       console.warn('Browser does not support output device selection.')
     }
@@ -893,7 +910,7 @@ export class Client extends EventEmitter implements IClientImpl {
     }
   }
 
-  get defaultInputDevice(): any {
+  get defaultInputDevice(): IDeviceList {
     return this._deviceList
       .filter((d) => d.kind === 'audioinput')
       .find((d) => d.id === 'default')
