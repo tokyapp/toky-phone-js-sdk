@@ -632,6 +632,7 @@ export class Client extends EventEmitter implements IClientImpl {
   private gotDevices(deviceInfos: MediaDeviceInfo[]): void {
     if (deviceInfos) {
       const devicesMapped = deviceInfos
+        .filter((d) => d.kind === 'audiooutput' || d.kind === 'audioinput')
         .map((d) => {
           if (!d.label) return undefined
           return {
@@ -662,7 +663,7 @@ export class Client extends EventEmitter implements IClientImpl {
 
       this.emit(MediaStatus.READY)
 
-      this.setOutputDevice(this.selectedOutputDevice)
+      this.setOutputDevice(this.selectedOutputDevice.id)
     } else {
       // * We can inform this to a service error
       console.error(`This can't be happening, device info is not present.`)
@@ -687,34 +688,6 @@ export class Client extends EventEmitter implements IClientImpl {
   /**
    * Event listeners
    */
-
-  private onNotify(message): void {
-    // const status = parseStatus(message);
-    console.warn(`--- Server status: ${message}`)
-  }
-
-  private subscribeToTransport(userAgent): void {
-    // To avoid having multiple listeners active.
-    if (this.subscription) {
-      this.subscription.removeListener('notify', this.onNotify.bind(this))
-    }
-
-    const transport = userAgent.transport
-
-    transport.on('message', this.onNotify.bind(this))
-
-    // // It could be that we are rate-limited, in that case, parse the
-    // // retry-after header and figure out how long we should wait
-    // // before subscribing again.
-    // this.subscription.once('failed', (response, cause) => {
-    //   const retryAfter = response.getHeader('Retry-After')
-
-    //   setTimeout(
-    //     this.subscribeToTransport.bind(this),
-    //     Number(retryAfter) * 1000
-    //   )
-    // })
-  }
 
   /**
    * Handlers for event listeners
@@ -747,10 +720,10 @@ export class Client extends EventEmitter implements IClientImpl {
     const inputDevices = this._deviceList.filter((d) => d.kind === 'audioinput')
 
     if (this.selectedInputDevice) {
-      const _selectedInputDevice = this.selectedInputDevice
+      const _selectedInputDevice = this.selectedInputDevice.id
 
       return [
-        this._deviceList.find((d) => d.id === _selectedInputDevice),
+        inputDevices.find((d) => d.id === _selectedInputDevice),
         ...inputDevices.filter((d) => d.id !== _selectedInputDevice),
       ]
     } else {
@@ -764,10 +737,10 @@ export class Client extends EventEmitter implements IClientImpl {
     )
 
     if (this.selectedOutputDevice) {
-      const _selectedOutputDevice = this.selectedOutputDevice
+      const _selectedOutputDevice = this.selectedOutputDevice.id
 
       return [
-        this._deviceList.find((d) => d.id === _selectedOutputDevice),
+        outputDevices.find((d) => d.id === _selectedOutputDevice),
         ...outputDevices.filter((d) => d.id !== _selectedOutputDevice),
       ]
     } else {
@@ -775,7 +748,7 @@ export class Client extends EventEmitter implements IClientImpl {
     }
   }
 
-  public getDeviceById(id: string): IDeviceList {
+  private getDeviceById(id: string): IDeviceList {
     return this._deviceList.find((d) => d.id === id)
   }
 
@@ -922,24 +895,24 @@ export class Client extends EventEmitter implements IClientImpl {
       .find((d) => d.id === 'default')
   }
 
-  get selectedInputDevice(): string {
+  get selectedInputDevice(): IDeviceList {
     if (typeof Storage !== 'undefined') {
       if (sessionStorage.getItem('toky_default_input')) {
-        return sessionStorage.getItem('toky_default_input')
+        return this.getDeviceById(sessionStorage.getItem('toky_default_input'))
       } else {
-        return this.defaultInputDevice.id
+        return this.getDeviceById(this.defaultInputDevice.id)
       }
     } else {
       throw new Error('Browser does not support session storage.')
     }
   }
 
-  get selectedOutputDevice(): string {
+  get selectedOutputDevice(): IDeviceList {
     if (typeof Storage !== 'undefined') {
       if (sessionStorage.getItem('toky_default_output')) {
-        return sessionStorage.getItem('toky_default_output')
+        return this.getDeviceById(sessionStorage.getItem('toky_default_output'))
       } else {
-        return this.defaultOutputDevice.id
+        return this.getDeviceById(this.defaultOutputDevice.id)
       }
     } else {
       throw new Error('Browser does not support session storage.')
