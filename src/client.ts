@@ -108,7 +108,7 @@ declare interface IClientImpl {
   stopAudio: (sound: HTMLAudioElement) => void
   cleanupMedia: () => void
   */
-  init: () => Promise<void>
+  init: () => Promise<{ connectionCountry: string }>
   register: () => void
   startCall: (options: {
     phoneNumber: string
@@ -222,7 +222,7 @@ export class Client extends EventEmitter implements IClientImpl {
    * and it establish communication with the Toky Server
    */
 
-  public async init(): Promise<any> {
+  public async init(): Promise<{ connectionCountry: string }> {
     const response = await getCallParams({
       agentId: this._account.user,
       apiKey: this._apiKey,
@@ -507,6 +507,10 @@ export class Client extends EventEmitter implements IClientImpl {
         .catch((error) => {
           console.error('Failed to connect', error)
         })
+    }
+
+    return {
+      connectionCountry: this._connectionCountry,
     }
   }
 
