@@ -222,7 +222,10 @@ export class Client extends EventEmitter implements IClientImpl {
    * and it establish communication with the Toky Server
    */
 
-  public async init(): Promise<{ connectionCountry: string }> {
+  public async init(): Promise<{
+    connectionCountry: string
+    sipUsername: string
+  }> {
     const response = await getCallParams({
       agentId: this._account.user,
       apiKey: this._apiKey,
@@ -511,6 +514,7 @@ export class Client extends EventEmitter implements IClientImpl {
 
     return {
       connectionCountry: this._connectionCountry,
+      sipUsername: this._account.sipUsername,
     }
   }
 
