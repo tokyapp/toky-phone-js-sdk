@@ -773,19 +773,11 @@ export class Client extends EventEmitter implements IClientImpl {
       try {
         await _remoteSource.setSinkId(id)
 
-        console.warn('successfully set sink id for remote audio')
-
         await _ringAudio.setSinkId(id)
-
-        console.warn('successfully set sink id for ring audio')
 
         await _errorAudio.setSinkId(id)
 
-        console.warn('successfully set sink id for error audio')
-
         await _incomingRingAudio.setSinkId(id)
-
-        console.warn('successfully set sink id for incoming ring audio')
 
         console.warn(`Success, audio output device attached: ${id}`)
 
