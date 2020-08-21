@@ -16,6 +16,7 @@
     "debug": "node --inspect --inspect-brk ./node_modules/webpack/bin/webpack.js",
     "build": "npm run webpack -- --env.mode production",
     "dev": "npm run webpack-dev-server -- --env.mode development",
+    "build:dev": "npm run webpack -- --env.mode development",
     "build:types": "tsc --emitDeclarationOnly",
     "prod:debug": "npm run debug -- --env.mode production",
     "dev:debug": "npm run debug -- --env.mode development",
