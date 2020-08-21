@@ -622,11 +622,12 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   public endCall(): void {
     if (this._established) {
       this._currentSession.bye()
-      this._hangupByCurrentAgent = true
     } else {
       /**
        * This is in a outgoing not already established call
        */
+      this._hangupByCurrentAgent = true
+
       if (this._callDirection === CallDirectionEnum.OUTBOUND) {
         const incomingSession = this._currentSession as Inviter
 
