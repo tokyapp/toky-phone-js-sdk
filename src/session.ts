@@ -145,6 +145,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _wantToWarmTransfer = false
   private _to = undefined
   private _from = undefined
+  private _hangupByCurrentAgent = false
 
   constructor(
     session: Session,
@@ -362,7 +363,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     stopAudio(this._media.ringAudio)
 
-    if (this._callDirection === CallDirectionEnum.OUTBOUND) {
+    if (
+      this._callDirection === CallDirectionEnum.OUTBOUND &&
+      this._hangupByCurrentAgent === false
+    ) {
       this._media.errorAudio.play()
     }
   }
@@ -617,6 +621,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   public endCall(): void {
     if (this._established) {
       this._currentSession.bye()
+      this._hangupByCurrentAgent = true
     } else {
       /**
        * This is in a outgoing not already established call
