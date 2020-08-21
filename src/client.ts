@@ -59,6 +59,8 @@ interface IAccountAttribute {
   name: string
   /** SIP username in Toky Telephone Service */
   sipUsername?: string
+  /** Option to accept inbound calls */
+  acceptInboundCalls?: boolean
 }
 
 interface IMediaSpec {
@@ -138,6 +140,7 @@ export class Client extends EventEmitter implements IClientImpl {
   _deviceList: IDeviceList[]
 
   /** Related to States */
+  acceptInboundCalls = false
   hasMediaPermissions = false
   isRegistering = false
   isRegistered = false
@@ -187,6 +190,18 @@ export class Client extends EventEmitter implements IClientImpl {
       }
 
       throw new Error(errorMessage)
+    }
+
+    /**
+     * Accept inbound calls, default is true
+     * review behaviour for warm rejected transferred calls
+     */
+
+    if (
+      !account.hasOwnProperty('acceptInboundCalls') ||
+      !account.acceptInboundCalls
+    ) {
+      this.acceptInboundCalls = true
     }
 
     if (version !== '0.16.1') {
@@ -369,13 +384,13 @@ export class Client extends EventEmitter implements IClientImpl {
 
           let currentSession = null
 
-          if (!isIncomingWarmTransfer) {
+          if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
             this._media.incomingRingAudio.play().then(() => {
               console.warn('-- audio play succeed on incoming session')
             })
           }
 
-          if (isFromAgent) {
+          if (isFromAgent && this.acceptInboundCalls) {
             currentSession = new SessionUA(
               incomingSession,
               this._media,
@@ -392,7 +407,18 @@ export class Client extends EventEmitter implements IClientImpl {
               }
             )
 
-            this.emit(ClientStatus.INVITE, currentSession)
+            this.emit(ClientStatus.INVITE, {
+              session: currentSession,
+              agentData: {
+                agentId: this._account.user,
+                sipUsername: this._account.sipUsername,
+                companyId: this._companyId,
+              },
+              callData: {
+                remoteUserId: customerUri,
+                remoteUserType: 'agent',
+              },
+            })
 
             currentSession.once('__session_terminated', () => {
               this.sessionTerminatedHandler()
@@ -432,7 +458,20 @@ export class Client extends EventEmitter implements IClientImpl {
               }
             )
 
-            this.emit(ClientStatus.INVITE, currentSession)
+            this.emit(ClientStatus.INVITE, {
+              session: currentSession,
+              agentData: {
+                agentId: this._account.user,
+                sipUsername: this._account.sipUsername,
+                companyId: this._companyId,
+              },
+              callData: {
+                remoteUserId: customerUri,
+                remoteUserType: 'agent',
+                transferredType: 'blind',
+                cause: 'rejected',
+              },
+            })
 
             currentSession.once('__session_terminated', () => {
               this.sessionTerminatedHandler()
@@ -455,11 +494,24 @@ export class Client extends EventEmitter implements IClientImpl {
                 uri: customerUri,
                 type: 'agent',
                 transferredType: 'warm',
-                cause: 'establish',
+                action: 'establish',
               }
             )
 
-            this.emit(ClientStatus.INVITE, currentSession)
+            this.emit(ClientStatus.INVITE, {
+              session: currentSession,
+              agentData: {
+                agentId: this._account.user,
+                sipUsername: this._account.sipUsername,
+                companyId: this._companyId,
+              },
+              callData: {
+                remoteUserUri: customerUri,
+                remoteUserType: 'agent',
+                transferredType: 'warm',
+                action: 'establish',
+              },
+            })
 
             currentSession.once('__session_terminated', () => {
               this.sessionTerminatedHandler()
@@ -491,6 +543,18 @@ export class Client extends EventEmitter implements IClientImpl {
                 break
               case RegistererState.Unregistered:
                 this.emit(ClientStatus.UNREGISTERED)
+
+                /** Trying to register again */
+                this._registerer
+                  .register()
+                  .then((request) => {
+                    console.log('Successfully sent REGISTER')
+                    console.log('Sent request =', request)
+                  })
+                  .catch((error) => {
+                    console.error('Failed to send REGISTER', error)
+                  })
+
                 break
               case RegistererState.Terminated:
                 console.error('Terminated')

@@ -115,7 +115,8 @@ interface ICallData {
    * or an Invite from a Warm transferred that requires to establish the call
    * inmediately
    */
-  cause?: 'rejected' | 'establish'
+  cause?: 'rejected'
+  action?: 'establish'
 }
 
 interface ISettings {
@@ -210,7 +211,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       if (
         inboundData.type === 'agent' &&
         inboundData.transferredType === TransferOptionsEnum.WARM &&
-        inboundData.cause === 'establish'
+        inboundData.action === 'establish'
       ) {
         let constrainsDefault: MediaStreamConstraints = {
           audio: true,
