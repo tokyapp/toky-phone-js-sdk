@@ -197,11 +197,10 @@ export class Client extends EventEmitter implements IClientImpl {
      * review behaviour for warm rejected transferred calls
      */
 
-    if (
-      !account.hasOwnProperty('acceptInboundCalls') ||
-      !account.acceptInboundCalls
-    ) {
+    if (!account.hasOwnProperty('acceptInboundCalls')) {
       this.acceptInboundCalls = true
+    } else {
+      this.acceptInboundCalls = Boolean(account.acceptInboundCalls)
     }
 
     if (version !== '0.16.1') {
