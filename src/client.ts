@@ -544,6 +544,8 @@ export class Client extends EventEmitter implements IClientImpl {
               case RegistererState.Unregistered:
                 this.emit(ClientStatus.UNREGISTERED)
 
+                this.isRegistered = false
+
                 /** Trying to register again */
                 this._registerer
                   .register()
@@ -562,15 +564,17 @@ export class Client extends EventEmitter implements IClientImpl {
             }
           })
 
-          this._registerer
-            .register()
-            .then((request) => {
-              console.log('Successfully sent REGISTER')
-              console.log('Sent request =', request)
-            })
-            .catch((error) => {
-              console.error('Failed to send REGISTER', error)
-            })
+          if (this.isRegistered === false) {
+            this._registerer
+              .register()
+              .then((request) => {
+                console.log('Successfully sent REGISTER')
+                console.log('Sent request =', request)
+              })
+              .catch((error) => {
+                console.error('Failed to send REGISTER', error)
+              })
+          }
         })
         .catch((error) => {
           console.error('Failed to connect', error)
