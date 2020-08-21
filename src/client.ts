@@ -31,6 +31,7 @@ import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
 export enum ClientStatus {
   INVITE = 'invite',
   REGISTERING = 'registering',
+  UNREGISTERED = 'unregistered',
   REGISTRATION_FAILED = 'registration_failed',
   REGISTERED = 'registered',
   DEFAULT = 'default',
@@ -489,7 +490,7 @@ export class Client extends EventEmitter implements IClientImpl {
                 )
                 break
               case RegistererState.Unregistered:
-                console.error('Unregistered')
+                this.emit(ClientStatus.UNREGISTERED)
                 break
               case RegistererState.Terminated:
                 console.error('Terminated')
