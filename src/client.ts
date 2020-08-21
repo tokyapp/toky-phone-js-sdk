@@ -988,7 +988,7 @@ export class Client extends EventEmitter implements IClientImpl {
 
       currentSession.once('__session_terminated', () => {
         console.warn('-- session killed')
-        this.sessionTerminatedHandler.bind(this)()
+        this.sessionTerminatedHandler()
         currentSession = null
       })
 
