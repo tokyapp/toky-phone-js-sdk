@@ -342,16 +342,19 @@ export class Client extends EventEmitter implements IClientImpl {
           // )
         },
         onDisconnect: (error?: Error): void => {
-          this.isRegistered = false
-
           if (this._registerer) {
-            this._registerer.unregister().catch((e: Error) => {
-              // Unregister failed
-              console.error(
-                'Failed to send UNREGISTERED or failed on Disconnected Event',
-                e
-              )
-            })
+            this._registerer
+              .unregister()
+              .then(() => {
+                this.isRegistered = false
+              })
+              .catch((e: Error) => {
+                // Unregister failed
+                console.error(
+                  'Failed to send UNREGISTERED or failed on Disconnected Event',
+                  e
+                )
+              })
             // Only attempt to reconnect if network/server dropped the connection (if there is an error)
             if (error) {
               this.attemptReconnection()
