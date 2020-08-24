@@ -147,6 +147,16 @@ export class Client extends EventEmitter implements IClientImpl {
   isTransportConnecting = false
   isTransportConnected = false
 
+  // * Variables used for reconnection
+  // Number of times to attempt reconnection before giving up
+  reconnectionAttempts = 3
+  // Number of seconds to wait between reconnection attempts
+  reconnectionDelay = 4
+  // Used to guard against overlapping reconnection attempts
+  attemptingReconnection = false
+  // If false, reconnection attempts will be discontinued or otherwise prevented
+  shouldBeConnected = true
+
   subscription = undefined
   serverUri: URI = undefined
 
@@ -330,6 +340,23 @@ export class Client extends EventEmitter implements IClientImpl {
           //   '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
           //   'background: blue; color: white; font-size: small'
           // )
+        },
+        onDisconnect: (error?: Error): void => {
+          this.isRegistered = false
+
+          if (this._registerer) {
+            this._registerer.unregister().catch((e: Error) => {
+              // Unregister failed
+              console.error(
+                'Failed to send UNREGISTERED or failed on Disconnected Event',
+                e
+              )
+            })
+            // Only attempt to reconnect if network/server dropped the connection (if there is an error)
+            if (error) {
+              this.attemptReconnection()
+            }
+          }
         },
         onInvite: (invitation: Invitation): void => {
           const incomingSession = invitation
@@ -546,14 +573,24 @@ export class Client extends EventEmitter implements IClientImpl {
                 this.isRegistered = false
 
                 /** Trying to register again */
+                // On unregistered, cleanup invalid registrations
                 this._registerer
-                  .register()
-                  .then((request) => {
-                    console.log('Successfully sent REGISTER')
-                    console.log('Sent request =', request)
+                  .unregister()
+                  .then(() => {
+                    console.log('Successfully sent UNREGISTER')
+                    return this._registerer.register()
                   })
-                  .catch((error) => {
-                    console.error('Failed to send REGISTER', error)
+                  .then((request) => {
+                    console.log('Successfully sent REGISTER on UNREGISTERED')
+                    console.log('Sent request =', request)
+                    this.isRegistered = true
+                  })
+                  .catch((e: Error) => {
+                    // Unregister or registered failed
+                    console.error(
+                      'Failed to send REGISTER or UNREGISTERED on UNREGISTERED action',
+                      e
+                    )
                   })
 
                 break
@@ -578,12 +615,67 @@ export class Client extends EventEmitter implements IClientImpl {
         .catch((error) => {
           console.error('Failed to connect', error)
         })
+
+      window.addEventListener('online', () => {
+        this.attemptReconnection()
+        console.warn('browser online, attempting to reconnect')
+      })
+
+      window.addEventListener('offline', () => {
+        console.warn(
+          'Browser goes offline. Once online it will try to reconnect.'
+        )
+      })
     }
 
     return {
       connectionCountry: this._connectionCountry,
       sipUsername: this._account.sipUsername,
     }
+  }
+
+  // Function which recursively attempts reconnection
+  attemptReconnection = (reconnectionAttempt = 1): void => {
+    // If not intentionally connected, don't reconnect.
+    if (!this.shouldBeConnected) {
+      return
+    }
+
+    // Reconnection attempt already in progress
+    if (this.attemptingReconnection) {
+      return
+    }
+
+    // Reconnection maximum attempts reached
+    if (reconnectionAttempt > this.reconnectionAttempts) {
+      return
+    }
+
+    // We're attempting a reconnection
+    this.attemptingReconnection = true
+
+    setTimeout(
+      () => {
+        // If not intentionally connected, don't reconnect.
+        if (!this.shouldBeConnected) {
+          this.attemptingReconnection = false
+          return
+        }
+        // Attempt reconnect
+        this._userAgent
+          .reconnect()
+          .then(() => {
+            // Reconnect attempt succeeded
+            this.attemptingReconnection = false
+          })
+          .catch((error: Error) => {
+            // Reconnect attempt failed
+            this.attemptingReconnection = false
+            this.attemptReconnection(++reconnectionAttempt)
+          })
+      },
+      reconnectionAttempt === 1 ? 0 : this.reconnectionDelay * 1000
+    )
   }
 
   /**
@@ -1054,7 +1146,6 @@ export class Client extends EventEmitter implements IClientImpl {
       )
 
       currentSession.once('__session_terminated', () => {
-        console.warn('-- session killed')
         this.sessionTerminatedHandler()
         currentSession = null
       })
