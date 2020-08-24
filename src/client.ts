@@ -149,13 +149,13 @@ export class Client extends EventEmitter implements IClientImpl {
 
   // * Variables used for reconnection
   // Number of times to attempt reconnection before giving up
-  reconnectionAttempts = 3
+  _reconnectionAttempts = 3
   // Number of seconds to wait between reconnection attempts
-  reconnectionDelay = 4
+  _reconnectionDelay = 4
   // Used to guard against overlapping reconnection attempts
-  attemptingReconnection = false
+  _attemptingReconnection = false
   // If false, reconnection attempts will be discontinued or otherwise prevented
-  shouldBeConnected = true
+  _shouldBeConnected = true
 
   subscription = undefined
   serverUri: URI = undefined
@@ -615,28 +615,28 @@ export class Client extends EventEmitter implements IClientImpl {
   // Function which recursively attempts reconnection
   attemptReconnection = (reconnectionAttempt = 1): void => {
     // If not intentionally connected, don't reconnect.
-    if (!this.shouldBeConnected) {
+    if (!this._shouldBeConnected) {
       return
     }
 
     // Reconnection attempt already in progress
-    if (this.attemptingReconnection) {
+    if (this._attemptingReconnection) {
       return
     }
 
     // Reconnection maximum attempts reached
-    if (reconnectionAttempt > this.reconnectionAttempts) {
+    if (reconnectionAttempt > this._reconnectionAttempts) {
       return
     }
 
     // We're attempting a reconnection
-    this.attemptingReconnection = true
+    this._attemptingReconnection = true
 
     setTimeout(
       () => {
         // If not intentionally connected, don't reconnect.
-        if (!this.shouldBeConnected) {
-          this.attemptingReconnection = false
+        if (!this._shouldBeConnected) {
+          this._attemptingReconnection = false
           return
         }
         // Attempt reconnect
@@ -644,15 +644,15 @@ export class Client extends EventEmitter implements IClientImpl {
           .reconnect()
           .then(() => {
             // Reconnect attempt succeeded
-            this.attemptingReconnection = false
+            this._attemptingReconnection = false
           })
           .catch((error: Error) => {
             // Reconnect attempt failed
-            this.attemptingReconnection = false
+            this._attemptingReconnection = false
             this.attemptReconnection(++reconnectionAttempt)
           })
       },
-      reconnectionAttempt === 1 ? 0 : this.reconnectionDelay * 1000
+      reconnectionAttempt === 1 ? 0 : this._reconnectionDelay * 1000
     )
   }
 
