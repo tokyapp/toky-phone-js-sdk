@@ -58,6 +58,9 @@ export enum SessionStatus {
   CONNECTING = 'connecting',
   RINGING = 'ringing',
   ACCEPTED = 'accepted',
+  TRANSFER_ACCEPTED = 'transfer_accepted',
+  TRANSFER_FAILED = 'transfer_failed',
+  TRANSFER_REJECTED = 'transfer_rejected',
   REJECTED = 'rejected',
   DISCONNECTED = 'disconnected',
   HOLD = 'hold',
@@ -205,13 +208,21 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       this._callId = incomingSession.request.getHeader('Call-ID')
 
+      if (
+        this._callData.type === 'agent' &&
+        this._callData.transferredType === TransferOptionsEnum.BLIND &&
+        this._callData.cause === 'rejected'
+      ) {
+        this.emit(SessionStatus.TRANSFER_REJECTED)
+      }
+
       /**
        * Applied for Warm transfer
        */
       if (
-        inboundData.type === 'agent' &&
-        inboundData.transferredType === TransferOptionsEnum.WARM &&
-        inboundData.action === 'establish'
+        this._callData.type === 'agent' &&
+        this._callData.transferredType === TransferOptionsEnum.WARM &&
+        this._callData.action === 'establish'
       ) {
         let constrainsDefault: MediaStreamConstraints = {
           audio: true,
@@ -235,6 +246,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         }
 
         incomingSession.accept(options)
+
+        this.emit(SessionStatus.TRANSFER_REJECTED)
       }
     }
 
@@ -766,9 +779,16 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             if (option === TransferOptionsEnum.WARM) {
               this._wantToWarmTransfer = true
             }
+
+            this.emit(SessionStatus.TRANSFER_ACCEPTED)
           } else {
             console.warn('status code', message.statusCode)
             console.warn('reason phrase', message.reasonPhrase)
+
+            this.emit(SessionStatus.TRANSFER_FAILED, {
+              statusCode: message.statusCode,
+              reasonPhrase: message.reasonPhrase,
+            })
 
             console.error(
               'This is not happening, server response does not match expected'
@@ -783,6 +803,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
             console.error('Invalid destination of transfer.')
           }
+
+          this.emit(SessionStatus.TRANSFER_FAILED, {
+            statusCode: message.statusCode,
+            reasonPhrase: message.reasonPhrase,
+          })
         },
       },
     })
