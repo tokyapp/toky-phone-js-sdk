@@ -571,28 +571,6 @@ export class Client extends EventEmitter implements IClientImpl {
                 this.emit(ClientStatus.UNREGISTERED)
 
                 this.isRegistered = false
-
-                /** Trying to register again */
-                // On unregistered, cleanup invalid registrations
-                this._registerer
-                  .unregister()
-                  .then(() => {
-                    console.log('Successfully sent UNREGISTER')
-                    return this._registerer.register()
-                  })
-                  .then((request) => {
-                    console.log('Successfully sent REGISTER on UNREGISTERED')
-                    console.log('Sent request =', request)
-                    this.isRegistered = true
-                  })
-                  .catch((e: Error) => {
-                    // Unregister or registered failed
-                    console.error(
-                      'Failed to send REGISTER or UNREGISTERED on UNREGISTERED action',
-                      e
-                    )
-                  })
-
                 break
               case RegistererState.Terminated:
                 console.error('Terminated')
