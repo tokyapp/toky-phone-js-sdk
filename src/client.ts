@@ -331,33 +331,55 @@ export class Client extends EventEmitter implements IClientImpl {
        * SIP js Listeners
        */
       this._userAgent.delegate = {
-        onRegister: (): void => {
-          // * This in alpha in SIP.js not used yet
-          // this.emit(ClientStatus.REGISTERED)
-          // this.isRegistering = false
-          // this.isRegistered = true
-          // console.log(
-          //   '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
-          //   'background: blue; color: white; font-size: small'
-          // )
-        },
         onDisconnect: (error?: Error): void => {
+          console.warn('-- disconnect event')
+
           if (this._registerer) {
-            this._registerer
-              .unregister()
-              .then(() => {
-                this.isRegistered = false
-              })
-              .catch((e: Error) => {
-                // Unregister failed
-                console.error(
-                  'Failed to send UNREGISTERED or failed on Disconnected Event',
-                  e
-                )
-              })
+            const registered =
+              this._registerer.state &&
+              this._registerer.state === RegistererState.Registered
+
+            if (registered) {
+              this._registerer
+                .unregister()
+                .then(() => {
+                  this.isRegistered = false
+                })
+                .catch((e: Error) => {
+                  // Unregister failed
+                  console.error(
+                    'Failed to send UNREGISTERED or failed on Disconnect Event',
+                    e
+                  )
+                })
+            }
             // Only attempt to reconnect if network/server dropped the connection (if there is an error)
             if (error) {
               this.attemptReconnection()
+            }
+          }
+        },
+        onConnect: (): void => {
+          console.warn('-- connected event')
+
+          if (this._registerer) {
+            const isRegistered =
+              this._registerer.state &&
+              this._registerer.state === RegistererState.Registered
+
+            if (isRegistered) {
+              this.isRegistered = true
+              this.emit(ClientStatus.REGISTERED)
+            } else {
+              this._registerer
+                .register()
+                .then((request) => {
+                  console.log('Successfully sent REGISTER on Connect event')
+                  console.log('Sent request =', request)
+                })
+                .catch((error) => {
+                  console.error('Failed to send REGISTER', error)
+                })
             }
           }
         },
@@ -634,6 +656,8 @@ export class Client extends EventEmitter implements IClientImpl {
 
     // We're attempting a reconnection
     this._attemptingReconnection = true
+
+    console.warn('-- attempting reconnection.')
 
     setTimeout(
       () => {
