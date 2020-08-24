@@ -150,6 +150,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _to = undefined
   private _from = undefined
   private _hangupByCurrentAgent = false
+  private _timeOutEvent = null
+  private TRANSFER_EVENT_DELAY = 200
 
   constructor(
     session: Session,
@@ -213,7 +215,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         this._callData.transferredType === TransferOptionsEnum.BLIND &&
         this._callData.cause === 'rejected'
       ) {
-        this.emit(SessionStatus.TRANSFER_REJECTED)
+        this._timeOutEvent = setTimeout(() => {
+          this.emit(SessionStatus.TRANSFER_REJECTED)
+        }, this.TRANSFER_EVENT_DELAY)
       }
 
       /**
@@ -247,7 +251,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
         incomingSession.accept(options)
 
-        this.emit(SessionStatus.TRANSFER_REJECTED)
+        this._timeOutEvent = setTimeout(() => {
+          this.emit(SessionStatus.TRANSFER_REJECTED)
+        }, this.TRANSFER_EVENT_DELAY)
       }
     }
 
@@ -354,6 +360,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             stopAudio(this._media.incomingRingAudio)
 
           this.cleanupMedia()
+
+          if (this._timeOutEvent) clearTimeout(this._timeOutEvent)
         }
 
         break
