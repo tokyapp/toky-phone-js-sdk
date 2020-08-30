@@ -138,6 +138,7 @@ export class Client extends EventEmitter implements IClientImpl {
   _registerer: Registerer
   _localStream: MediaStream
   _deviceList: IDeviceList[]
+  _devicesInfoRaw: MediaDeviceInfo[]
 
   /** Related to States */
   acceptInboundCalls = false
@@ -744,8 +745,25 @@ export class Client extends EventEmitter implements IClientImpl {
       navigator.mediaDevices.ondevicechange = async (): Promise<void> => {
         const devicesInfo = await this.enumerateDevices()
 
-        if (devicesInfo) {
+        /**
+         * @remarks
+         * We're doing a comparison between the listed devices
+         * we store the first time and then compare with the current because .ondevicechange()
+         * triggers two times (see behavior) when devices change
+         */
+
+        if (this._devicesInfoRaw) {
+          const newIds = new Set(devicesInfo.map((d) => d.deviceId))
+
+          const oldIds = new Set(this._devicesInfoRaw.map((d) => d.deviceId))
+
+          if (!eqSet(newIds, oldIds)) {
+            this.gotDevices(devicesInfo)
+            this._devicesInfoRaw = devicesInfo
+          }
+        } else if (devicesInfo) {
           this.gotDevices(devicesInfo)
+          this._devicesInfoRaw = devicesInfo
         }
       }
 
