@@ -124,7 +124,7 @@ interface ICallData {
 
 interface ISettings {
   agentId: string
-  apiKey: string
+  accessToken: string
   sipUsername: string
   companyId: string
 }
@@ -137,8 +137,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _localStream: MediaStream
   private _senderEnabled: boolean
   private _hold: boolean
-  private _apiKey: string
-  private _agentId: string
+  private _accessToken: string
   private _sipUsername: string
   private _companyId: string
   private _callDirection: CallDirectionEnum
@@ -164,8 +163,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     this._currentSession = session
     this._media = media
-    this._apiKey = tokySettings.apiKey
-    this._agentId = tokySettings.agentId
+    this._accessToken = tokySettings.accessToken
     this._sipUsername = tokySettings.sipUsername
     this._companyId = tokySettings.companyId
     this._callData = inboundData
@@ -406,8 +404,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       callRecording({
         callId: this._callId,
         action: RecordingActionEnum.REC_STATUS,
-        apiKey: this._apiKey,
-        agentId: this._agentId,
+        accessToken: this._accessToken,
       })
         .then(() => {
           this._recordingFeatureActivated = true
@@ -579,8 +576,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       const response = await holdCall({
         callId: this._callId,
         action,
-        apiKey: this._apiKey,
-        agentId: this._agentId,
+        accessToken: this._accessToken,
       })
 
       if (response.success) {
@@ -614,8 +610,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         const response = await callRecording({
           callId: this._callId,
           action,
-          apiKey: this._apiKey,
-          agentId: this._agentId,
+          accessToken: this._accessToken,
         })
 
         if (response.success) {

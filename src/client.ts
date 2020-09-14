@@ -122,7 +122,7 @@ declare interface IClientImpl {
 
 export class Client extends EventEmitter implements IClientImpl {
   /** Related to Toky Settings */
-  _apiKey: string
+  _accessToken: string
   _account: IAccountAttribute
   _companyId: string
   _tokyDomain: string
@@ -162,20 +162,20 @@ export class Client extends EventEmitter implements IClientImpl {
   serverUri: URI = undefined
 
   constructor({
-    apiKey,
+    accessToken,
     account,
     transportLib,
     media,
   }: {
-    apiKey: string
+    accessToken: string
     account: IAccountAttribute
     transportLib: 'sip.js' | 'jsSIP'
     media: IMediaSpec
   }) {
     super()
 
-    if (!apiKey) {
-      throw new Error('Required options should be provided: apiKey')
+    if (!accessToken) {
+      throw new Error('Required options should be provided: accessToken')
     }
 
     if (
@@ -218,7 +218,7 @@ export class Client extends EventEmitter implements IClientImpl {
       throw new Error(`SIP.js ${version} not supported, required 0.16.1`)
     }
 
-    this._apiKey = apiKey
+    this._accessToken = accessToken
     this._account = account
     this._appName = account.name
     this._transportLib = transportLib
@@ -253,8 +253,7 @@ export class Client extends EventEmitter implements IClientImpl {
     sipUsername: string
   }> {
     const response = await getCallParams({
-      agentId: this._account.user,
-      apiKey: this._apiKey,
+      accessToken: this._accessToken,
     })
 
     this.mediaInit()
@@ -451,7 +450,7 @@ export class Client extends EventEmitter implements IClientImpl {
                 agentId: this._account.user,
                 sipUsername: this._account.sipUsername,
                 companyId: this._companyId,
-                apiKey: this._apiKey,
+                accessToken: this._accessToken,
               },
               {
                 uri: customerUri,
@@ -500,7 +499,7 @@ export class Client extends EventEmitter implements IClientImpl {
                 agentId: this._account.user,
                 sipUsername: this._account.sipUsername,
                 companyId: this._companyId,
-                apiKey: this._apiKey,
+                accessToken: this._accessToken,
               },
               {
                 uri: customerUri,
@@ -540,7 +539,7 @@ export class Client extends EventEmitter implements IClientImpl {
                 agentId: this._account.user,
                 sipUsername: this._account.sipUsername,
                 companyId: this._companyId,
-                apiKey: this._apiKey,
+                accessToken: this._accessToken,
               },
               {
                 uri: customerUri,
@@ -1159,7 +1158,7 @@ export class Client extends EventEmitter implements IClientImpl {
           agentId: this._account.user,
           sipUsername: this._account.sipUsername,
           companyId: this._companyId,
-          apiKey: this._apiKey,
+          accessToken: this._accessToken,
         },
         {
           uri: this.outboundCallURI(phoneNumber),

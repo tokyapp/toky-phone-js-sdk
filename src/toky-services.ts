@@ -52,19 +52,14 @@ interface CallParamsAPIResponse extends APIResponse {
 }
 
 export const getCallParams = ({
-  agentId,
-  apiKey,
+  accessToken,
 }: {
-  agentId: string
-  apiKey: string
+  accessToken: string
 }): Promise<CallParamsAPIResponse> =>
   axios({
-    url: `${tokyApiUrl}/v1/widget/call/params`,
+    url: `${tokyApiUrl}/v1/sdk/call/params`,
     headers: {
-      'X-Toky-Key': apiKey,
-    },
-    params: {
-      email: agentId,
+      Authorization: `Bearer ${accessToken}`,
     },
   })
     .then((response) => {
@@ -77,6 +72,7 @@ export const getCallParams = ({
       }
     })
     .catch((error) => {
+      console.error(error)
       throw new Error(error)
     })
 
@@ -88,21 +84,16 @@ export enum HoldActionEnum {
 export const holdCall = ({
   callId,
   action,
-  apiKey,
-  agentId,
+  accessToken,
 }: {
   callId: string
   action: HoldActionEnum
-  apiKey: string
-  agentId: string
+  accessToken: string
 }): Promise<APIResponse> =>
   axios({
-    url: `${tokyApiUrl}/v1/calls/by_callid/${callId}/${action}`,
+    url: `${tokyApiUrl}/v1/sdk/calls/${callId}/${action}`,
     headers: {
-      'x-toky-key': apiKey,
-    },
-    params: {
-      agent: agentId,
+      Authorization: `Bearer ${accessToken}`,
     },
   })
     .then((response) => {
@@ -128,21 +119,16 @@ export enum RecordingActionEnum {
 export const callRecording = ({
   callId,
   action,
-  apiKey,
-  agentId,
+  accessToken,
 }: {
   callId: string
   action: RecordingActionEnum
-  apiKey: string
-  agentId: string
+  accessToken: string
 }): Promise<CallRecordingAPIResponse | APIResponse> =>
   axios({
-    url: `${tokyApiUrl}/v1/calls/by_callid/${callId}/${action}`,
+    url: `${tokyApiUrl}/v1/sdk/calls/${callId}/${action}`,
     headers: {
-      'x-toky-key': apiKey,
-    },
-    params: {
-      agent: agentId,
+      Authorization: `Bearer ${accessToken}`,
     },
   })
     .then((response) => {
