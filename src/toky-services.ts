@@ -43,12 +43,27 @@ interface CallParamsAPIData {
   referer: string
 }
 
+interface CallDetailsAPIData {
+  cdr: {
+    direction: string
+    duration: string
+    start_dt: string
+    child_call: {
+      callid: string
+    }
+  }
+}
+
 interface CallRecordingAPIResponse extends APIResponse {
   recording_enabled: boolean
 }
 
 interface CallParamsAPIResponse extends APIResponse {
   data: CallParamsAPIData
+}
+
+interface CallDetailsAPIResponse extends APIResponse {
+  result: CallDetailsAPIData
 }
 
 export const getCallParams = ({
@@ -167,5 +182,34 @@ export const callRecording = ({
       }
     })
     .catch((error) => {
+      throw new Error(error)
+    })
+
+export const callDetails = ({
+  agentId,
+  callId,
+  accessToken,
+}: {
+  agentId: string
+  callId: string
+  accessToken: string
+}): Promise<CallDetailsAPIResponse> =>
+  axios({
+    url: `${tokyApiUrl}/v1/sdk/calls/${callId}?agent_id=${agentId}`,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+    .then((response) => {
+      const data: CallDetailsAPIResponse = response.data
+
+      if (data && data.success) {
+        return data
+      } else {
+        throw new Error('Something went wrong on toky service call')
+      }
+    })
+    .catch((error) => {
+      console.error(error)
       throw new Error(error)
     })

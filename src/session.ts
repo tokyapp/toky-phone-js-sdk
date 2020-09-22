@@ -23,6 +23,7 @@ import {
   callRecording,
   RecordingActionEnum,
   HoldActionEnum,
+  callDetails,
 } from './toky-services'
 
 const tokyResourcesUrl = isProduction
@@ -788,7 +789,31 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
               this._wantToWarmTransfer = true
             }
 
-            this.emit(SessionStatus.TRANSFER_ACCEPTED)
+            callDetails({
+              agentId: this._agentId,
+              callId: this._callId,
+              accessToken: this._accessToken,
+            })
+              .then((data) => {
+                if (data.result && data.result.cdr) {
+                  this.emit(SessionStatus.TRANSFER_ACCEPTED, {
+                    callData: {
+                      direction: data.result.cdr.direction,
+                      duration: data.result.cdr.duration,
+                      timeOfCall: data.result.cdr.start_dt,
+                      transferredCallId: data.result.cdr.child_call
+                        ? data.result.cdr.child_call.callid
+                        : null,
+                    },
+                  })
+                }
+              })
+              .catch((err) => {
+                console.error('Call Info is no available', err)
+                this.emit(SessionStatus.TRANSFER_ACCEPTED, {
+                  callData: undefined,
+                })
+              })
           } else {
             console.warn('status code', message.statusCode)
             console.warn('reason phrase', message.reasonPhrase)
