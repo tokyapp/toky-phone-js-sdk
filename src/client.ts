@@ -253,6 +253,7 @@ export class Client extends EventEmitter implements IClientImpl {
     sipUsername: string
   }> {
     const response = await getCallParams({
+      agentId: this._account.user,
       accessToken: this._accessToken,
     })
 

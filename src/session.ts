@@ -139,6 +139,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _hold: boolean
   private _accessToken: string
   private _sipUsername: string
+  private _agentId: string
   private _companyId: string
   private _callDirection: CallDirectionEnum
   private _recordingFeatureActivated = false
@@ -165,6 +166,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._media = media
     this._accessToken = tokySettings.accessToken
     this._sipUsername = tokySettings.sipUsername
+    this._agentId = tokySettings.agentId
     this._companyId = tokySettings.companyId
     this._callData = inboundData
 
@@ -403,6 +405,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     if (message.statusCode === 200) {
       callRecording({
         callId: this._callId,
+        agentId: this._agentId,
         action: RecordingActionEnum.REC_STATUS,
         accessToken: this._accessToken,
       })
@@ -575,6 +578,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       const response = await holdCall({
         callId: this._callId,
+        agentId: this._agentId,
         action,
         accessToken: this._accessToken,
       })
@@ -609,6 +613,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
         const response = await callRecording({
           callId: this._callId,
+          agentId: this._agentId,
           action,
           accessToken: this._accessToken,
         })
