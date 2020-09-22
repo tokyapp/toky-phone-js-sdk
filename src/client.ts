@@ -324,10 +324,6 @@ export class Client extends EventEmitter implements IClientImpl {
 
       this.emit(ClientStatus.READY)
 
-      this.emit(ClientStatus.REGISTERING)
-
-      this.isRegistering = true
-
       /**
        * SIP js Listeners
        */
@@ -605,6 +601,10 @@ export class Client extends EventEmitter implements IClientImpl {
           })
 
           if (this.isRegistered === false) {
+            this.emit(ClientStatus.REGISTERING)
+
+            this.isRegistering = true
+
             this._registerer
               .register()
               .then((request) => {
