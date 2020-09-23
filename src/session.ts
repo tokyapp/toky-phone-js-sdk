@@ -56,7 +56,6 @@ export interface IGetConnection {
 
 export enum SessionStatus {
   TRYING = 'trying',
-  CONNECTING = 'connecting',
   RINGING = 'ringing',
   ACCEPTED = 'accepted',
   TRANSFER_ACCEPTED = 'transfer_accepted',
@@ -257,8 +256,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         }, this.TRANSFER_EVENT_DELAY)
       }
     }
-
-    this.emit(SessionStatus.CONNECTING)
   }
 
   get callId(): string {
@@ -435,7 +432,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     if (message.statusCode) {
       if (message.statusCode === 100) {
-        this.emit(SessionStatus.CONNECTING)
+        // * Previously we had a connecting status
+        // this.emit(SessionStatus.CONNECTING)
       }
 
       if (message.statusCode === 183 || message.statusCode === 180) {

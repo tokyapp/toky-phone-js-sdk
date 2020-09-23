@@ -31,6 +31,7 @@ import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
 export enum ClientStatus {
   INVITE = 'invite',
   REGISTERING = 'registering',
+  CONNECTING = 'connecting',
   UNREGISTERED = 'unregistered',
   REGISTRATION_FAILED = 'registration_failed',
   REGISTERED = 'registered',
@@ -1150,6 +1151,8 @@ export class Client extends EventEmitter implements IClientImpl {
         this.outboundCallURI(phoneNumber),
         options
       )
+
+      this.emit(ClientStatus.CONNECTING)
 
       let currentSession = new SessionUA(
         inviter,
