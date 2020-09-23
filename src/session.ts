@@ -796,6 +796,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
                 if (data.result && data.result.cdr) {
                   this.emit(SessionStatus.TRANSFER_ACCEPTED, {
                     callData: {
+                      callId: this._callId,
                       direction: data.result.cdr.direction,
                       duration: data.result.cdr.duration,
                       timeOfCall: data.result.cdr.start_dt,
