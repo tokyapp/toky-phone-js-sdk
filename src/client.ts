@@ -24,6 +24,7 @@ import {
   isChrome,
   eqSet,
   getAudio,
+  isProduction,
 } from './helpers'
 
 import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
@@ -119,6 +120,20 @@ declare interface IClientImpl {
     callerId: string
   }) => ISessionImpl
   on: (event: ClientStatus, listener: () => void) => void
+}
+
+const tokyResourcesUrl = isProduction
+  ? process.env.TOKY_RESOURCES_URL
+  : process.env.TOKY_RESOURCES_URL_DEV
+
+if (!tokyResourcesUrl) {
+  throw new Error('Something went wrong trying to get audio resources url.')
+}
+
+const defaultAudio = {
+  ringAudio: `${tokyResourcesUrl}/resources/audio/ringing.ogg`,
+  incomingRingAudio: `${tokyResourcesUrl}/resources/audio/piano-ring.ogg`,
+  errorAudio: `${tokyResourcesUrl}/resources/audio/error.ogg`,
 }
 
 export class Client extends EventEmitter implements IClientImpl {
@@ -226,9 +241,30 @@ export class Client extends EventEmitter implements IClientImpl {
 
     appendMediaElements()
 
-    const incomingRingAudio = new Audio(media.incomingRingAudio)
-    const errorAudio = new Audio(media.errorAudio)
-    const ringAudio = new Audio(media.ringAudio)
+    let _incomingRingAudio = defaultAudio.incomingRingAudio
+    let _errorAudio = defaultAudio.errorAudio
+    let _ringAudio = defaultAudio.ringAudio
+
+    if (media) {
+      if (
+        media.hasOwnProperty('incomingRingAudio') &&
+        media.incomingRingAudio
+      ) {
+        _incomingRingAudio = media.incomingRingAudio
+      }
+
+      if (media.hasOwnProperty('errorAudio') && media.errorAudio) {
+        _errorAudio = media.errorAudio
+      }
+
+      if (media.hasOwnProperty('ringAudio') && media.ringAudio) {
+        _ringAudio = media.ringAudio
+      }
+    }
+
+    const incomingRingAudio = new Audio(_incomingRingAudio)
+    const errorAudio = new Audio(_errorAudio)
+    const ringAudio = new Audio(_ringAudio)
 
     ringAudio.loop = true
     incomingRingAudio.loop = true

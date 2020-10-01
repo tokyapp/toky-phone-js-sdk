@@ -34,7 +34,7 @@ if (!tokyResourcesUrl) {
   throw new Error('Something went wrong trying to get audio resources url.')
 }
 
-const defatulDTMFAudio = {
+const defaultDTMFAudio = {
   0: `${tokyResourcesUrl}/resources/audio/dtmf/0.wav`,
   1: `${tokyResourcesUrl}/resources/audio/dtmf/1.wav`,
   2: `${tokyResourcesUrl}/resources/audio/dtmf/2.wav`,
@@ -520,7 +520,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     console.log(`[${this._callId}] Sending DTMF tone: ${tone}`)
 
-    const toneAudio = new Audio(defatulDTMFAudio[tone])
+    const toneAudio = new Audio(defaultDTMFAudio[tone])
 
     toneAudio.play().then(() => {
       console.log('successfully play DTMF tone', tone)
