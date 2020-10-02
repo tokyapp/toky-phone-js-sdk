@@ -74,7 +74,9 @@ export const getCallParams = ({
   accessToken: string
 }): Promise<CallParamsAPIResponse> =>
   axios({
-    url: `${tokyApiUrl}/v1/sdk/call/params?agent_id=${agentId}`,
+    url: `${tokyApiUrl}/v1/sdk/call/params?agent_id=${encodeURIComponent(
+      agentId
+    )}`,
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
