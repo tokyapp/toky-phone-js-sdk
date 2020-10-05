@@ -74,11 +74,12 @@ export const getCallParams = ({
   accessToken: string
 }): Promise<CallParamsAPIResponse> =>
   axios({
-    url: `${tokyApiUrl}/v1/sdk/call/params?agent_id=${encodeURIComponent(
-      agentId
-    )}`,
+    url: `${tokyApiUrl}/v1/sdk/call/params`,
     headers: {
       Authorization: `Bearer ${accessToken}`,
+    },
+    params: {
+      agent_id: agentId,
     },
   })
     .then((response) => {
@@ -112,9 +113,12 @@ export const holdCall = ({
   accessToken: string
 }): Promise<APIResponse> =>
   axios({
-    url: `${tokyApiUrl}/v1/sdk/calls/${callId}/${action}?agent_id=${agentId}`,
+    url: `${tokyApiUrl}/v1/sdk/calls/${callId}/${action}`,
     headers: {
       Authorization: `Bearer ${accessToken}`,
+    },
+    params: {
+      agent_id: agentId,
     },
   })
     .then((response) => {
@@ -149,9 +153,12 @@ export const callRecording = ({
   accessToken: string
 }): Promise<CallRecordingAPIResponse | APIResponse> =>
   axios({
-    url: `${tokyApiUrl}/v1/sdk/calls/${callId}/${action}?agent_id=${agentId}`,
+    url: `${tokyApiUrl}/v1/sdk/calls/${callId}/${action}`,
     headers: {
       Authorization: `Bearer ${accessToken}`,
+    },
+    params: {
+      agent_id: agentId,
     },
   })
     .then((response) => {
@@ -197,9 +204,12 @@ export const callDetails = ({
   accessToken: string
 }): Promise<CallDetailsAPIResponse> =>
   axios({
-    url: `${tokyApiUrl}/v1/sdk/calls/${callId}?agent_id=${agentId}`,
+    url: `${tokyApiUrl}/v1/sdk/calls/${callId}`,
     headers: {
       Authorization: `Bearer ${accessToken}`,
+    },
+    params: {
+      agent_id: agentId,
     },
   })
     .then((response) => {
