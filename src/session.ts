@@ -91,7 +91,7 @@ export enum CallDirectionEnum {
 
 export declare interface ISessionImpl {
   callId: string
-  pauseRecordingActivated: boolean
+  callRecordingEnabled: boolean
   mute: () => void
   hold?: () => void
   record?: () => void
@@ -262,7 +262,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     return this._callId
   }
 
-  get pauseRecordingActivated(): boolean {
+  get callRecordingEnabled(): boolean {
     return this._recordingFeatureActivated
   }
 
@@ -399,8 +399,16 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     stopAudio(this._media.ringAudio)
 
     this.emit(SessionStatus.ACCEPTED)
+  }
 
-    if (message.statusCode === 200) {
+  private progressHandler(response: IncomingResponse): void {
+    console.warn('--- Call in progress response', response)
+
+    const message = response.message
+
+    if (message.callId) {
+      this._callId = message.callId
+
       callRecording({
         callId: this._callId,
         agentId: this._agentId,
@@ -413,21 +421,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         .catch(() => {
           this._recordingFeatureActivated = false
         })
-    } else {
-      console.error(
-        'Unexpected response on accepted session listener, response:',
-        response
-      )
-    }
-  }
-
-  private progressHandler(response: IncomingResponse): void {
-    console.warn('--- Call in progress response', response)
-
-    const message = response.message
-
-    if (message.callId) {
-      this._callId = message.callId
     }
 
     if (message.statusCode) {

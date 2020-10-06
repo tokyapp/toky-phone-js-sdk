@@ -41,6 +41,7 @@ interface CallParamsAPIData {
   anon_contact_info: boolean
   connection_country: string
   referer: string
+  recording_change: boolean
 }
 
 interface CallDetailsAPIData {

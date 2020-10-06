@@ -63,6 +63,8 @@ interface IAccountAttribute {
   sipUsername?: string
   /** Option to accept inbound calls */
   acceptInboundCalls?: boolean
+  /** Recording permissions */
+  callRecordingEnabled: boolean
 }
 
 interface IMediaSpec {
@@ -288,6 +290,7 @@ export class Client extends EventEmitter implements IClientImpl {
   public async init(): Promise<{
     connectionCountry: string
     sipUsername: string
+    callRecordingEnabled: boolean
   }> {
     const response = await getCallParams({
       agentId: this._account.user,
@@ -302,6 +305,7 @@ export class Client extends EventEmitter implements IClientImpl {
     this._tokyDomain = paramsData.sip.domain
     this._connectionCountry = paramsData.connection_country
     this._account.sipUsername = paramsData.sip.username
+    this._account.callRecordingEnabled = paramsData.recording_change
 
     if (this._transportLib === 'sip.js') {
       const paramsTurnServers = paramsData.sip.turn_servers
@@ -672,6 +676,7 @@ export class Client extends EventEmitter implements IClientImpl {
     return {
       connectionCountry: this._connectionCountry,
       sipUsername: this._account.sipUsername,
+      callRecordingEnabled: this._account.callRecordingEnabled,
     }
   }
 
