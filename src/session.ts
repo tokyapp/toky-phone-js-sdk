@@ -399,16 +399,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     stopAudio(this._media.ringAudio)
 
     this.emit(SessionStatus.ACCEPTED)
-  }
 
-  private progressHandler(response: IncomingResponse): void {
-    console.warn('--- Call in progress response', response)
-
-    const message = response.message
-
-    if (message.callId) {
-      this._callId = message.callId
-
+    if (message.statusCode === 200) {
       callRecording({
         callId: this._callId,
         agentId: this._agentId,
@@ -421,6 +413,21 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         .catch(() => {
           this._recordingFeatureActivated = false
         })
+    } else {
+      console.error(
+        'Unexpected response on accepted session listener, response:',
+        response
+      )
+    }
+  }
+
+  private progressHandler(response: IncomingResponse): void {
+    console.warn('--- Call in progress response', response)
+
+    const message = response.message
+
+    if (message.callId) {
+      this._callId = message.callId
     }
 
     if (message.statusCode) {
