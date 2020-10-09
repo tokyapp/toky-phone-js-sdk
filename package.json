@@ -17,6 +17,7 @@
     "build": "npm run webpack -- --env.mode production",
     "dev": "npm run webpack-dev-server -- --env.mode development",
     "build:dev": "npm run webpack -- --env.mode development",
+    "build:staging": "npm run webpack -- --env.mode staging",
     "build:types": "tsc --emitDeclarationOnly",
     "prod:debug": "npm run debug -- --env.mode production",
     "dev:debug": "npm run debug -- --env.mode development",

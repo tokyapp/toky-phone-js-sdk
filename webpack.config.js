@@ -7,7 +7,21 @@ const libraryName = 'toky-sdk-alpha'
 
 const modeConfig = (env) => require(`./build-utils/webpack.${env}`)(env)
 
+const getEnvFile = function (key) {
+  const files = {
+    production: '.env.prod',
+    staging: '.env.staging',
+    development: '.env.dev',
+  }
+
+  return files[key] || files.local
+}
+
 module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
+  const dotenv = new Dotenv({
+    path: getEnvFile(mode),
+  })
+
   return webpackMerge(
     {
       target: 'web',
@@ -34,7 +48,7 @@ module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
         extensions: ['.ts', '.tsx', '.js', '.json', 'jsx'],
       },
       plugins: [
-        new Dotenv(),
+        dotenv,
         new webpack.DefinePlugin({
           'process.env.NODE_ENV': JSON.stringify(mode),
         }),
