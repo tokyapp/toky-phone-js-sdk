@@ -56,8 +56,6 @@ interface IAccountAttribute {
   user: string
   /** Type of user that request the service */
   type: 'agent'
-  /** App Name displayed in Server */
-  name: string
   /** SIP username in Toky Telephone Service */
   sipUsername?: string
   /** Option to accept inbound calls */
@@ -196,10 +194,8 @@ export class Client extends EventEmitter implements IClientImpl {
     if (
       !account.user ||
       !account.type ||
-      !account.name ||
       !account.hasOwnProperty('user') ||
-      !account.hasOwnProperty('type') ||
-      !account.hasOwnProperty('name')
+      !account.hasOwnProperty('type')
     ) {
       let errorMessage = 'Required options should be provided: '
 
@@ -209,10 +205,6 @@ export class Client extends EventEmitter implements IClientImpl {
 
       if (!account.hasOwnProperty('type') || !account.type) {
         errorMessage += 'account.type '
-      }
-
-      if (!account.hasOwnProperty('name') || !account.name) {
-        errorMessage += 'account.name'
       }
 
       throw new Error(errorMessage)
@@ -235,7 +227,6 @@ export class Client extends EventEmitter implements IClientImpl {
 
     this._accessToken = accessToken
     this._account = account
-    this._appName = account.name
     this._transportLib = transportLib
 
     appendMediaElements()
@@ -303,6 +294,7 @@ export class Client extends EventEmitter implements IClientImpl {
     this._connectionCountry = paramsData.connection_country
     this._account.sipUsername = paramsData.sip.username
     this._account.callRecordingEnabled = paramsData.recording_change
+    this._appName = paramsData.registered_app_name
 
     if (this._transportLib === 'sip.js') {
       const paramsTurnServers = paramsData.sip.turn_servers

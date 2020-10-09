@@ -38,6 +38,7 @@ interface CallParamsAPIData {
   connection_country: string
   referer: string
   recording_change: boolean
+  registered_app_name: string
 }
 
 interface CallDetailsAPIData {
