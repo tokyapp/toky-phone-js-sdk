@@ -14,7 +14,7 @@ import {
 
 import { IncomingResponse, OutgoingReferRequest, URI } from 'sip.js/lib/core'
 
-import { stopAudio, isProduction } from './helpers'
+import { stopAudio } from './helpers'
 
 import { IMediaAttribute } from './client'
 
@@ -26,9 +26,7 @@ import {
   callDetails,
 } from './toky-services'
 
-const tokyResourcesUrl = isProduction
-  ? process.env.TOKY_RESOURCES_URL
-  : process.env.TOKY_RESOURCES_URL_DEV
+const tokyResourcesUrl = process.env.TOKY_RESOURCES_URL
 
 if (!tokyResourcesUrl) {
   throw new Error('Something went wrong trying to get audio resources url.')

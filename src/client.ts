@@ -24,7 +24,6 @@ import {
   isChrome,
   eqSet,
   getAudio,
-  isProduction,
 } from './helpers'
 
 import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
@@ -124,9 +123,7 @@ declare interface IClientImpl {
   on: (event: ClientStatus, listener: () => void) => void
 }
 
-const tokyResourcesUrl = isProduction
-  ? process.env.TOKY_RESOURCES_URL
-  : process.env.TOKY_RESOURCES_URL_DEV
+const tokyResourcesUrl = process.env.TOKY_RESOURCES_URL
 
 if (!tokyResourcesUrl) {
   throw new Error('Something went wrong trying to get audio resources url.')

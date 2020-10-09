@@ -1,10 +1,6 @@
 import axios from 'axios'
 
-import { isProduction } from './helpers'
-
-const tokyApiUrl = isProduction
-  ? process.env.TOKY_API_URL
-  : process.env.TOKY_API_URL_DEV
+const tokyApiUrl = process.env.TOKY_API_URL
 
 interface APIResponse {
   success: boolean
