@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin')
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer')
   .BundleAnalyzerPlugin
 
@@ -13,6 +14,9 @@ module.exports = () => ({
       inject: 'head',
       // used for cache refreshing
       hash: true,
+    }),
+    new ForkTsCheckerWebpackPlugin({
+      async: true,
     }),
   ],
   devServer: {
