@@ -1,5 +1,7 @@
 import { EventEmitter } from 'events'
 
+import Pusher from 'pusher-js'
+
 import {
   Session,
   Web,
@@ -25,6 +27,20 @@ import {
   HoldActionEnum,
   callDetails,
 } from './toky-services'
+
+const pusher = new Pusher(process.env.PUSHER_KEY, {
+  cluster: 'us2',
+  encrypted: true,
+})
+
+pusher.subscribe(`internal-channel-${process.env.PUSHER_CHANNEL_ID}`)
+pusher.subscribe(`toky-channel-${process.env.PUSHER_CHANNEL_ID}`)
+pusher.subscribe('all-channel')
+
+pusher.bind('events', function (data) {
+  console.warn('events', data)
+  // EventPush.emit(data)
+})
 
 const tokyResourcesUrl = process.env.TOKY_RESOURCES_URL
 
