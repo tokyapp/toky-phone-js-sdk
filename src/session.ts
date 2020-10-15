@@ -33,14 +33,9 @@ const pusher = new Pusher(process.env.PUSHER_KEY, {
   encrypted: true,
 })
 
-pusher.subscribe(`internal-channel-${process.env.PUSHER_CHANNEL_ID}`)
-pusher.subscribe(`toky-channel-${process.env.PUSHER_CHANNEL_ID}`)
-pusher.subscribe('all-channel')
-
-pusher.bind('events', function (data) {
-  console.warn('events', data)
-  // EventPush.emit(data)
-})
+const tokyChannel = pusher.subscribe(
+  `toky-channel-${process.env.PUSHER_CHANNEL_ID}`
+)
 
 const tokyResourcesUrl = process.env.TOKY_RESOURCES_URL
 
@@ -72,7 +67,9 @@ export enum SessionStatus {
   TRYING = 'trying',
   RINGING = 'ringing',
   ACCEPTED = 'accepted',
-  TRANSFER_ACCEPTED = 'transfer_accepted',
+  TRANSFER_SUCCESS = 'transfer_success',
+  TRANSFER_WARM_INIT = 'transfer_warm_init',
+  TRANSFER_WARM_ANSWERED = 'transfer_warm_answered',
   TRANSFER_FAILED = 'transfer_failed',
   TRANSFER_REJECTED = 'transfer_rejected',
   REJECTED = 'rejected',
@@ -194,6 +191,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       this.sessionStateListener.bind(this)
     )
 
+    tokyChannel.bind('events', this.pusherEventsHandler.bind(this))
+
     // Options including delegate to capture response messages
     const inviteOptions: InviterInviteOptions = {
       requestDelegate: {
@@ -224,18 +223,20 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       this._callId = incomingSession.request.getHeader('Call-ID')
 
-      if (
-        this._callData.type === 'agent' &&
-        this._callData.transferredType === TransferOptionsEnum.BLIND &&
-        this._callData.cause === 'rejected'
-      ) {
-        this._timeOutEvent = setTimeout(() => {
-          this.emit(SessionStatus.TRANSFER_REJECTED)
-        }, this.TRANSFER_EVENT_DELAY)
-      }
+      // if (
+      //   this._callData.type === 'agent' &&
+      //   this._callData.transferredType === TransferOptionsEnum.BLIND &&
+      //   this._callData.cause === 'rejected'
+      // ) {
+      //   this._timeOutEvent = setTimeout(() => {
+      //     this.emit(SessionStatus.TRANSFER_REJECTED)
+      //   }, this.TRANSFER_EVENT_DELAY)
+      // }
 
       /**
        * Applied for Warm transfer
+       * this case is when the conversation with the agent started
+       * and we have to establish the call automatically
        */
       if (
         this._callData.type === 'agent' &&
@@ -264,10 +265,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         }
 
         incomingSession.accept(options)
-
-        this._timeOutEvent = setTimeout(() => {
-          this.emit(SessionStatus.TRANSFER_REJECTED)
-        }, this.TRANSFER_EVENT_DELAY)
       }
     }
   }
@@ -286,6 +283,24 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
   get from(): any {
     return this._from
+  }
+
+  private pusherEventsHandler(events: any): void {
+    if (events.event === 'call-event') {
+      const data = events.data
+
+      if (data.type && data.type === 'call.transfer') {
+        if (data.is_warm) {
+          this.emit(SessionStatus.TRANSFER_WARM_INIT, data)
+        }
+      }
+
+      if (data.type && data.type === 'call.transfer.update') {
+        if (data.is_warm) {
+          this.emit(SessionStatus.TRANSFER_WARM_ANSWERED, data)
+        }
+      }
+    }
   }
 
   private sessionStateListener(newState: SessionState): void {
@@ -354,7 +369,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         break
       }
       case SessionState.Terminated: {
-        console.warn('call direction', this._callDirection)
+        console.warn('call direction in terminated event', this._callDirection)
         /**
          * Warm case: this is because on outbound warm transfer call
          * the server sends an INVITE and then a BYE message and
@@ -374,6 +389,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           this.cleanupMedia()
 
           if (this._timeOutEvent) clearTimeout(this._timeOutEvent)
+
+          tokyChannel.unbind()
         }
 
         break
@@ -797,6 +814,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
               this.sessionStateListener.bind(this)
             )
 
+            tokyChannel.unbind()
+
             if (option === TransferOptionsEnum.WARM) {
               this._wantToWarmTransfer = true
             }
@@ -808,7 +827,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             })
               .then((data) => {
                 if (data.result && data.result.cdr) {
-                  this.emit(SessionStatus.TRANSFER_ACCEPTED, {
+                  this.emit(SessionStatus.TRANSFER_SUCCESS, {
                     callData: {
                       callId: this._callId,
                       transferType: option,
@@ -824,7 +843,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
               })
               .catch((err) => {
                 console.error('Call Info is no available', err)
-                this.emit(SessionStatus.TRANSFER_ACCEPTED, {
+                this.emit(SessionStatus.TRANSFER_SUCCESS, {
                   callData: undefined,
                 })
               })
