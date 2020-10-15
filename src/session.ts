@@ -70,6 +70,8 @@ export enum SessionStatus {
   TRANSFER_SUCCESS = 'transfer_success',
   TRANSFER_WARM_INIT = 'transfer_warm_init',
   TRANSFER_WARM_ANSWERED = 'transfer_warm_answered',
+  TRANSFER_WARM_NOT_ANSWERED = 'transfer_warm_not_answered',
+  TRANSFER_WARM_COMPLETED = 'transfer_warm_not_completed',
   TRANSFER_FAILED = 'transfer_failed',
   TRANSFER_REJECTED = 'transfer_rejected',
   REJECTED = 'rejected',
@@ -298,6 +300,12 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       if (data.type && data.type === 'call.transfer.update') {
         if (data.is_warm) {
           this.emit(SessionStatus.TRANSFER_WARM_ANSWERED, data)
+        }
+      }
+
+      if (data.type && data.type === 'call.transfer.failure') {
+        if (data.is_warm) {
+          this.emit(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, data)
         }
       }
     }
