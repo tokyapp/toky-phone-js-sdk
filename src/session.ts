@@ -65,9 +65,10 @@ export enum SessionStatus {
   UNMUTED = 'unmuted',
   RECORDING = 'recording',
   NOT_RECORDING = 'not_recording',
-  TRANSFER_SUCCESS = 'transfer_success',
+  /** TRANSFER_FAILED indicates that the server rejects the transfer for some reason
+   * one of the reasons can be, transferred agent doesn't exists
+   */
   TRANSFER_FAILED = 'transfer_failed',
-  TRANSFER_REJECTED = 'transfer_rejected',
   TRANSFER_BLIND_INIT = 'transfer_blind_init',
   TRANSFER_BLIND_ANSWERED = 'transfer_blind_answered',
   TRANSFER_BLIND_NOT_ANSWERED = 'transfer_blind_not_answered',
@@ -294,12 +295,42 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       if (data.type && data.type === 'call.transfer') {
         if (data.is_warm) {
-          this.emit(SessionStatus.TRANSFER_WARM_INIT, data)
+          callDetails({
+            agentId: this._agentId,
+            callId: this._callId,
+            accessToken: this._accessToken,
+          })
+            .then((data) => {
+              if (data.result?.cdr) {
+                this.emit(SessionStatus.TRANSFER_WARM_INIT, {
+                  callId: this._callId,
+                  transferType: 'warm',
+                  direction: data.result.cdr.direction,
+                  duration: data.result.cdr.duration,
+                  timeOfCall: data.result.cdr.start_dt,
+                  transferredCallId: data.result.cdr.child_call
+                    ? data.result.cdr.child_call.callid
+                    : null,
+                })
+              }
+            })
+            .catch((err) => {
+              console.error('Call Info is no available', err)
+              this.emit(SessionStatus.TRANSFER_WARM_INIT, {
+                callData: undefined,
+              })
+            })
         }
       }
 
       if (data.type && data.type === 'call.transfer.update') {
-        if (data.is_warm) {
+        console.log('condition', data)
+        console.log('call id', this._callId)
+        if (
+          data.is_warm &&
+          data.transfer_to_answered &&
+          data.callid === this._callId
+        ) {
           this.emit(SessionStatus.TRANSFER_WARM_ANSWERED, data)
         }
       }
@@ -827,22 +858,17 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
             this._tokyChannel.unbind()
 
-            let statusToEmit = SessionStatus.TRANSFER_BLIND_INIT
-
             if (option === TransferOptionsEnum.WARM) {
               this._wantToWarmTransfer = true
-              statusToEmit = SessionStatus.TRANSFER_WARM_INIT
-            }
-
-            callDetails({
-              agentId: this._agentId,
-              callId: this._callId,
-              accessToken: this._accessToken,
-            })
-              .then((data) => {
-                if (data.result && data.result.cdr) {
-                  this.emit(statusToEmit, {
-                    callData: {
+            } else {
+              callDetails({
+                agentId: this._agentId,
+                callId: this._callId,
+                accessToken: this._accessToken,
+              })
+                .then((data) => {
+                  if (data.result?.cdr) {
+                    this.emit(SessionStatus.TRANSFER_BLIND_INIT, {
                       callId: this._callId,
                       transferType: option,
                       direction: data.result.cdr.direction,
@@ -851,16 +877,16 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
                       transferredCallId: data.result.cdr.child_call
                         ? data.result.cdr.child_call.callid
                         : null,
-                    },
-                  })
-                }
-              })
-              .catch((err) => {
-                console.error('Call Info is no available', err)
-                this.emit(SessionStatus.TRANSFER_SUCCESS, {
-                  callData: undefined,
+                    })
+                  }
                 })
-              })
+                .catch((err) => {
+                  console.error('Call Info is no available', err)
+                  this.emit(SessionStatus.TRANSFER_BLIND_INIT, {
+                    callData: undefined,
+                  })
+                })
+            }
           } else {
             console.warn('status code', message.statusCode)
             console.warn('reason phrase', message.reasonPhrase)
