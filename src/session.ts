@@ -1,7 +1,5 @@
 import { EventEmitter } from 'events'
 
-import Pusher from 'pusher-js'
-
 import {
   Session,
   Web,
@@ -16,6 +14,8 @@ import {
 
 import { IncomingResponse, OutgoingReferRequest, URI } from 'sip.js/lib/core'
 
+import { Channel } from 'pusher-js'
+
 import { stopAudio } from './helpers'
 
 import { IMediaAttribute } from './client'
@@ -27,15 +27,6 @@ import {
   HoldActionEnum,
   callDetails,
 } from './toky-services'
-
-const pusher = new Pusher(process.env.PUSHER_KEY, {
-  cluster: 'us2',
-  encrypted: true,
-})
-
-const tokyChannel = pusher.subscribe(
-  `toky-channel-${process.env.PUSHER_CHANNEL_ID}`
-)
 
 const tokyResourcesUrl = process.env.TOKY_RESOURCES_URL
 
@@ -164,11 +155,12 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _from = undefined
   private _hangupByCurrentAgent = false
   private _timeOutEvent = null
-  private TRANSFER_EVENT_DELAY = 200
+  private _tokyChannel = null
 
   constructor(
     session: Session,
     media: IMediaAttribute,
+    tokyChannel: Channel,
     direction: CallDirectionEnum,
     tokySettings: ISettings,
     inboundData?: ICallData
@@ -182,6 +174,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._agentId = tokySettings.agentId
     this._companyId = tokySettings.companyId
     this._callData = inboundData
+    this._tokyChannel = tokyChannel
 
     this._senderEnabled = true
     this._hold = false
@@ -398,7 +391,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
           if (this._timeOutEvent) clearTimeout(this._timeOutEvent)
 
-          tokyChannel.unbind()
+          this._tokyChannel.unbind()
         }
 
         break
@@ -822,7 +815,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
               this.sessionStateListener.bind(this)
             )
 
-            tokyChannel.unbind()
+            this._tokyChannel.unbind()
 
             if (option === TransferOptionsEnum.WARM) {
               this._wantToWarmTransfer = true

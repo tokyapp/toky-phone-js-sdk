@@ -11,6 +11,8 @@ import {
   version,
 } from 'sip.js'
 
+import Pusher, { Channel } from 'pusher-js'
+
 import { EventEmitter } from 'events'
 
 import { getCallParams, IWSServers } from './toky-services'
@@ -27,6 +29,11 @@ import {
 } from './helpers'
 
 import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
+
+const pusher = new Pusher(process.env.PUSHER_KEY, {
+  cluster: 'us2',
+  encrypted: true,
+})
 
 export enum ClientStatus {
   INVITE = 'invite',
@@ -142,6 +149,7 @@ export class Client extends EventEmitter implements IClientImpl {
   _connectionCountry: string
   _appName: string
   _tokyIceServers: IIceServerAttribute[]
+  _tokyChannel: Channel
 
   _media: IMediaAttribute
 
@@ -289,6 +297,9 @@ export class Client extends EventEmitter implements IClientImpl {
 
     const paramsData = response.data
 
+    this._tokyChannel = pusher.subscribe(
+      `toky-channel-${paramsData.channel_id}`
+    )
     this._companyId = paramsData.company_id
     this._tokyDomain = paramsData.sip.domain
     this._connectionCountry = paramsData.connection_country
@@ -472,6 +483,7 @@ export class Client extends EventEmitter implements IClientImpl {
             currentSession = new SessionUA(
               incomingSession,
               this._media,
+              this._tokyChannel,
               CallDirectionEnum.INBOUND,
               {
                 agentId: this._account.user,
@@ -521,6 +533,7 @@ export class Client extends EventEmitter implements IClientImpl {
             currentSession = new SessionUA(
               incomingSession,
               this._media,
+              this._tokyChannel,
               CallDirectionEnum.INBOUND,
               {
                 agentId: this._account.user,
@@ -561,6 +574,7 @@ export class Client extends EventEmitter implements IClientImpl {
             currentSession = new SessionUA(
               incomingSession,
               this._media,
+              this._tokyChannel,
               CallDirectionEnum.INBOUND,
               {
                 agentId: this._account.user,
@@ -1187,6 +1201,7 @@ export class Client extends EventEmitter implements IClientImpl {
       let currentSession = new SessionUA(
         inviter,
         this._media,
+        this._tokyChannel,
         CallDirectionEnum.OUTBOUND,
         {
           agentId: this._account.user,

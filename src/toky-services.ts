@@ -39,6 +39,7 @@ interface CallParamsAPIData {
   referer: string
   recording_change: boolean
   registered_app_name: string
+  channel_id: string
 }
 
 interface CallDetailsAPIData {
