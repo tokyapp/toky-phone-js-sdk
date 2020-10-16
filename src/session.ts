@@ -57,22 +57,25 @@ export interface IGetConnection {
 export enum SessionStatus {
   TRYING = 'trying',
   RINGING = 'ringing',
-  ACCEPTED = 'accepted',
-  TRANSFER_SUCCESS = 'transfer_success',
-  TRANSFER_WARM_INIT = 'transfer_warm_init',
-  TRANSFER_WARM_ANSWERED = 'transfer_warm_answered',
-  TRANSFER_WARM_NOT_ANSWERED = 'transfer_warm_not_answered',
-  TRANSFER_WARM_COMPLETED = 'transfer_warm_not_completed',
-  TRANSFER_FAILED = 'transfer_failed',
-  TRANSFER_REJECTED = 'transfer_rejected',
+  CONNECTED = 'connected',
   REJECTED = 'rejected',
-  DISCONNECTED = 'disconnected',
   HOLD = 'hold',
   UNHOLD = 'unhold',
   MUTED = 'muted',
   UNMUTED = 'unmuted',
   RECORDING = 'recording',
   NOT_RECORDING = 'not_recording',
+  TRANSFER_SUCCESS = 'transfer_success',
+  TRANSFER_FAILED = 'transfer_failed',
+  TRANSFER_REJECTED = 'transfer_rejected',
+  TRANSFER_BLIND_INIT = 'transfer_blind_init',
+  TRANSFER_BLIND_ANSWERED = 'transfer_blind_answered',
+  TRANSFER_BLIND_NOT_ANSWERED = 'transfer_blind_not_answered',
+  TRANSFER_BLIND_COMPLETED = 'transfer_blind_completed',
+  TRANSFER_WARM_INIT = 'transfer_warm_init',
+  TRANSFER_WARM_ANSWERED = 'transfer_warm_answered',
+  TRANSFER_WARM_NOT_ANSWERED = 'transfer_warm_not_answered',
+  TRANSFER_WARM_COMPLETED = 'transfer_warm_completed',
   FAILED = 'failed',
   BYE = 'bye',
 }
@@ -140,6 +143,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _media: IMediaAttribute
   private _localStream: MediaStream
   private _senderEnabled: boolean
+  private _isConnected: boolean
   private _hold: boolean
   private _accessToken: string
   private _sipUsername: string
@@ -154,7 +158,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _to = undefined
   private _from = undefined
   private _hangupByCurrentAgent = false
-  private _timeOutEvent = null
   private _tokyChannel = null
 
   constructor(
@@ -179,6 +182,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._senderEnabled = true
     this._hold = false
     this._recording = true
+    this._isConnected = false
 
     this._callDirection = direction
 
@@ -280,6 +284,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     return this._from
   }
 
+  get isConnected(): boolean {
+    return this._isConnected
+  }
+
   private pusherEventsHandler(events: any): void {
     if (events.event === 'call-event') {
       const data = events.data
@@ -362,7 +370,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         })
 
         if (this._callDirection === CallDirectionEnum.INBOUND) {
-          this.emit(SessionStatus.ACCEPTED)
+          this.emit(SessionStatus.CONNECTED)
+          this._isConnected = true
         }
 
         this._established = true
@@ -384,12 +393,12 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             origin: 'terminatedEvent',
           })
 
+          this._isConnected = false
+
           if (this._callDirection === CallDirectionEnum.INBOUND)
             stopAudio(this._media.incomingRingAudio)
 
           this.cleanupMedia()
-
-          if (this._timeOutEvent) clearTimeout(this._timeOutEvent)
 
           this._tokyChannel.unbind()
         }
@@ -430,7 +439,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     stopAudio(this._media.ringAudio)
 
-    this.emit(SessionStatus.ACCEPTED)
+    this.emit(SessionStatus.CONNECTED)
+    this._isConnected = true
 
     if (message.statusCode === 200) {
       callRecording({
@@ -817,8 +827,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
             this._tokyChannel.unbind()
 
+            let statusToEmit = SessionStatus.TRANSFER_BLIND_INIT
+
             if (option === TransferOptionsEnum.WARM) {
               this._wantToWarmTransfer = true
+              statusToEmit = SessionStatus.TRANSFER_WARM_INIT
             }
 
             callDetails({
@@ -828,7 +841,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             })
               .then((data) => {
                 if (data.result && data.result.cdr) {
-                  this.emit(SessionStatus.TRANSFER_SUCCESS, {
+                  this.emit(statusToEmit, {
                     callData: {
                       callId: this._callId,
                       transferType: option,
