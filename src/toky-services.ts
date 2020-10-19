@@ -50,6 +50,9 @@ interface CallDetailsAPIData {
     child_call: {
       callid: string
     }
+    parent_call?: {
+      callid: string
+    }
   }
 }
 
