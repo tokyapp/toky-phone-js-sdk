@@ -222,7 +222,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       const incomingSession = session as Invitation
 
       this._callId = incomingSession.request.getHeader('Call-ID')
-
       /**
        * Applied for Warm transfer
        * this case is when the conversation with the agent started
@@ -389,7 +388,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       /**
        * This is not invoked since in this point the session is killed already
-       * we're make the request in the bye event (confirm transfer action)
+       * we're make the request in the bye event (<confirm transfer> action)
        */
       if (data?.type === 'call.transfer.success') {
         if (data.is_warm) {
@@ -815,7 +814,52 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
   public endCall(): void {
     if (this._established) {
-      this._currentSession.bye()
+      if (this._callData.transferredType === TransferOptionsEnum.WARM) {
+        callDetails({
+          agentId: this._agentId,
+          callId: this._callId,
+          accessToken: this._accessToken,
+        })
+          .then((data) => {
+            if (data.result?.cdr) {
+              const cdr = data.result.cdr
+
+              if (cdr.parent_call?.callid) {
+                const parentCallId = cdr.parent_call.callid
+                const warmTransferData = sessionStorage.getItem(
+                  'current_warm_transfer_data'
+                )
+
+                const transferData = JSON.parse(warmTransferData)
+
+                if (
+                  transferData.callId === parentCallId &&
+                  transferData.status === 'ANSWERED'
+                ) {
+                  this.emit(SessionStatus.TRANSFER_WARM_COMPLETED, {
+                    callId: this._callId,
+                    transferType: 'warm',
+                    direction: cdr.direction,
+                    duration: cdr.duration,
+                    timeOfCall: cdr.start_dt,
+                    transferredCallId: cdr.child_call?.callid || null,
+                  })
+                  sessionStorage.removeItem('current_warm_transfer_data')
+                }
+
+                this._currentSession.bye()
+              }
+            }
+          })
+          .catch((err) => {
+            console.error('Call Info is no available', err)
+            this.emit(SessionStatus.TRANSFER_WARM_INIT, {
+              callData: undefined,
+            })
+          })
+      } else {
+        this._currentSession.bye()
+      }
     } else {
       /**
        * This is in a outgoing not already established call
