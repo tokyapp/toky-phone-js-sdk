@@ -223,16 +223,6 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       this._callId = incomingSession.request.getHeader('Call-ID')
 
-      // if (
-      //   this._callData.type === 'agent' &&
-      //   this._callData.transferredType === TransferOptionsEnum.BLIND &&
-      //   this._callData.cause === 'rejected'
-      // ) {
-      //   this._timeOutEvent = setTimeout(() => {
-      //     this.emit(SessionStatus.TRANSFER_REJECTED)
-      //   }, this.TRANSFER_EVENT_DELAY)
-      // }
-
       /**
        * Applied for Warm transfer
        * this case is when the conversation with the agent started
@@ -289,12 +279,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
                     this.emit(SessionStatus.TRANSFER_WARM_INIT, {
                       callId: this._callId,
                       transferType: 'warm',
-                      direction: data.result.cdr.direction,
-                      duration: data.result.cdr.duration,
-                      timeOfCall: data.result.cdr.start_dt,
-                      transferredCallId: data.result.cdr.child_call
-                        ? data.result.cdr.child_call.callid
-                        : null,
+                      direction: cdr.direction,
+                      duration: cdr.duration,
+                      timeOfCall: cdr.start_dt,
+                      transferredCallId: cdr.child_call?.callid || null,
                     })
                     sessionStorage.setItem(
                       'current_warm_transfer_data',
@@ -347,121 +335,105 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     if (events.event === 'call-event') {
       const data = events.data
 
-      // if (data.type && data.type === 'call.transfer') {
-      //   if (data.is_warm) {
-      //     callDetails({
-      //       agentId: this._agentId,
-      //       callId: this._callId,
-      //       accessToken: this._accessToken,
-      //     })
-      //       .then((data) => {
-      //         if (data.result?.cdr) {
-      //           const cdr = data.result.cdr
-
-      //           if (cdr.parent_call?.callid) {
-      //             const parentCallId = cdr.parent_call.callid
-      //             const warmTransferData = sessionStorage.getItem(
-      //               'current_warm_transfer_data'
-      //             )
-
-      //             const transferData = JSON.parse(warmTransferData)
-
-      //             if (
-      //               transferData.callId === parentCallId &&
-      //               transferData.status === 'REFER'
-      //             ) {
-      //               this.emit(SessionStatus.TRANSFER_WARM_INIT, {
-      //                 callId: this._callId,
-      //                 transferType: 'warm',
-      //                 direction: data.result.cdr.direction,
-      //                 duration: data.result.cdr.duration,
-      //                 timeOfCall: data.result.cdr.start_dt,
-      //                 transferredCallId: data.result.cdr.child_call
-      //                   ? data.result.cdr.child_call.callid
-      //                   : null,
-      //               })
-      //               sessionStorage.setItem(
-      //                 'current_warm_transfer_data',
-      //                 JSON.stringify({
-      //                   ...transferData,
-      //                   inviteCallId: this._callId,
-      //                   status: 'INVITE',
-      //                 })
-      //               )
-      //             }
-      //           }
-      //         }
-      //       })
-      //       .catch((err) => {
-      //         console.error('Call Info is no available', err)
-      //         this.emit(SessionStatus.TRANSFER_WARM_INIT, {
-      //           callData: undefined,
-      //         })
-      //       })
-      //   }
-      // }
-
       if (data.type && data.type === 'call.transfer.update') {
-        console.log('condition', data)
-        console.log('call id', this._callId)
+        if (data.is_warm && data.transfer_to_answered) {
+          callDetails({
+            agentId: this._agentId,
+            callId: data.callid,
+            accessToken: this._accessToken,
+          })
+            .then((data) => {
+              if (data.result?.cdr) {
+                const cdr = data.result.cdr
 
-        callDetails({
-          agentId: this._agentId,
-          callId: data.callid,
-          accessToken: this._accessToken,
-        })
-          .then((data) => {
-            if (data.result?.cdr) {
-              const cdr = data.result.cdr
-
-              if (cdr.parent_call?.callid) {
-                const parentCallId = cdr.parent_call.callid
-                const warmTransferData = sessionStorage.getItem(
-                  'current_warm_transfer_data'
-                )
-
-                const transferData = JSON.parse(warmTransferData)
-
-                if (
-                  transferData.callId === parentCallId &&
-                  transferData.status === 'INVITE'
-                ) {
-                  this.emit(SessionStatus.TRANSFER_WARM_ANSWERED, {
-                    callId: this._callId,
-                    transferType: 'warm',
-                    direction: data.result.cdr.direction,
-                    duration: data.result.cdr.duration,
-                    timeOfCall: data.result.cdr.start_dt,
-                    transferredCallId: data.result.cdr.child_call
-                      ? data.result.cdr.child_call.callid
-                      : null,
-                  })
-                  sessionStorage.setItem(
-                    'current_warm_transfer_data',
-                    JSON.stringify({
-                      ...transferData,
-                      inviteCallId: this._callId,
-                      status: 'ANSWERED',
-                    })
+                if (cdr.parent_call?.callid) {
+                  const parentCallId = cdr.parent_call.callid
+                  const warmTransferData = sessionStorage.getItem(
+                    'current_warm_transfer_data'
                   )
+
+                  const transferData = JSON.parse(warmTransferData)
+
+                  if (
+                    transferData.callId === parentCallId &&
+                    transferData.status === 'INVITE'
+                  ) {
+                    this.emit(SessionStatus.TRANSFER_WARM_ANSWERED, {
+                      callId: this._callId,
+                      transferType: 'warm',
+                      direction: cdr.direction,
+                      duration: cdr.duration,
+                      timeOfCall: cdr.start_dt,
+                      transferredCallId: cdr.child_call?.callid || null,
+                    })
+                    sessionStorage.setItem(
+                      'current_warm_transfer_data',
+                      JSON.stringify({
+                        ...transferData,
+                        inviteCallId: this._callId,
+                        status: 'ANSWERED',
+                      })
+                    )
+                  }
                 }
               }
-            }
-          })
-          .catch((err) => {
-            console.error('Call Info is no available', err)
-            this.emit(SessionStatus.TRANSFER_WARM_INIT, {
-              callData: undefined,
             })
-          })
+            .catch((err) => {
+              console.error('Call Info is no available', err)
+              this.emit(SessionStatus.TRANSFER_WARM_INIT, {
+                callData: undefined,
+              })
+            })
+        }
+      }
 
-        // if (
-        //   data.is_warm &&
-        //   data.transfer_to_answered &&
-        //   data.callid === this._callId
-        // ) {
-        //   this.emit(SessionStatus.TRANSFER_WARM_ANSWERED, data)
-        // }
+      /**
+       * This is not invoked since in this point the session is killed already
+       * we're make the request in the bye event (confirm transfer action)
+       */
+      if (data?.type === 'call.transfer.success') {
+        if (data.is_warm) {
+          callDetails({
+            agentId: this._agentId,
+            callId: data.callid,
+            accessToken: this._accessToken,
+          })
+            .then((data) => {
+              if (data.result?.cdr) {
+                const cdr = data.result.cdr
+
+                if (cdr.parent_call?.callid) {
+                  const parentCallId = cdr.parent_call.callid
+                  const warmTransferData = sessionStorage.getItem(
+                    'current_warm_transfer_data'
+                  )
+
+                  const transferData = JSON.parse(warmTransferData)
+
+                  if (
+                    transferData.callId === parentCallId &&
+                    transferData.status === 'INVITE'
+                  ) {
+                    this.emit(SessionStatus.TRANSFER_WARM_COMPLETED, {
+                      callId: this._callId,
+                      transferType: 'warm',
+                      direction: cdr.direction,
+                      duration: cdr.duration,
+                      timeOfCall: cdr.start_dt,
+                      transferredCallId: cdr.child_call?.callid || null,
+                    })
+                    sessionStorage.removeItem('current_warm_transfer_data')
+                  }
+                }
+              }
+            })
+            .catch((err) => {
+              console.error('Call Info is no available', err)
+              this.emit(SessionStatus.TRANSFER_WARM_INIT, {
+                callData: undefined,
+              })
+            })
+        }
       }
 
       if (data.type && data.type === 'call.transfer.failure') {
@@ -1004,16 +976,15 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
                 accessToken: this._accessToken,
               })
                 .then((data) => {
+                  const cdr = data.result.cdr
                   if (data.result?.cdr) {
                     this.emit(SessionStatus.TRANSFER_BLIND_INIT, {
                       callId: this._callId,
                       transferType: option,
-                      direction: data.result.cdr.direction,
-                      duration: data.result.cdr.duration,
-                      timeOfCall: data.result.cdr.start_dt,
-                      transferredCallId: data.result.cdr.child_call
-                        ? data.result.cdr.child_call.callid
-                        : null,
+                      direction: cdr.direction,
+                      duration: cdr.duration,
+                      timeOfCall: cdr.start_dt,
+                      transferredCallId: cdr.child_call?.callid || null,
                     })
                   }
                 })
