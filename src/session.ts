@@ -72,9 +72,6 @@ export enum SessionStatus {
    */
   TRANSFER_FAILED = 'transfer_failed',
   TRANSFER_BLIND_INIT = 'transfer_blind_init',
-  TRANSFER_BLIND_ANSWERED = 'transfer_blind_answered',
-  TRANSFER_BLIND_NOT_ANSWERED = 'transfer_blind_not_answered',
-  TRANSFER_BLIND_COMPLETED = 'transfer_blind_completed',
   TRANSFER_WARM_INIT = 'transfer_warm_init',
   TRANSFER_WARM_ANSWERED = 'transfer_warm_answered',
   TRANSFER_WARM_NOT_ANSWERED = 'transfer_warm_not_answered',
@@ -304,9 +301,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             })
             .catch((err) => {
               console.error('Call Info is no available', err)
-              this.emit(SessionStatus.TRANSFER_WARM_INIT, {
-                callData: undefined,
-              })
+              this.emit(SessionStatus.TRANSFER_WARM_INIT, null)
             })
         })
       }
@@ -382,9 +377,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             })
             .catch((err) => {
               console.error('Call Info is no available', err)
-              this.emit(SessionStatus.TRANSFER_WARM_INIT, {
-                callData: undefined,
-              })
+              this.emit(SessionStatus.TRANSFER_WARM_ANSWERED, null)
             })
         }
       }
@@ -432,9 +425,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             })
             .catch((err) => {
               console.error('Call Info is no available', err)
-              this.emit(SessionStatus.TRANSFER_WARM_INIT, {
-                callData: undefined,
-              })
+              this.emit(SessionStatus.TRANSFER_WARM_COMPLETED, null)
             })
         }
       }
@@ -514,9 +505,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             })
             .catch((err) => {
               console.error('Call Info is no available', err)
-              this.emit(SessionStatus.TRANSFER_WARM_INIT, {
-                callData: undefined,
-              })
+              // TODO: fix later
+              this.emit(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, null)
             })
         }
       }
@@ -933,9 +923,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           })
           .catch((err) => {
             console.error('Call Info is no available', err)
-            this.emit(SessionStatus.TRANSFER_WARM_INIT, {
-              callData: undefined,
-            })
+            this.emit(SessionStatus.TRANSFER_WARM_COMPLETED, null)
           })
       } else {
         this._currentSession.bye()
@@ -1114,9 +1102,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
                 })
                 .catch((err) => {
                   console.error('Call Info is no available', err)
-                  this.emit(SessionStatus.TRANSFER_BLIND_INIT, {
-                    callData: undefined,
-                  })
+                  this.emit(SessionStatus.TRANSFER_BLIND_INIT, null)
                 })
             }
           } else {
