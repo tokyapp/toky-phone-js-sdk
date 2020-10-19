@@ -264,37 +264,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           },
         }
 
-        incomingSession.accept(options)
-      }
-    }
-  }
-
-  get callId(): string {
-    return this._callId
-  }
-
-  get callRecordingEnabled(): boolean {
-    return this._recordingFeatureActivated
-  }
-
-  get to(): any {
-    return this._to
-  }
-
-  get from(): any {
-    return this._from
-  }
-
-  get isConnected(): boolean {
-    return this._isConnected
-  }
-
-  private pusherEventsHandler(events: any): void {
-    if (events.event === 'call-event') {
-      const data = events.data
-
-      if (data.type && data.type === 'call.transfer') {
-        if (data.is_warm) {
+        incomingSession.accept(options).then(() => {
           callDetails({
             agentId: this._agentId,
             callId: this._callId,
@@ -335,6 +305,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
                       })
                     )
                   }
+
+                  if (transferData.muted) {
+                    this.mute()
+                  }
                 }
               }
             })
@@ -344,8 +318,88 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
                 callData: undefined,
               })
             })
-        }
+        })
       }
+    }
+  }
+
+  get callId(): string {
+    return this._callId
+  }
+
+  get callRecordingEnabled(): boolean {
+    return this._recordingFeatureActivated
+  }
+
+  get to(): any {
+    return this._to
+  }
+
+  get from(): any {
+    return this._from
+  }
+
+  get isConnected(): boolean {
+    return this._isConnected
+  }
+
+  private pusherEventsHandler(events: any): void {
+    if (events.event === 'call-event') {
+      const data = events.data
+
+      // if (data.type && data.type === 'call.transfer') {
+      //   if (data.is_warm) {
+      //     callDetails({
+      //       agentId: this._agentId,
+      //       callId: this._callId,
+      //       accessToken: this._accessToken,
+      //     })
+      //       .then((data) => {
+      //         if (data.result?.cdr) {
+      //           const cdr = data.result.cdr
+
+      //           if (cdr.parent_call?.callid) {
+      //             const parentCallId = cdr.parent_call.callid
+      //             const warmTransferData = sessionStorage.getItem(
+      //               'current_warm_transfer_data'
+      //             )
+
+      //             const transferData = JSON.parse(warmTransferData)
+
+      //             if (
+      //               transferData.callId === parentCallId &&
+      //               transferData.status === 'REFER'
+      //             ) {
+      //               this.emit(SessionStatus.TRANSFER_WARM_INIT, {
+      //                 callId: this._callId,
+      //                 transferType: 'warm',
+      //                 direction: data.result.cdr.direction,
+      //                 duration: data.result.cdr.duration,
+      //                 timeOfCall: data.result.cdr.start_dt,
+      //                 transferredCallId: data.result.cdr.child_call
+      //                   ? data.result.cdr.child_call.callid
+      //                   : null,
+      //               })
+      //               sessionStorage.setItem(
+      //                 'current_warm_transfer_data',
+      //                 JSON.stringify({
+      //                   ...transferData,
+      //                   inviteCallId: this._callId,
+      //                   status: 'INVITE',
+      //                 })
+      //               )
+      //             }
+      //           }
+      //         }
+      //       })
+      //       .catch((err) => {
+      //         console.error('Call Info is no available', err)
+      //         this.emit(SessionStatus.TRANSFER_WARM_INIT, {
+      //           callData: undefined,
+      //         })
+      //       })
+      //   }
+      // }
 
       if (data.type && data.type === 'call.transfer.update') {
         console.log('condition', data)
