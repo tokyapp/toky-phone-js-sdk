@@ -65,7 +65,9 @@ export enum SessionStatus {
   UNMUTED = 'unmuted',
   RECORDING = 'recording',
   NOT_RECORDING = 'not_recording',
-  /** TRANSFER_FAILED indicates that the server rejects the transfer for some reason
+  /**
+   * @remarks
+   * TRANSFER_FAILED indicates that the server rejects the transfer for some reason
    * one of the reasons can be, transferred agent doesn't exists
    */
   TRANSFER_FAILED = 'transfer_failed',
@@ -77,6 +79,7 @@ export enum SessionStatus {
   TRANSFER_WARM_ANSWERED = 'transfer_warm_answered',
   TRANSFER_WARM_NOT_ANSWERED = 'transfer_warm_not_answered',
   TRANSFER_WARM_COMPLETED = 'transfer_warm_completed',
+  TRANSFER_WARM_NOT_COMPLETED = 'transfer_warm_not_completed',
   FAILED = 'failed',
   BYE = 'bye',
 }
@@ -387,8 +390,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       }
 
       /**
+       * @remarks
        * This is not invoked since in this point the session is killed already
-       * we're make the request in the bye event (<confirm transfer> action)
+       * so we're making the request in the .endCall() method (<confirm transfer> action)
        */
       if (data?.type === 'call.transfer.success') {
         if (data.is_warm) {
@@ -437,7 +441,83 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       if (data.type && data.type === 'call.transfer.failure') {
         if (data.is_warm) {
-          this.emit(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, data)
+          callDetails({
+            agentId: this._agentId,
+            callId: data.callid,
+            accessToken: this._accessToken,
+          })
+            .then((data) => {
+              if (data.result?.cdr) {
+                const cdr = data.result.cdr
+
+                if (cdr.parent_call?.callid) {
+                  const parentCallId = cdr.parent_call.callid
+                  const warmTransferData = sessionStorage.getItem(
+                    'current_warm_transfer_data'
+                  )
+
+                  const transferData = JSON.parse(warmTransferData)
+
+                  if (
+                    transferData.callId === parentCallId &&
+                    transferData.status === 'INVITE'
+                  ) {
+                    this.emit(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, {
+                      callId: this._callId,
+                      transferType: 'warm',
+                      direction: cdr.direction,
+                      duration: cdr.duration,
+                      timeOfCall: cdr.start_dt,
+                      transferredCallId: cdr.child_call?.callid || null,
+                    })
+
+                    sessionStorage.setItem(
+                      'current_warm_transfer_data',
+                      JSON.stringify({
+                        ...transferData,
+                        inviteCallId: this._callId,
+                        status: 'NOT_ANSWERED',
+                      })
+                    )
+                  }
+
+                  /**
+                   * @remarks
+                   * This case is when the transferred agent answers the call
+                   * but the agent finally do not accept it, so
+                   * is ANSWERED but is NOT_COMPLETED
+                   */
+                  if (
+                    transferData.callId === parentCallId &&
+                    transferData.status === 'ANSWERED'
+                  ) {
+                    this.emit(SessionStatus.TRANSFER_WARM_NOT_COMPLETED, {
+                      callId: this._callId,
+                      transferType: 'warm',
+                      direction: cdr.direction,
+                      duration: cdr.duration,
+                      timeOfCall: cdr.start_dt,
+                      transferredCallId: cdr.child_call?.callid || null,
+                    })
+
+                    sessionStorage.setItem(
+                      'current_warm_transfer_data',
+                      JSON.stringify({
+                        ...transferData,
+                        inviteCallId: this._callId,
+                        status: 'NOT_COMPLETED',
+                      })
+                    )
+                  }
+                }
+              }
+            })
+            .catch((err) => {
+              console.error('Call Info is no available', err)
+              this.emit(SessionStatus.TRANSFER_WARM_INIT, {
+                callData: undefined,
+              })
+            })
         }
       }
     }
@@ -844,9 +924,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
                     timeOfCall: cdr.start_dt,
                     transferredCallId: cdr.child_call?.callid || null,
                   })
-                  sessionStorage.removeItem('current_warm_transfer_data')
                 }
 
+                sessionStorage.removeItem('current_warm_transfer_data')
                 this._currentSession.bye()
               }
             }
