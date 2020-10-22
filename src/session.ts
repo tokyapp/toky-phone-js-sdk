@@ -26,6 +26,8 @@ import {
   RecordingActionEnum,
   HoldActionEnum,
   callDetails,
+  TransferActionEnum,
+  cancelTransferAction,
 } from './toky-services'
 
 const tokyResourcesUrl = process.env.TOKY_RESOURCES_URL
@@ -77,6 +79,7 @@ export enum SessionStatus {
   TRANSFER_WARM_NOT_ANSWERED = 'transfer_warm_not_answered',
   TRANSFER_WARM_COMPLETED = 'transfer_warm_completed',
   TRANSFER_WARM_NOT_COMPLETED = 'transfer_warm_not_completed',
+  TRANSFER_WARM_CANCELED = 'transfer_warm_canceled',
   FAILED = 'failed',
   BYE = 'bye',
 }
@@ -878,6 +881,36 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       }
     } catch (err) {
       console.error('Error at hold action', err)
+      throw new Error(err)
+    }
+  }
+
+  public async cancelTransfer(): Promise<void> {
+    try {
+      const warmTransferData = sessionStorage.getItem(
+        'current_warm_transfer_data'
+      )
+
+      if (warmTransferData) {
+        const transferData = JSON.parse(warmTransferData)
+
+        if (transferData.callId) {
+          const response = await cancelTransferAction({
+            callId: transferData.callId,
+            agentId: this._agentId,
+            action: TransferActionEnum.cancel,
+            accessToken: this._accessToken,
+          })
+
+          if (response) {
+            this.emit(SessionStatus.TRANSFER_WARM_CANCELED)
+          }
+        } else {
+          throw new Error('Parent call id data is not available')
+        }
+      }
+    } catch (err) {
+      console.error('Error at cancel_transfer action', err)
       throw new Error(err)
     }
   }

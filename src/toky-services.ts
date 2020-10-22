@@ -196,6 +196,44 @@ export const callRecording = ({
       throw new Error(error)
     })
 
+export enum TransferActionEnum {
+  cancel = 'cancel_transfer',
+}
+
+export const cancelTransferAction = ({
+  callId,
+  action,
+  agentId,
+  accessToken,
+}: {
+  callId: string
+  agentId: string
+  action: TransferActionEnum
+  accessToken: string
+}): Promise<APIResponse> =>
+  axios({
+    url: `${tokyApiUrl}/v1/sdk/calls/${callId}/${action}`,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    params: {
+      agent_id: agentId,
+    },
+  })
+    .then((response) => {
+      const data: APIResponse = response.data
+
+      if (data && data.success) {
+        return response.data
+      } else {
+        throw new Error('Something went wrong on toky service call')
+      }
+    })
+    .catch((error) => {
+      console.error(error)
+      throw new Error(error)
+    })
+
 export const callDetails = ({
   agentId,
   callId,
