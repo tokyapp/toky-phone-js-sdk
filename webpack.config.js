@@ -13,14 +13,13 @@ const getEnvFile = function (key) {
   const files = {
     production: '.env.prod',
     staging: '.env.staging',
-    development: '.env.dev',
+    dev: '.env.dev',
   }
 
   return files[key] || files.local
 }
 
 module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
-  console.log('here', gitRevisionPlugin.branch())
   const dotenv = new Dotenv({
     path: getEnvFile(gitRevisionPlugin.branch()),
   })
