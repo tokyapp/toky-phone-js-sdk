@@ -3,6 +3,7 @@ const webpack = require('webpack')
 const Dotenv = require('dotenv-webpack')
 const webpackMerge = require('webpack-merge')
 const GitRevisionPlugin = require('git-revision-webpack-plugin')
+const gitRevisionPlugin = new GitRevisionPlugin()
 
 const libraryName = 'toky-sdk-alpha'
 
@@ -19,6 +20,7 @@ const getEnvFile = function (key) {
 }
 
 module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
+  console.log('here', gitRevisionPlugin.branch())
   const dotenv = new Dotenv({
     path: getEnvFile(gitRevisionPlugin.branch()),
   })
