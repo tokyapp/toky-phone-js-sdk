@@ -2,6 +2,7 @@
 const webpack = require('webpack')
 const Dotenv = require('dotenv-webpack')
 const webpackMerge = require('webpack-merge')
+const GitRevisionPlugin = require('git-revision-webpack-plugin')
 
 const libraryName = 'toky-sdk-alpha'
 
@@ -19,7 +20,7 @@ const getEnvFile = function (key) {
 
 module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
   const dotenv = new Dotenv({
-    path: getEnvFile(mode),
+    path: getEnvFile(gitRevisionPlugin.branch()),
   })
 
   return webpackMerge(
@@ -51,8 +52,14 @@ module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
         dotenv,
         new webpack.DefinePlugin({
           'process.env.NODE_ENV': JSON.stringify(mode),
+          VERSION: JSON.stringify(gitRevisionPlugin.version()),
+          COMMITHASH: JSON.stringify(gitRevisionPlugin.commithash()),
+          BRANCH: JSON.stringify(gitRevisionPlugin.branch()),
         }),
         new webpack.ProgressPlugin(),
+        new GitRevisionPlugin({
+          branch: true,
+        }),
       ],
       /**
        * SIP.js would be treated as a peer dependency
