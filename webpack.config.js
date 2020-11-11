@@ -11,12 +11,12 @@ const modeConfig = (env) => require(`./build-utils/webpack.${env}`)(env)
 
 const getEnvFile = function (key) {
   const files = {
-    production: '.env.prod',
+    master: '.env.prod',
     staging: '.env.staging',
     dev: '.env.dev',
   }
 
-  return files[key] || files.local
+  return files[key] || files.master
 }
 
 module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
