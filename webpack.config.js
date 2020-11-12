@@ -14,6 +14,7 @@ const getEnvFile = function (key) {
     master: '.env.prod',
     staging: '.env.staging',
     dev: '.env.dev',
+    'dev-bundle': '.env.dev',
   }
 
   return files[key] || files.master
