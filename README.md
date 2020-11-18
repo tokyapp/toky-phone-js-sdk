@@ -131,7 +131,7 @@ tokySession
 tokySession.endCall()
 ```
 
-# Audio device selection
+## Audio device selection
 
 The `MediaStatus.READY` is emitted when the devices permissions had been allowed by the user
 
