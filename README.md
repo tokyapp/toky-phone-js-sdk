@@ -47,14 +47,124 @@ await Client.init()
 
 ```javascript
 let tokySession = Client.startCall({
-  phoneNumber: '+595991123123', /* example number */
-  callerId: '+13344413569',     /* example caller id from the company */
+  phoneNumber: '+595217288659' /* example number */,
+  callerId: '+13344413569' /* example caller id from the company */,
 })
 ```
 
 ## Mute call
+
 ```javascript
 tokySession.mute()
+```
+
+## Hold Call
+
+```javascript
+tokySession
+  .hold()
+  .then(() => {
+    console.warn('--- HOLD action success')
+  })
+  .catch(() => {
+    console.warn('--- HOLD action unsuccess')
+  })
+```
+
+## Record Call
+
+This option will work if the agent has the corresponding permissions
+
+```javascript
+tokySession
+  .record()
+  .then(() => {
+    console.warn('--- RECORD action success')
+  })
+  .catch(() => {
+    console.warn('--- RECORD action unsuccess')
+  })
+```
+
+## Transfer call with Blind and Warm options
+
+```javascript
+const { TransferEnum, TransferOptionsEnum } = TokySDK
+
+tokySession.makeTransfer({
+  type: TransferEnum.AGENT,
+  destination: 'jane@doe.com',
+  option: TransferOptionsEnum.BLIND,
+})
+
+tokySession.makeTransfer({
+  type: TransferEnum.GROUP,
+  destination: '123' /* A valid group id that you get from the API */,
+  option: TransferOptionsEnum.WARM,
+})
+
+tokySession.makeTransfer({
+  type: TransferEnum.NUMBER,
+  destination: '+595217288659',
+  option: TransferOptionsEnum.BLIND,
+})
+```
+
+## Cancel transfer
+
+The cancel transfer option will work only for Warm Transfers
+
+```javascript
+tokySession
+  .cancelTransfer()
+  .then(() => {
+    console.warn('--- Cancel Transfer action success')
+  })
+  .catch(() => {
+    console.warn('--- Cancel Transfer action unsuccess')
+  })
+```
+
+## End Call
+
+```javascript
+tokySession.endCall()
+```
+
+# Audio device selection
+
+The `MediaStatus.READY` is emitted when the devices permissions had been allowed by the user
+
+```javascript
+Client.on(MediaStatus.READY, () => {
+  /* The device id */
+  const outputDevice = '230988012091820398213'
+  Client.setOutputDevice(outputDevice).then(() => {
+    console.log('Output device updated successfully!')
+  })
+
+  /**
+   * This is applied for established calls
+   * it allows you to switch audio devices mid-call
+   */
+  const inputSelected = '120398120398123'
+  if (tokySession) {
+    const connection = tokySession.getConnection()
+    Client.setInputDevice(inputSelected, connection).then(() => {
+      console.log('Input device updated successfully!')
+    })
+  } else {
+    Client.setInputDevice(inputSelected).then(() => {
+      console.log('Input device updated successfully!')
+    })
+  }
+
+  /* The list of devices available, and can be used to switch devices */
+  console.log(Client.inputs, Client.outputs)
+
+  console.log(`Selected input: ${Client.selectedInputDevice.name}`)
+  console.log(`Selected ouput: ${Client.selectedOutputDevice.name}`)
+})
 ```
 
 To support this project, please consider to [donate](https://www.gittip.com/monbro/).
