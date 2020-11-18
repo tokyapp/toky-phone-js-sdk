@@ -26,6 +26,8 @@ Clone the repository or download the [zip](https://github.com/monbro/javascript-
 
 ## Connecting and registering
 
+The `.init()` method is making an authomatic registration with the phone system
+
 ```javascript
 import TokySDK from 'toky-phone-js-sdk'
 
@@ -50,6 +52,27 @@ let tokySession = Client.startCall({
   phoneNumber: '+595217288659' /* example number */,
   callerId: '+13344413569' /* example caller id from the company */,
 })
+```
+
+## TokyClient instance events
+
+### Registration events
+```javascript
+Client.on(ClientStatus.REGISTERED, () => { /* Your code here */ })
+Client.on(ClientStatus.UNREGISTERED, () => { /* Your code here */ })
+```
+The **Connecting** event is emitted whenever a call is starting and is the first event after a **Ringing** event
+```javascript
+Client.on(ClientStatus.CONNECTING, () => { /* Your code here */ })
+```
+### Media status events
+```javascript
+Client.on(MediaStatus.READY, () => { /* Your code here */ })
+Client.on(MediaStatus.UPDATED, () => { /* Your code here */ })
+Client.on(MediaStatus.INPUT_UPDATED, () => { /* Your code here */ })
+Client.on(MediaStatus.OUTPUT_UPDATED, () => { /* Your code here */ })
+Client.on(MediaStatus.PERMISSION_GRANTED, () => { /* Your code here */ })
+Client.on(MediaStatus.PERMISSION_REVOKED, () => { /* Your code here */ })
 ```
 
 ## Mute call
@@ -162,6 +185,7 @@ Client.on(MediaStatus.READY, () => {
   /* The list of available devices, and can be used to switch devices */
   console.log(Client.inputs, Client.outputs)
 
+  /* List current available devices */
   console.log(`Selected input: ${Client.selectedInputDevice.name}`)
   console.log(`Selected ouput: ${Client.selectedOutputDevice.name}`)
 })
