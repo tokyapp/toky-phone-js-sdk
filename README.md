@@ -1,62 +1,61 @@
-javascript-sdk-boilerplate [![Build Status](https://travis-ci.org/monbro/javascript-sdk-boilerplate.svg?branch=master)](https://travis-ci.org/monbro/javascript-sdk-boilerplate)
-===========================
+# Toky Phone JS SDK
 
-A boilerplate code template for creating a generic javascript sdk. Check out the [demo](https://rawgit.com/monbro/javascript-sdk-boilerplate/master/example/example1.html).
+The Toky Phone JS SDK is a WebRTC Javascript library providing an abstraction to the Toky phone system, including its main features.
 
-### 1. Installation
+## Prerequisites
 
-You will need to have [nodejs](http://nodejs.org/download) isntalled.
+- You will need an active Toky Account
+- The App should be Browser-based
+- An API key from the Toky Web App
 
-Clone the repository or download the [zip](https://github.com/monbro/javascript-sdk-boilerplate/archive/master.zip).
-Or you can use the existing [yeoman generator](https://www.npmjs.org/package/generator-javascript-sdk-boilerplate):
+## What can you do?
 
-* ```npm install -g generator-javascript-sdk-boilerplate```
-* ```yo javascript-sdk-boilerplate```
+Make calls, receive web calls, all of the operations related to a call, mute, hold, recording, transfer call to other Agents, Groups or Numbers, Blind transfers and Warm.
 
-### 2. Getting started
+## Installation
 
-* open the command line and switch into the project folder
-* ```npm install```
-* ```sudo npm install -g gulp```
-* ```gulp``` to see the list of available tasks
+Clone the repository or download the [zip](https://github.com/monbro/javascript-sdk-boilerplate/archive/master.zip) or install from npm.
 
-### 3. Essential Gulp Tasks
+`$ npm install --save toky-phone-js-sdk`
 
-* ```gulp build``` dumps a plain and a minified file from all files in the folder ```src``` into the folder ```dist```.
-* ```gulp clean``` removes all files in the folder ```dist```.
-* ```gulp test``` runs the tests and linting for all files in the folder ```src```.
-* ```gulp bump-patch``` increases the version by ```0.0.1``` for the last git commit and pushes the new tag to the remote repository.
-* ```gulp bump-minor``` increases the version by ```0.1.0``` for the last git commit and pushes the new tag to the remote repository.
-* ```gulp bump-major``` increases the version by ```1.0.0``` for the last git commit and pushes the new tag to the remote repository.
+## Authentication
 
-## Web References
+- In order to authenticate, first you need an API key provided by the Toky Web App, you can find info in this guide: https://help.toky.co/en/articles/2299425-where-can-i-find-the-api-key
+- The second step is to register your App: https://toky-phone-js-sdk.readme.io/reference#applications
+- Once you register an Application the the third step is to obtain an Access Token: https://toky-phone-js-sdk.readme.io/reference#access_token
 
-### Tutorials to build a SDK
+## Connecting and registering
 
-* http://msdn.microsoft.com/en-us/library/jj820239.aspx
+```javascript
+import TokySDK from 'toky-phone-js-sdk'
 
-### How others do it:
+const { TokyClient } = TokySDK
 
-* https://github.com/apigee/apigee-javascript-sdk/blob/master/apigee.js
-* https://github.com/stackmob/stackmob-js-sdk/blob/master/stackmob.js
-* https://github.com/gilt/gilt-js-sdk/blob/master/gilt-js-api.js
-* https://github.com/BuddyPlatform/Buddy-JS-SDK/blob/master/buddy.js
-* https://github.com/EdmundsAPI/sdk-javascript/blob/master/edmunds.api.sdk.js
-* https://github.com/justintv/twitch-js-sdk/blob/master/twitch.js
-* https://github.com/aws/aws-sdk-js/blob/master/dist/aws-sdk.js
-* https://github.com/Instagram/instagram-javascript-sdk/blob/master/ig.js
-* https://github.com/splunk/splunk-sdk-javascript/blob/master/client/splunk.js
+const Client = new TokyClient({
+  accessToken: '{{access_token}}',
+  account: {
+    user: 'john@doe.com',
+    type: 'agent',
+  },
+  transportLib: 'sip.js',
+})
 
-### Final usage examples
+await Client.init()
+```
 
-* https://keen.io/docs/clients/javascript/usage-guide/ with https://dc8na2hxrj29i.cloudfront.net/code/keen-2.1.0-min.js
-* https://developers.facebook.com/docs/javascript/quickstart/v2.0 with https://connect.facebook.net/en_US/sdk.js
-* https://parse.com/docs/js_guide with www.parsecdn.com/js/parse-1.2.18.min.js
+## Outgoing call
 
-### Helpful sites
+```javascript
+let tokySession = Client.startCall({
+  phoneNumber: '+595991123123', /* example number */
+  callerId: '+13344413569',     /* example caller id from the company */
+})
+```
 
-* http://blog.ponyfoo.com/2014/01/27/my-first-gulp-adventure
-* http://regex101.com/
+## Mute call
+```javascript
+tokySession.mute()
+```
 
 To support this project, please consider to [donate](https://www.gittip.com/monbro/).
 
