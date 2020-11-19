@@ -63,7 +63,7 @@ const { ClientStatus } = TokySDK
 Client.on(ClientStatus.REGISTERED, () => { /* Your code here */ })
 Client.on(ClientStatus.UNREGISTERED, () => { /* Your code here */ })
 ```
-The **Connecting** event is emitted whenever a call is starting and is the first event after a **Ringing** event
+The **Connecting** event is emitted whenever a call is starting and is the first event before a **Ringing** event in the Session instance
 ```javascript
 const { ClientStatus } = TokySDK
 
@@ -81,13 +81,14 @@ Client.on(MediaStatus.PERMISSION_GRANTED, () => { /* Your code here */ })
 Client.on(MediaStatus.PERMISSION_REVOKED, () => { /* Your code here */ })
 ```
 
-## Mute call
+## Session instance methods
+### Mute call
 
 ```javascript
 tokySession.mute()
 ```
 
-## Hold Call
+### Hold Call
 
 ```javascript
 tokySession
@@ -100,7 +101,7 @@ tokySession
   })
 ```
 
-## Record Call
+### Record Call
 
 This option will work if the agent has the corresponding permissions
 
@@ -115,7 +116,7 @@ tokySession
   })
 ```
 
-## Transfer call with Blind and Warm options
+### Transfer call with Blind and Warm options
 
 ```javascript
 const { TransferEnum, TransferOptionsEnum } = TokySDK
@@ -139,7 +140,7 @@ tokySession.makeTransfer({
 })
 ```
 
-## Cancel transfer
+### Cancel transfer
 
 The cancel transfer option will work only for Warm Transfers
 
@@ -154,7 +155,7 @@ tokySession
   })
 ```
 
-## End Call
+### End Call
 
 ```javascript
 tokySession.endCall()
