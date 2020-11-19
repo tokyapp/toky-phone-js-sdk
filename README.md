@@ -58,15 +58,21 @@ let tokySession = Client.startCall({
 
 ### Registration events
 ```javascript
+const { ClientStatus } = TokySDK
+
 Client.on(ClientStatus.REGISTERED, () => { /* Your code here */ })
 Client.on(ClientStatus.UNREGISTERED, () => { /* Your code here */ })
 ```
 The **Connecting** event is emitted whenever a call is starting and is the first event after a **Ringing** event
 ```javascript
+const { ClientStatus } = TokySDK
+
 Client.on(ClientStatus.CONNECTING, () => { /* Your code here */ })
 ```
 ### Media status events
 ```javascript
+const { MediaStatus } = TokySDK
+
 Client.on(MediaStatus.READY, () => { /* Your code here */ })
 Client.on(MediaStatus.UPDATED, () => { /* Your code here */ })
 Client.on(MediaStatus.INPUT_UPDATED, () => { /* Your code here */ })
@@ -159,6 +165,8 @@ tokySession.endCall()
 The `MediaStatus.READY` is emitted when the devices permissions had been allowed by the user
 
 ```javascript
+const { MediaStatus } = TokySDK
+
 Client.on(MediaStatus.READY, () => {
   /* The device id */
   const outputDevice = '230988012091820398213'
