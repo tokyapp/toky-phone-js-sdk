@@ -22,7 +22,7 @@ Clone the repository or download the [zip](https://github.com/monbro/javascript-
 
 - In order to authenticate, first you need an API key provided by the Toky Web App, you can find info in this guide: https://help.toky.co/en/articles/2299425-where-can-i-find-the-api-key
 - The second step is to register your App: https://toky-phone-js-sdk.readme.io/reference#applications
-- Once you register an Application the the third step is to obtain an Access Token: https://toky-phone-js-sdk.readme.io/reference#access_token
+- Once you register an Application the next step is to obtain an Access Token: https://toky-phone-js-sdk.readme.io/reference#access_token
 
 ## Connecting and registering
 
