@@ -10,7 +10,7 @@ The Toky Phone JS SDK is a WebRTC Javascript library providing an abstraction to
 
 ## What can you do?
 
-Make calls, receive web calls, all of the operations related to a call, mute, hold, recording, transfer call to other Agents, Groups or Numbers, Blind transfers and Warm.
+Make calls, receive web calls, all of the operations related to a call, mute, hold, recording, transfer calls to other Agents, Groups or Numbers, Blind transfers, and Warm.
 
 ## Installation
 
@@ -20,13 +20,16 @@ Clone the repository or download the [zip](https://github.com/monbro/javascript-
 
 ## Authentication
 
-- In order to authenticate, first you need an API key provided by the Toky Web App, you can find info in this guide: https://help.toky.co/en/articles/2299425-where-can-i-find-the-api-key
-- The second step is to register your App: https://toky-phone-js-sdk.readme.io/reference#applications
-- Once you register an Application the next step is to obtain an Access Token: https://toky-phone-js-sdk.readme.io/reference#access_token
+- To authenticate, first, you need an API key provided by the Toky Web App. You can find info in this guide: 
+    - https://help.toky.co/en/articles/2299425-where-can-i-find-the-api-key
+- The second step is to register your App:
+    -  https://toky-phone-js-sdk.readme.io/reference#applications
+- Once you register an Application, the next step is to obtain an Access Token:
+    - https://toky-phone-js-sdk.readme.io/reference#access_token
 
 ## Connecting and registering
 
-The `.init()` method is making an authomatic registration with the phone system
+The `.init()` method is making an automatic registration with the phone system.
 
 ```javascript
 import TokySDK from 'toky-phone-js-sdk'
@@ -47,7 +50,7 @@ await Client.init()
 
 ## Outgoing call
 
-You can list the available **Phone Numbers** of the company, pick one of them and establish a call. 
+You can list the available **Phone Numbers** of the company, pick one of them, and establish a call. 
 
 https://toky-phone-js-sdk.readme.io/reference#agentsdids
 
@@ -107,7 +110,7 @@ tokySession
 
 ### Record Call
 
-This option will work if the agent has the corresponding permissions
+This option will work if the agent has the corresponding permissions.
 
 ```javascript
 tokySession
@@ -146,7 +149,7 @@ tokySession.makeTransfer({
 
 ### Cancel transfer
 
-The cancel transfer option will work only for Warm Transfers
+The cancel transfer option will work only for Warm Transfers.
 
 ```javascript
 tokySession
@@ -167,7 +170,7 @@ tokySession.endCall()
 
 ## Audio device selection
 
-The `MediaStatus.READY` is emitted when the devices permissions had been allowed by the user
+The `MediaStatus.READY` is emitted when the user's permissions had been allowed.
 
 ```javascript
 const { MediaStatus } = TokySDK
@@ -203,7 +206,3 @@ Client.on(MediaStatus.READY, () => {
   console.log(`Selected ouput: ${Client.selectedOutputDevice.name}`)
 })
 ```
-
-To support this project, please consider to [donate](https://www.gittip.com/monbro/).
-
-This software is published under the MIT-License. See 'license' for more information.
