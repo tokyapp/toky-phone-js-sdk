@@ -14,7 +14,7 @@ Make calls, receive web calls, all of the operations related to a call, mute, ho
 
 ## Installation
 
-Clone the repository or download the [zip](https://github.com/monbro/javascript-sdk-boilerplate/archive/master.zip) or install from npm.
+Clone the repository or download the [zip]() or install from npm.
 
 `$ npm install --save toky-phone-js-sdk`
 
@@ -132,12 +132,6 @@ tokySession.makeTransfer({
   type: TransferEnum.AGENT,
   destination: 'jane@doe.com',
   option: TransferOptionsEnum.BLIND,
-})
-
-tokySession.makeTransfer({
-  type: TransferEnum.GROUP,
-  destination: '123' /* A valid group id that you get from the API */,
-  option: TransferOptionsEnum.WARM,
 })
 
 tokySession.makeTransfer({
