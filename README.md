@@ -47,7 +47,7 @@ await Client.init()
 
 ## Outgoing call
 
-You can list the available company's DIDs (Phone Numbers) to establish the call. 
+You can list the available **Phone Numbers** of the company, pick one of them and establish a call. 
 
 https://toky-phone-js-sdk.readme.io/reference#agentsdids
 
