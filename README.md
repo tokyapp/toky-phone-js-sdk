@@ -47,6 +47,10 @@ await Client.init()
 
 ## Outgoing call
 
+You can list the available company's DIDs (Phone Numbers) to establish the call. 
+
+https://toky-phone-js-sdk.readme.io/reference#agentsdids
+
 ```javascript
 let tokySession = Client.startCall({
   phoneNumber: '+595217288659' /* example number */,
