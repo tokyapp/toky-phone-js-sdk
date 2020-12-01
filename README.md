@@ -14,7 +14,7 @@ Make calls, receive web calls, all of the operations related to a call, mute, ho
 
 ## Installation
 
-Clone the repository or download the [zip]() or install from npm.
+Clone the repository or download the [zip](https://tokystorage.s3.amazonaws.com/shared/toky-js-sdk/0.5.2.zip) or install from npm.
 
 `$ npm install --save toky-phone-js-sdk`
 
