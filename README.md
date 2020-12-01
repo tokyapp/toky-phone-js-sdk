@@ -47,20 +47,6 @@ const Client = new TokyClient({
 
 await Client.init()
 ```
-
-## Outgoing call
-
-You can list the available **Phone Numbers** of the company, pick one of them, and establish a call. 
-
-https://toky-phone-js-sdk.readme.io/reference#agentsdids
-
-```javascript
-let tokySession = Client.startCall({
-  phoneNumber: '+595217288659' /* example number */,
-  callerId: '+13344413569' /* example caller id from the company */,
-})
-```
-
 ## TokyClient instance events
 
 ### Registration events
@@ -87,6 +73,20 @@ Client.on(MediaStatus.OUTPUT_UPDATED, () => { /* Your code here */ })
 Client.on(MediaStatus.PERMISSION_GRANTED, () => { /* Your code here */ })
 Client.on(MediaStatus.PERMISSION_REVOKED, () => { /* Your code here */ })
 ```
+## Outgoing call
+
+You can list the available **Phone Numbers** of the company, pick one, and establish a call. 
+
+https://toky-phone-js-sdk.readme.io/reference#agentsdids
+
+```javascript
+let tokySession = Client.startCall({
+  phoneNumber: '+595217288659' /* example number */,
+  callerId: '+13344413569' /* example caller id from the company */,
+})
+```
+Once the call is established we get a session (`tokySession`) of that call and 
+later we will use it to make the following operations
 
 ## Session instance methods
 ### Mute call
@@ -162,6 +162,31 @@ tokySession
 tokySession.endCall()
 ```
 
+## Session instance events
+
+```javascript
+tokySession.on(SessionStatus.MUTED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.UNMUTED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.HOLD, () => { /* Your code here */ })
+tokySession.on(SessionStatus.UNHOLD, () => { /* Your code here */ })
+tokySession.on(SessionStatus.RECORDING, () => { /* Your code here */ })
+tokySession.on(SessionStatus.NOT_RECORDING, () => { /* Your code here */ })
+```
+
+## Transfer call events
+We have several call events for transfer calls.
+
+ `TRANSFER_FAILED` is related to the phone system rejecting the transfer operation, a example could be an invalid agent sip username used to make a blind transfer.
+```javascript
+currentSession.on(SessionStatus.TRANSFER_BLIND_INIT, () => { /* Your code here */ })
+currentSession.on(SessionStatus.TRANSFER_WARM_INIT, () => { /* Your code here */ })
+currentSession.on(SessionStatus.TRANSFER_WARM_ANSWERED, () => { /* Your code here */ )
+currentSession.on(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, () => { /* Your code here */ })
+currentSession.on(SessionStatus.TRANSFER_WARM_COMPLETED, () => { /* Your code here */ })
+currentSession.on(SessionStatus.TRANSFER_WARM_NOT_COMPLETED, () => { /* Your code here */ })
+currentSession.on(SessionStatus.TRANSFER_WARM_CANCELED, () => { /* Your code here */ })
+currentSession.on(SessionStatus.TRANSFER_FAILED, () => { /* Your code here */ })
+```
 ## Audio device selection
 
 The `MediaStatus.READY` is emitted when the user's permissions had been allowed.
