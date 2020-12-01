@@ -1,7 +1,7 @@
 {
-  "name": "toky-sdk-v1",
+  "name": "toky-phone-js-sdk",
   "version": "0.5.1",
-  "description": "Toky Dialer SDK v1",
+  "description": "Toky Phone JS SDK v1",
   "main": "dist/toky-sdk-alpha.js",
   "module": "dist/toky-sdk-alpha.js",
   "typings": "dist/types/index.d.ts",
