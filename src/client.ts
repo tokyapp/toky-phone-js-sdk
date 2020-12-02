@@ -39,6 +39,7 @@ export enum ClientStatus {
   INVITE = 'invite',
   REGISTERING = 'registering',
   CONNECTING = 'connecting',
+  RECONNECTING = 'reconnecting',
   UNREGISTERED = 'unregistered',
   REGISTRATION_FAILED = 'registration_failed',
   REGISTERED = 'registered',
@@ -718,6 +719,7 @@ export class Client extends EventEmitter implements IClientImpl {
           .then(() => {
             // Reconnect attempt succeeded
             this._attemptingReconnection = false
+            this.emit(ClientStatus.RECONNECTING)
           })
           .catch((error: Error) => {
             // Reconnect attempt failed
