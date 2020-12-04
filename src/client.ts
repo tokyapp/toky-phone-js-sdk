@@ -732,6 +732,7 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   /**
+   * Devices
    * @remarks
    * Media related methods, now mixed with Client class
    * maybe later can exists in its own class
@@ -922,10 +923,6 @@ export class Client extends EventEmitter implements IClientImpl {
     UserAgent.makeURI(
       `sip:service@${this._tokyDomain};company=${this._companyId};dnis=${phoneNumber}`
     )
-
-  /**
-   * Event listeners
-   */
 
   /**
    * Handlers for event listeners
