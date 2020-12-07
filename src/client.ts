@@ -39,7 +39,8 @@ export enum ClientStatus {
   INVITE = 'invite',
   REGISTERING = 'registering',
   CONNECTING = 'connecting',
-  RECONNECTING = 'reconnecting',
+  ONLINE = 'online',
+  OFFLINE = 'offline',
   UNREGISTERED = 'unregistered',
   REGISTRATION_FAILED = 'registration_failed',
   REGISTERED = 'registered',
@@ -671,6 +672,7 @@ export class Client extends EventEmitter implements IClientImpl {
       })
 
       window.addEventListener('offline', () => {
+        this.emit(ClientStatus.OFFLINE)
         console.warn(
           'Browser goes offline. Once online it will try to reconnect.'
         )
@@ -719,7 +721,7 @@ export class Client extends EventEmitter implements IClientImpl {
           .then(() => {
             // Reconnect attempt succeeded
             this._attemptingReconnection = false
-            this.emit(ClientStatus.RECONNECTING)
+            this.emit(ClientStatus.ONLINE)
           })
           .catch((error: Error) => {
             // Reconnect attempt failed
