@@ -39,6 +39,8 @@ export enum ClientStatus {
   INVITE = 'invite',
   REGISTERING = 'registering',
   CONNECTING = 'connecting',
+  ONLINE = 'online',
+  OFFLINE = 'offline',
   UNREGISTERED = 'unregistered',
   REGISTRATION_FAILED = 'registration_failed',
   REGISTERED = 'registered',
@@ -670,6 +672,7 @@ export class Client extends EventEmitter implements IClientImpl {
       })
 
       window.addEventListener('offline', () => {
+        this.emit(ClientStatus.OFFLINE)
         console.warn(
           'Browser goes offline. Once online it will try to reconnect.'
         )
@@ -718,6 +721,7 @@ export class Client extends EventEmitter implements IClientImpl {
           .then(() => {
             // Reconnect attempt succeeded
             this._attemptingReconnection = false
+            this.emit(ClientStatus.ONLINE)
           })
           .catch((error: Error) => {
             // Reconnect attempt failed
@@ -730,6 +734,7 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   /**
+   * Devices
    * @remarks
    * Media related methods, now mixed with Client class
    * maybe later can exists in its own class
@@ -920,10 +925,6 @@ export class Client extends EventEmitter implements IClientImpl {
     UserAgent.makeURI(
       `sip:service@${this._tokyDomain};company=${this._companyId};dnis=${phoneNumber}`
     )
-
-  /**
-   * Event listeners
-   */
 
   /**
    * Handlers for event listeners
