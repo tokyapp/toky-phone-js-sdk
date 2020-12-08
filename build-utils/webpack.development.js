@@ -6,7 +6,7 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer')
 
 module.exports = () => ({
   plugins: [
-    new BundleAnalyzerPlugin(),
+    new BundleAnalyzerPlugin({ analyzerPort: 8889 }),
     new HtmlWebpackPlugin({
       // target template to copy the structure from
       template: 'public/template.html',
