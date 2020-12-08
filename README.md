@@ -220,7 +220,7 @@ Client.on(MediaStatus.READY, () => {
   /* The list of available devices, and can be used to switch devices */
   console.log(Client.inputs, Client.outputs)
 
-  /* List current available devices */
+  /* List current selected devices, input and output respectively */
   console.log(`Selected input: ${Client.selectedInputDevice.name}`)
   console.log(`Selected ouput: ${Client.selectedOutputDevice.name}`)
 })
