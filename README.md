@@ -88,7 +88,7 @@ let tokySession = Client.startCall({
   callerId: '+13344413569' /* example caller id from the company */,
 })
 ```
-Once the call is established we get a session (`tokySession`) of that call and 
+Once the call is established, we get a session (`tokySession`) of that call and 
 later we will use it to make the following operations
 
 ## Session instance methods
