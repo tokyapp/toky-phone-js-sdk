@@ -12,6 +12,9 @@ The Toky Phone JS SDK is a WebRTC Javascript library providing an abstraction to
 
 Make calls, receive web calls, all of the operations related to a call, mute, hold, recording, transfer calls to other Agents, Groups or Numbers, Blind transfers, and Warm.
 
+## Alpha version
+During the alpha period, we may change aspects of the API based on authentication and feedback.
+
 ## Installation
 
 Clone the repository or download the [zip](https://tokystorage.s3.amazonaws.com/shared/toky-js-sdk/0.5.2.zip) or install from npm.
