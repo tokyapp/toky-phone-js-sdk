@@ -1221,14 +1221,14 @@ export class Client extends EventEmitter implements IClientImpl {
         return currentSession
       } else {
         console.error(
-          'Unable to acquire media, grant media permissions first in navigator settings.'
+          'Unable to acquire media, you need to grant media permissions in navigator settings.'
         )
 
         this.emit(ClientStatus.INVITE_REJECTED, {
           code: 412,
           status: 'Conditional Request Failed',
           msg:
-            'Unable to acquire media, grant media permissions first in navigator settings.',
+            'Unable to acquire media, you need to grant media permissions in navigator settings.',
         })
       }
     } else {
