@@ -37,6 +37,7 @@ const pusher = new Pusher(process.env.PUSHER_KEY, {
 
 export enum ClientStatus {
   INVITE = 'invite',
+  INVITE_REJECTED = 'INVITE_REJECTED',
   REGISTERING = 'registering',
   CONNECTING = 'connecting',
   ONLINE = 'online',
@@ -348,7 +349,7 @@ export class Client extends EventEmitter implements IClientImpl {
         authorizationPassword: paramsData.sip.password,
         userAgentString: `toky/${packageJson.name}-${packageJson.version}/${browserSpecs.name}-${browserSpecs.version}`,
         logBuiltinEnabled: true,
-        logLevel: 'debug',
+        logLevel: isDevelopment ? 'debug' : 'error',
         allowLegacyNotifications: true,
         sipExtension100rel: SIPExtension.Supported,
         displayName,
@@ -825,14 +826,8 @@ export class Client extends EventEmitter implements IClientImpl {
         if (permission.state === 'denied') {
           console.error('-- ðŸ”¥ Mic access DENIED! Contact support@toky.co')
 
-          alert(
-            `❌ We couldn't access your microphone.\n\n
-            The microphone seems to be blocked. 
-            Please give Toky permission to use it or contact our support team to get help.\n\n
-            https://help.toky.co/how-tos/how-to-unblock-my-microphone-access-for-toky`
-          )
-
           this.emit(MediaStatus.PERMISSION_REVOKED)
+          this.hasMediaPermissions = false
         }
 
         if (permission.state === 'prompt') {
@@ -1191,38 +1186,51 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      const inviter = new Inviter(
-        this._userAgent,
-        this.outboundCallURI(phoneNumber),
-        options
-      )
+      if (this.hasMediaPermissions) {
+        const inviter = new Inviter(
+          this._userAgent,
+          this.outboundCallURI(phoneNumber),
+          options
+        )
 
-      this.emit(ClientStatus.CONNECTING)
+        this.emit(ClientStatus.CONNECTING)
 
-      let currentSession = new SessionUA(
-        inviter,
-        this._media,
-        this._tokyChannel,
-        CallDirectionEnum.OUTBOUND,
-        {
-          agentId: this._account.user,
-          sipUsername: this._account.sipUsername,
-          companyId: this._companyId,
-          accessToken: this._accessToken,
-        },
-        {
-          uri: this.outboundCallURI(phoneNumber),
-          type: 'contact',
-          phone: phoneNumber,
-        }
-      )
+        let currentSession = new SessionUA(
+          inviter,
+          this._media,
+          this._tokyChannel,
+          CallDirectionEnum.OUTBOUND,
+          {
+            agentId: this._account.user,
+            sipUsername: this._account.sipUsername,
+            companyId: this._companyId,
+            accessToken: this._accessToken,
+          },
+          {
+            uri: this.outboundCallURI(phoneNumber),
+            type: 'contact',
+            phone: phoneNumber,
+          }
+        )
 
-      currentSession.once('__session_terminated', () => {
-        this.sessionTerminatedHandler()
-        currentSession = null
-      })
+        currentSession.once('__session_terminated', () => {
+          this.sessionTerminatedHandler()
+          currentSession = null
+        })
 
-      return currentSession
+        return currentSession
+      } else {
+        console.error(
+          'Unable to acquire media, you need to grant media permissions in navigator settings.'
+        )
+
+        this.emit(ClientStatus.INVITE_REJECTED, {
+          code: 412,
+          status: 'Conditional Request Failed',
+          msg:
+            'Unable to acquire media, you need to grant media permissions in navigator settings.',
+        })
+      }
     } else {
       console.warn('need registration first')
       return null
