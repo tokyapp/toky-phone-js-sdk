@@ -108,20 +108,6 @@ interface HTMLMediaElementExp extends HTMLMediaElement {
 }
 
 declare interface IClientImpl {
-  // * Private Methods
-  /*
-  onNotify: (message: string) => void
-  subscribeToTransport: (userAgent: UserAgent) => void
-  setupUserAgentListeners: (userAgent: UserAgent) => void
-  setupSessionListeners: (session: Session) => void
-  setupSessionDescriptionHandlerListeners: (
-    sessionDescriptionHandler: Web.SessionDescriptionHandler
-  ) => void
-  trackAddedHandler: () => void
-  acceptedHandler: () => void
-  stopAudio: (sound: HTMLAudioElement) => void
-  cleanupMedia: () => void
-  */
   init: () => Promise<{ connectionCountry: string }>
   register: () => void
   startCall: (options: {
