@@ -9,7 +9,7 @@ module.exports = () => ({
     new BundleAnalyzerPlugin({ analyzerPort: 8889 }),
     new HtmlWebpackPlugin({
       // target template to copy the structure from
-      template: 'public/template.html',
+      template: 'example/template.html',
       // insert the bundle to the head so we can run the initialization script after it
       inject: 'head',
       // used for cache refreshing
@@ -21,7 +21,7 @@ module.exports = () => ({
   ],
   devServer: {
     // since our index.html is located in the dist folder, we need to provide different content bases
-    contentBase: ['public/'],
+    contentBase: ['example/'],
     port: 8080,
     publicPath: 'http://localhost:8080/',
     hot: true,
