@@ -174,16 +174,16 @@ tokySession.on(SessionStatus.NOT_RECORDING, () => { /* Your code here */ })
 ## Transfer call events
 We have several call events for transfer calls.
 
- `TRANSFER_FAILED` is related to the phone system rejecting the transfer operation, a example could be an invalid agent sip username used to make a blind transfer.
+ `TRANSFER_FAILED` is related to the phone system rejecting the transfer operation, i.e. use an invalid agent sip username to make a blind transfer.
 ```javascript
-currentSession.on(SessionStatus.TRANSFER_BLIND_INIT, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_INIT, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_ANSWERED, () => { /* Your code here */ )
-currentSession.on(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_COMPLETED, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_NOT_COMPLETED, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_CANCELED, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_FAILED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_BLIND_INIT, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_INIT, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_ANSWERED, () => { /* Your code here */ )
+tokySession.on(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_COMPLETED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_NOT_COMPLETED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_CANCELED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_FAILED, () => { /* Your code here */ })
 ```
 ## Audio device selection
 
