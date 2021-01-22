@@ -22,8 +22,19 @@ const deviceStatusTile = document.querySelector('#device-status')
 const deviceStatusSub = document.querySelector('#device-sub')
 const inputDeviceStatusSub = document.querySelector('#input-device-sub')
 const outputDeviceStatusSub = document.querySelector('#output-device-sub')
+const generalMessage = document.querySelector('#general-message')
+const generalArticle = document.querySelector('#general-article')
+const phoneNumber = document.querySelector('#phone-number')
+const callerId = document.querySelector('#caller-id')
 
 const keypad = getButtons('keypad')
+
+const tokyApiUrl = 'https://api.toky.co'
+const tokySsoURL = 'https://app.toky.co'
+/**
+ * Insert created app_id from the toky api
+ */
+const currentAppId = ''
 
 const {
   TokyClient,
@@ -179,12 +190,19 @@ keypad.forEach((button) => {
 async function main() {
   const urlParams = new URLSearchParams(window.location.search)
   const authorizationCode = urlParams.get('code')
-  const agentId = decodeURIComponent(urlParams.get('agent_id'))
+  const agentId = urlParams.get('agent_id')
 
   let transferTypeSelected = transferType.value
   let warmOption = false
 
   if (authorizationCode) {
+    if (!agentId) {
+      generalMessage.textContent =
+        'agent_id query param is required to run the example app'
+      generalArticle.classList.add('is-danger')
+      return
+    }
+
     const raw = JSON.stringify({
       scope: 'dialer',
       agent_id: agentId,
@@ -205,6 +223,7 @@ async function main() {
       .then((result) => {
         accessToken.value = result.data ? result.data.access_token : ''
         agent.value = agentId
+        generalMessage.textContent = 'Status: Code authorization granted'
 
         startBtn.addEventListener('click', async () => {
           Client = new TokyClient({
@@ -335,7 +354,7 @@ async function main() {
      * ref: https://toky-js-sdk.toky.co/docs/single-sign-on
      */
     window.location.replace(
-      `https://${tokySsoURL}/auth/sso/login/${currentAppId}?redirect_url=${encodeURIComponent(
+      `${tokySsoURL}/auth/sso/login/${currentAppId}?redirect_url=${encodeURIComponent(
         window.location.href
       )}`
     )
@@ -362,8 +381,8 @@ async function main() {
 
     if (!tokySession) {
       tokySession = Client.startCall({
-        phoneNumber: '+595991123123',
-        callerId: '+13344413569',
+        phoneNumber: phoneNumber.value,
+        callerId: callerId.value,
       })
 
       if (tokySession) {
