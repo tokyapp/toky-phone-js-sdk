@@ -25,6 +25,29 @@ Clone the repository or download the [zip](https://tokystorage.s3.amazonaws.com/
 
 For the authentication flow, please refer to the documentation related: [docs/authentication.md](docs/authentication.md)
 
+## Development & Production environment
+### **Development**
+For the development environment we need an `.env.dev` file
+
+```bash
+npm run dev
+```
+Runs the app in development mode.
+
+Open http://localhost:8080 to view it in the browser.
+### **Production**
+For the production environment we need an `.env.prod` file
+
+```bash
+npm run build
+```
+Builds the sdk for production to the `/dist` folder.
+
+The `.env` file needs this structure as the example
+```
+TOKY_API_URL=""
+TOKY_RESOURCES_URL=""
+```
 ## Connecting and registering
 
 The `.init()` method is making an automatic registration with the phone system.
