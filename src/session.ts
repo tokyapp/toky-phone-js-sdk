@@ -195,6 +195,9 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     )
 
     tokyChannel.bind('events', this.pusherEventsHandler.bind(this))
+    window.onbeforeunload = (): void => {
+      this.endCall()
+    }
 
     // Options including delegate to capture response messages
     const inviteOptions: InviterInviteOptions = {
