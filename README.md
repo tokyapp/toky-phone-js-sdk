@@ -18,7 +18,7 @@ During the alpha period, we may change aspects of the API based on authenticatio
 
 ## Installation
 
-Clone the repository or download the [zip](https://tokystorage.s3.amazonaws.com/shared/toky-js-sdk/0.5.4.zip) or install from npm.
+Clone the repository or download the [zip](https://tokystorage.s3.amazonaws.com/shared/toky-js-sdk/latest.zip) or install from npm.
 
 `$ npm install --save toky-phone-js-sdk`
 
