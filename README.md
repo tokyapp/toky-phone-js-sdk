@@ -32,9 +32,9 @@ For the development environment we need an `.env.dev` file
 ```bash
 npm run dev
 ```
-Runs the app in development mode.
+Runs the app in development mode and the example in `/example` folder as well.
 
-Open http://localhost:8080 to view it in the browser.
+Open http://localhost:8080 to view it in the browser. It contains an example of the SSO authentication flow.
 ### **Production**
 For the production environment we need an `.env.prod` file
 
