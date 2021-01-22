@@ -24,6 +24,8 @@ const inputDeviceStatusSub = document.querySelector('#input-device-sub')
 const outputDeviceStatusSub = document.querySelector('#output-device-sub')
 const generalMessage = document.querySelector('#general-message')
 const generalArticle = document.querySelector('#general-article')
+const phoneNumber = document.querySelector('#phone-number')
+const callerId = document.querySelector('#caller-id')
 
 const keypad = getButtons('keypad')
 
@@ -198,6 +200,7 @@ async function main() {
       generalMessage.textContent =
         'agent_id query param is required to run the example app'
       generalArticle.classList.add('is-danger')
+      return
     }
 
     const raw = JSON.stringify({
@@ -378,8 +381,8 @@ async function main() {
 
     if (!tokySession) {
       tokySession = Client.startCall({
-        phoneNumber: '+595991123123',
-        callerId: '+13344413569',
+        phoneNumber: phoneNumber.value,
+        callerId: callerId.value,
       })
 
       if (tokySession) {
