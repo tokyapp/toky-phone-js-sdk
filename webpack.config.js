@@ -7,7 +7,8 @@ const gitRevisionPlugin = new GitRevisionPlugin()
 
 const libraryName = 'toky-sdk-alpha'
 
-const modeConfig = (env) => require(`./build-utils/webpack.${env}`)(env)
+const modeConfig = (env, dotenv) =>
+  require(`./build-utils/webpack.${env}`)(env, dotenv)
 
 const getEnvFile = function (key) {
   const files = {
@@ -17,7 +18,7 @@ const getEnvFile = function (key) {
     'dev-bundle': '.env.dev',
   }
 
-  return files[key] || files.master
+  return files[key] || files.dev
 }
 
 module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
@@ -69,6 +70,6 @@ module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
        */
       // externals: ['sip.js'],
     },
-    modeConfig(mode)
+    modeConfig(mode, dotenv)
   )
 }
