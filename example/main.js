@@ -353,6 +353,12 @@ async function main() {
      * REDIRECT BEGIN
      * ref: https://toky-js-sdk.toky.co/docs/single-sign-on
      */
+    if (!currentAppId) {
+      generalMessage.textContent =
+        'app_id has to be provided in the main.js example file, contact Toky support for more details'
+      generalArticle.classList.add('is-danger')
+      return
+    }
     window.location.replace(
       `${tokySsoURL}/auth/sso/login/${currentAppId}?redirect_url=${encodeURIComponent(
         window.location.href
