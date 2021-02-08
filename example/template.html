@@ -26,7 +26,7 @@
             </div>
           </div>
 
-          <button class="button is-small" id="startCall">Start Call</button>
+          <button class="button is-small" id="startCall" disabled>Start Call</button>
           <button class="button is-small" id="endCall" disabled>
             End Call
           </button>
@@ -63,8 +63,8 @@
 
           <div class="field">
             <label for="caller-id" class="label">Caller id (international format):</label>
-            <div class="control">
-              <input id="caller-id" type="tel" class="input is-small" />
+            <div class="control select is-primary is-small">
+              <select id="caller-id"></select>
             </div>
           </div>
 
