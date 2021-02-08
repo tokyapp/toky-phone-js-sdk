@@ -25,7 +25,7 @@ const outputDeviceStatusSub = document.querySelector('#output-device-sub')
 const generalMessage = document.querySelector('#general-message')
 const generalArticle = document.querySelector('#general-article')
 const phoneNumber = document.querySelector('#phone-number')
-const callerId = document.querySelector('#caller-id')
+const callerIdSelect = document.querySelector('#caller-id')
 
 const keypad = getButtons('keypad')
 
@@ -191,6 +191,43 @@ keypad.forEach((button) => {
 })
 
 /**
+ * @param {object[]} inputs available Input devices listed by the SDK
+ * @param {object[]} outputs available Output devices listed by the SDK
+ */
+function createDeviceOptions(inputs, outputs) {
+  audioSelectOutput.options.length = 0
+  audioSelectInput.options.length = 0
+
+  inputs.forEach((device) => {
+    const option = document.createElement('option')
+    option.value = device.id
+    option.text = device.name
+    audioSelectInput.appendChild(option)
+  })
+
+  outputs.forEach((device) => {
+    const option = document.createElement('option')
+    option.value = device.id
+    option.text = device.name
+    audioSelectOutput.appendChild(option)
+  })
+}
+
+/**
+ * @param callerIds
+ */
+function createCallerIdOption(callerIds) {
+  callerIdSelect.options.length = 0
+
+  callerIds.forEach((callerId) => {
+    const option = document.createElement('option')
+    option.value = callerId.number
+    option.text = callerId.number
+    callerIdSelect.appendChild(option)
+  })
+}
+
+/**
  * Main method when the example starts
  *
  * @returns {void}
@@ -211,22 +248,18 @@ async function main() {
       return
     }
 
-    const raw = JSON.stringify({
-      scope: 'dialer',
-      agent_id: agentId,
-      authorization_code: authorizationCode,
-      grant_type: 'code',
-    })
-
-    const requestOptions = {
-      method: 'POST',
-      body: raw,
-    }
-
     /**
      * ref: https://toky-js-sdk.toky.co/reference#access_token
      */
-    fetch(`${tokyApiUrl}/v1/access_token`, requestOptions)
+    fetch(`${tokyApiUrl}/v1/access_token`, {
+      method: 'POST',
+      body: JSON.stringify({
+        scope: 'dialer',
+        agent_id: agentId,
+        authorization_code: authorizationCode,
+        grant_type: 'code',
+      }),
+    })
       .then((response) => response.json())
       .then((result) => {
         accessToken.value = result.data ? result.data.access_token : ''
@@ -234,8 +267,18 @@ async function main() {
         generalMessage.textContent = 'Status: Code authorization granted'
 
         startBtn.addEventListener('click', async () => {
+          fetch(`${tokyApiUrl}/v1/sdk/agents/dids?agent_id=${agent.value}`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken.value}` },
+          })
+            .then((response) => response.json())
+            .then((result) => {
+              createCallerIdOption(result.dids)
+            })
+            .catch((err) => console.error(err))
+
           Client = new TokyClient({
-            accessToken: result.data ? result.data.access_token : '',
+            accessToken: accessToken.value,
             account: {
               user: agentId,
               type: 'agent',
@@ -245,28 +288,7 @@ async function main() {
 
           await Client.init()
 
-          /**
-           * @param {object[]} inputs available Input devices listed by the SDK
-           * @param {object[]} outputs available Output devices listed by the SDK
-           */
-          function createDeviceOptions(inputs, outputs) {
-            audioSelectOutput.options.length = 0
-            audioSelectInput.options.length = 0
-
-            inputs.forEach((device) => {
-              const option = document.createElement('option')
-              option.value = device.id
-              option.text = device.name
-              audioSelectInput.appendChild(option)
-            })
-
-            outputs.forEach((device) => {
-              const option = document.createElement('option')
-              option.value = device.id
-              option.text = device.name
-              audioSelectOutput.appendChild(option)
-            })
-          }
+          startCallBtn.disabled = false
 
           Client.on(ClientStatus.REGISTERED, () => {
             startBtn.style.pointerEvents = 'none'
@@ -359,7 +381,9 @@ async function main() {
           })
         })
       })
-      .catch((error) => console.log('error', error))
+      .catch((error) => {
+        console.log('error', error)
+      })
   } else {
     /**
      * REDIRECT BEGIN
@@ -400,7 +424,7 @@ async function main() {
     if (!tokySession) {
       tokySession = Client.startCall({
         phoneNumber: phoneNumber.value,
-        callerId: callerId.value,
+        callerId: callerIdSelect.value,
       })
 
       if (tokySession) {
