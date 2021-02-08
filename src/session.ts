@@ -751,9 +751,10 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
   /**
    * Send DTMF.
-   * @remarks
    * Send an INFO request with content type application/dtmf-relay.
-   * @param tone - Tone to send.
+   *
+   * @param {string} tone - Tone to send to current session
+   * @returns {Promise<void>}
    */
   public processDTMF(tone: string): Promise<void> {
     console.log(`[${this._callId}] sending DTMF...`)

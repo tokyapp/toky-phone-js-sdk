@@ -52,6 +52,9 @@ const keypadDisabled = (disabled) => {
   keypad.forEach((button) => (button.disabled = disabled))
 }
 
+/**
+ * @param {object} currentSession Session established after a call
+ */
 function setupSessionListeners(currentSession) {
   currentSession.on(SessionStatus.CONNECTED, () => {
     callStatusTile.classList.remove('is-info')
@@ -187,6 +190,11 @@ keypad.forEach((button) => {
   })
 })
 
+/**
+ * Main method when the example starts
+ *
+ * @returns {void}
+ */
 async function main() {
   const urlParams = new URLSearchParams(window.location.search)
   const authorizationCode = urlParams.get('code')
@@ -237,6 +245,10 @@ async function main() {
 
           await Client.init()
 
+          /**
+           * @param {object[]} inputs available Input devices listed by the SDK
+           * @param {object[]} outputs available Output devices listed by the SDK
+           */
           function createDeviceOptions(inputs, outputs) {
             audioSelectOutput.options.length = 0
             audioSelectInput.options.length = 0
