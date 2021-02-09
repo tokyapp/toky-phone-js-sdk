@@ -99,7 +99,7 @@ Client.on(MediaStatus.PERMISSION_REVOKED, () => { /* Your code here */ })
 
 You can list the available **Phone Numbers** of the company, pick one, and establish a call. 
 
-https://toky-phone-js-sdk.readme.io/reference#agentsdids
+https://toky-js-sdk.toky.co/reference#agentsdids
 
 ```javascript
 let tokySession = Client.startCall({

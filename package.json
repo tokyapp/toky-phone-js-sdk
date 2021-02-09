@@ -11,8 +11,8 @@
     "test": "test"
   },
   "scripts": {
-    "webpack": "webpack",
-    "webpack-dev-server": "webpack-dev-server",
+    "webpack": "./node_modules/webpack/bin/webpack.js",
+    "webpack-dev-server": "./node_modules/webpack-dev-server/bin/webpack-dev-server.js",
     "debug": "node --inspect --inspect-brk ./node_modules/webpack/bin/webpack.js",
     "build": "npm run webpack -- --env.mode production",
     "dev": "npm run webpack-dev-server -- --env.mode development",
