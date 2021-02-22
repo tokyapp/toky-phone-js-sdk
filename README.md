@@ -1,4 +1,5 @@
 # Toky Phone JS SDK
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 The Toky Phone JS SDK is a WebRTC Javascript library providing an abstraction to the Toky phone system, including its main features.
 
@@ -17,19 +18,37 @@ During the alpha period, we may change aspects of the API based on authenticatio
 
 ## Installation
 
-Clone the repository or download the [zip](https://tokystorage.s3.amazonaws.com/shared/toky-js-sdk/0.5.4.zip) or install from npm.
+Clone the repository or download the [zip](https://tokystorage.s3.amazonaws.com/shared/toky-js-sdk/latest.zip) or install from npm.
 
 `$ npm install --save toky-phone-js-sdk`
 
 ## Authentication
 
-- To authenticate, first, you need an API key provided by the Toky Web App. You can find info in this guide: 
-    - https://help.toky.co/en/articles/2299425-where-can-i-find-the-api-key
-- The second step is to register your App:
-    -  https://toky-phone-js-sdk.readme.io/reference#applications
-- Once you register an Application, the next step is to obtain an Access Token:
-    - https://toky-phone-js-sdk.readme.io/reference#access_token
+For the authentication flow, please refer to the documentation related: [docs/authentication.md](docs/authentication.md)
 
+## Development & Production environment
+### **Development**
+For the development environment we need an `.env.dev` file
+
+```bash
+npm run dev
+```
+Runs the app in development mode and the example in `/example` folder as well.
+
+Open http://localhost:8080 to view it in the browser. It contains an example of the SSO authentication flow.
+### **Production**
+For the production environment we need an `.env.prod` file
+
+```bash
+npm run build
+```
+Builds the sdk for production to the `/dist` folder.
+
+The `.env` file needs this structure as the example
+```
+TOKY_API_URL=""
+TOKY_RESOURCES_URL=""
+```
 ## Connecting and registering
 
 The `.init()` method is making an automatic registration with the phone system.
@@ -80,7 +99,7 @@ Client.on(MediaStatus.PERMISSION_REVOKED, () => { /* Your code here */ })
 
 You can list the available **Phone Numbers** of the company, pick one, and establish a call. 
 
-https://toky-phone-js-sdk.readme.io/reference#agentsdids
+https://toky-js-sdk.toky.co/reference#agentsdids
 
 ```javascript
 let tokySession = Client.startCall({
@@ -179,16 +198,16 @@ tokySession.on(SessionStatus.NOT_RECORDING, () => { /* Your code here */ })
 ## Transfer call events
 We have several call events for transfer calls.
 
- `TRANSFER_FAILED` is related to the phone system rejecting the transfer operation, a example could be an invalid agent sip username used to make a blind transfer.
+ `TRANSFER_FAILED` is related to the phone system rejecting the transfer operation, i.e. use an invalid agent sip username to make a blind transfer.
 ```javascript
-currentSession.on(SessionStatus.TRANSFER_BLIND_INIT, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_INIT, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_ANSWERED, () => { /* Your code here */ )
-currentSession.on(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_COMPLETED, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_NOT_COMPLETED, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_WARM_CANCELED, () => { /* Your code here */ })
-currentSession.on(SessionStatus.TRANSFER_FAILED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_BLIND_INIT, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_INIT, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_ANSWERED, () => { /* Your code here */ )
+tokySession.on(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_COMPLETED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_NOT_COMPLETED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_WARM_CANCELED, () => { /* Your code here */ })
+tokySession.on(SessionStatus.TRANSFER_FAILED, () => { /* Your code here */ })
 ```
 ## Audio device selection
 
@@ -227,30 +246,4 @@ Client.on(MediaStatus.READY, () => {
   console.log(`Selected input: ${Client.selectedInputDevice.name}`)
   console.log(`Selected ouput: ${Client.selectedOutputDevice.name}`)
 })
-```
-
-## License
-
-```
-MIT License
-
-Copyright (c) 2020 Toky Phone JS SDK
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 ```

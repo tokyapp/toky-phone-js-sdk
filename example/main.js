@@ -22,8 +22,19 @@ const deviceStatusTile = document.querySelector('#device-status')
 const deviceStatusSub = document.querySelector('#device-sub')
 const inputDeviceStatusSub = document.querySelector('#input-device-sub')
 const outputDeviceStatusSub = document.querySelector('#output-device-sub')
+const generalMessage = document.querySelector('#general-message')
+const generalArticle = document.querySelector('#general-article')
+const phoneNumber = document.querySelector('#phone-number')
+const callerIdSelect = document.querySelector('#caller-id')
 
 const keypad = getButtons('keypad')
+
+const tokyApiUrl = 'https://api.toky.co'
+const tokySsoURL = 'https://app.toky.co'
+/**
+ * Insert created app_id from the toky api
+ */
+const currentAppId = ''
 
 const {
   TokyClient,
@@ -41,6 +52,9 @@ const keypadDisabled = (disabled) => {
   keypad.forEach((button) => (button.disabled = disabled))
 }
 
+/**
+ * @param {object} currentSession Session established after a call
+ */
 function setupSessionListeners(currentSession) {
   currentSession.on(SessionStatus.CONNECTED, () => {
     callStatusTile.classList.remove('is-info')
@@ -176,143 +190,221 @@ keypad.forEach((button) => {
   })
 })
 
+/**
+ * @param {object[]} inputs available Input devices listed by the SDK
+ * @param {object[]} outputs available Output devices listed by the SDK
+ */
+function createDeviceOptions(inputs, outputs) {
+  audioSelectOutput.options.length = 0
+  audioSelectInput.options.length = 0
+
+  inputs.forEach((device) => {
+    const option = document.createElement('option')
+    option.value = device.id
+    option.text = device.name
+    audioSelectInput.appendChild(option)
+  })
+
+  outputs.forEach((device) => {
+    const option = document.createElement('option')
+    option.value = device.id
+    option.text = device.name
+    audioSelectOutput.appendChild(option)
+  })
+}
+
+/**
+ * @param callerIds
+ */
+function createCallerIdOption(callerIds) {
+  callerIdSelect.options.length = 0
+
+  callerIds.forEach((callerId) => {
+    const option = document.createElement('option')
+    option.value = callerId.number
+    option.text = callerId.number
+    callerIdSelect.appendChild(option)
+  })
+}
+
+/**
+ * Main method when the example starts
+ *
+ * @returns {void}
+ */
 async function main() {
+  const urlParams = new URLSearchParams(window.location.search)
+  const authorizationCode = urlParams.get('code')
+  const agentId = urlParams.get('agent_id')
+
   let transferTypeSelected = transferType.value
   let warmOption = false
 
-  startBtn.addEventListener('click', async () => {
-    Client = new TokyClient({
-      accessToken: accessToken.value,
-      account: {
-        user: agent.value,
-        type: 'agent',
-      },
-      transportLib: 'sip.js',
-    })
-
-    await Client.init()
-
-    function createDeviceOptions(inputs, outputs) {
-      audioSelectOutput.options.length = 0
-      audioSelectInput.options.length = 0
-
-      inputs.forEach((device) => {
-        const option = document.createElement('option')
-        option.value = device.id
-        option.text = device.name
-        audioSelectInput.appendChild(option)
-      })
-
-      outputs.forEach((device) => {
-        const option = document.createElement('option')
-        option.value = device.id
-        option.text = device.name
-        audioSelectOutput.appendChild(option)
-      })
+  if (authorizationCode) {
+    if (!agentId) {
+      generalMessage.textContent =
+        'agent_id query param is required to run the example app'
+      generalArticle.classList.add('is-danger')
+      return
     }
 
-    Client.on(ClientStatus.REGISTERED, () => {
-      startBtn.style.pointerEvents = 'none'
-      startBtn.style.cursor = 'default'
-      startBtn.classList.remove('is-success')
-
-      callStatusTile.classList.add('is-warning')
-      callStatusSub.textContent = 'Registered'
-
-      startCallBtn.classList.add('is-success')
-      startCallBtn.textContent = 'Start Call'
-      endCallBtn.classList.add('is-danger')
-      endCallBtn.textContent = 'End Call'
-
-      muteBtn.classList.add('is-light')
+    /**
+     * ref: https://toky-js-sdk.toky.co/reference#access_token
+     */
+    fetch(`${tokyApiUrl}/v1/access_token`, {
+      method: 'POST',
+      body: JSON.stringify({
+        scope: 'dialer',
+        agent_id: agentId,
+        authorization_code: authorizationCode,
+        grant_type: 'code',
+      }),
     })
+      .then((response) => response.json())
+      .then((result) => {
+        accessToken.value = result.data ? result.data.access_token : ''
+        agent.value = agentId
+        generalMessage.textContent = 'Status: Code authorization granted'
 
-    Client.on(ClientStatus.CONNECTING, () => {
-      callStatusSub.textContent = 'Connecting'
+        startBtn.addEventListener('click', async () => {
+          fetch(`${tokyApiUrl}/v1/sdk/agents/dids?agent_id=${agent.value}`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken.value}` },
+          })
+            .then((response) => response.json())
+            .then((result) => {
+              createCallerIdOption(result.dids)
+            })
+            .catch((err) => console.error(err))
 
-      endCallBtn.disabled = false
-    })
+          Client = new TokyClient({
+            accessToken: accessToken.value,
+            account: {
+              user: agentId,
+              type: 'agent',
+            },
+            transportLib: 'sip.js',
+          })
 
-    Client.on(ClientStatus.RECONNECTING, () => {
-      callStatusSub.textContent = 'Reconnecting'
-    })
+          await Client.init()
 
-    Client.on(ClientStatus.INVITE, (data) => {
-      const incomingSession = data.session
-      console.log('incomingSession', incomingSession)
+          startCallBtn.disabled = false
 
-      startCallBtn.textContent = 'Answer Call'
-      endCallBtn.textContent = 'Reject Call'
+          Client.on(ClientStatus.REGISTERED, () => {
+            startBtn.style.pointerEvents = 'none'
+            startBtn.style.cursor = 'default'
+            startBtn.classList.remove('is-success')
 
-      endCallBtn.disabled = false
+            callStatusTile.classList.add('is-warning')
+            callStatusSub.textContent = 'Registered'
 
-      tokySession = incomingSession
-      setupSessionListeners(tokySession)
-    })
+            startCallBtn.classList.add('is-success')
+            startCallBtn.textContent = 'Start Call'
+            endCallBtn.classList.add('is-danger')
+            endCallBtn.textContent = 'End Call'
 
-    Client.on(MediaStatus.READY, () => {
-      audioSelectOutput.addEventListener('change', () => {
-        Client.setOutputDevice(audioSelectOutput.value).then(() => {
-          console.log('Output device updated successfully!')
+            muteBtn.classList.add('is-light')
+          })
+
+          Client.on(ClientStatus.CONNECTING, () => {
+            callStatusSub.textContent = 'Connecting'
+
+            endCallBtn.disabled = false
+          })
+
+          Client.on(ClientStatus.RECONNECTING, () => {
+            callStatusSub.textContent = 'Reconnecting'
+          })
+
+          Client.on(ClientStatus.INVITE, (data) => {
+            const incomingSession = data.session
+            console.log('incomingSession', incomingSession)
+
+            startCallBtn.textContent = 'Answer Call'
+            endCallBtn.textContent = 'Reject Call'
+
+            endCallBtn.disabled = false
+
+            tokySession = incomingSession
+            setupSessionListeners(tokySession)
+          })
+
+          Client.on(MediaStatus.READY, () => {
+            audioSelectOutput.addEventListener('change', () => {
+              Client.setOutputDevice(audioSelectOutput.value).then(() => {
+                console.log('Output device updated successfully!')
+              })
+            })
+
+            audioSelectInput.addEventListener('change', () => {
+              const inputSelected = audioSelectInput.value
+              if (tokySession) {
+                const connection = tokySession.getConnection()
+                Client.setInputDevice(inputSelected, connection).then(() => {
+                  console.log('Input device updated successfully!')
+                })
+              } else {
+                Client.setInputDevice(inputSelected).then(() => {
+                  console.log('Input device updated successfully!')
+                })
+              }
+            })
+
+            createDeviceOptions(Client.inputs, Client.outputs)
+
+            inputDeviceStatusSub.textContent = `Selected input: ${Client.selectedInputDevice.name}`
+            outputDeviceStatusSub.textContent = `Selected ouput: ${Client.selectedOutputDevice.name}`
+          })
+
+          Client.on(MediaStatus.UPDATED, () => {
+            createDeviceOptions(Client.inputs, Client.outputs)
+          })
+
+          Client.on(MediaStatus.INPUT_UPDATED, () => {
+            inputDeviceStatusSub.textContent = `Selected input: ${Client.selectedInputDevice.name}`
+          })
+
+          Client.on(MediaStatus.OUTPUT_UPDATED, () => {
+            outputDeviceStatusSub.textContent = `Selected ouput: ${Client.selectedOutputDevice.name}`
+          })
+
+          Client.on(MediaStatus.PERMISSION_REVOKED, () => {
+            console.error('-- Microphone permission not granted')
+            deviceStatusTile.classList.add('is-danger')
+            deviceStatusSub.textContent = 'Permission not granted'
+          })
+
+          Client.on(MediaStatus.PERMISSION_GRANTED, () => {
+            console.warn('-- Microphone permission granted')
+            deviceStatusTile.classList.add('is-primary')
+            deviceStatusSub.textContent = 'Permission granted'
+          })
         })
       })
-
-      audioSelectInput.addEventListener('change', () => {
-        const inputSelected = audioSelectInput.value
-        if (tokySession) {
-          const connection = tokySession.getConnection()
-          Client.setInputDevice(inputSelected, connection).then(() => {
-            console.log('Input device updated successfully!')
-          })
-        } else {
-          Client.setInputDevice(inputSelected).then(() => {
-            console.log('Input device updated successfully!')
-          })
-        }
+      .catch((error) => {
+        console.log('error', error)
       })
-
-      createDeviceOptions(Client.inputs, Client.outputs)
-
-      inputDeviceStatusSub.textContent = `Selected input: ${Client.selectedInputDevice.name}`
-      outputDeviceStatusSub.textContent = `Selected ouput: ${Client.selectedOutputDevice.name}`
-    })
-
-    Client.on(MediaStatus.UPDATED, () => {
-      createDeviceOptions(Client.inputs, Client.outputs)
-    })
-
-    Client.on(MediaStatus.INPUT_UPDATED, () => {
-      inputDeviceStatusSub.textContent = `Selected input: ${Client.selectedInputDevice.name}`
-    })
-
-    Client.on(MediaStatus.OUTPUT_UPDATED, () => {
-      outputDeviceStatusSub.textContent = `Selected ouput: ${Client.selectedOutputDevice.name}`
-    })
-
-    Client.on(MediaStatus.PERMISSION_REVOKED, () => {
-      console.error('-- Microphone permission not granted')
-      deviceStatusTile.classList.add('is-danger')
-      deviceStatusSub.textContent = 'Permission not granted'
-    })
-
-    Client.on(MediaStatus.PERMISSION_GRANTED, () => {
-      console.warn('-- Microphone permission granted')
-      deviceStatusTile.classList.add('is-primary')
-      deviceStatusSub.textContent = 'Permission granted'
-    })
-  })
+  } else {
+    /**
+     * REDIRECT BEGIN
+     * ref: https://toky-js-sdk.toky.co/docs/single-sign-on
+     */
+    if (!currentAppId) {
+      generalMessage.textContent =
+        'app_id has to be provided in the main.js example file, contact Toky support for more details'
+      generalArticle.classList.add('is-danger')
+      return
+    }
+    window.location.replace(
+      `${tokySsoURL}/auth/sso/login/${currentAppId}?redirect_url=${encodeURIComponent(
+        window.location.href
+      )}`
+    )
+  }
 
   /**
    * Utilities and Event Listeners related to Demo App
    */
-
-  function getSelectedOption(select) {
-    try {
-      return select.options[select.selectedIndex].value
-    } catch (e) {
-      return undefined
-    }
-  }
 
   transferType.addEventListener('change', () => {
     console.log('selected value', transferType.value)
@@ -331,8 +423,8 @@ async function main() {
 
     if (!tokySession) {
       tokySession = Client.startCall({
-        phoneNumber: '+595991123123',
-        callerId: '+13344413569',
+        phoneNumber: phoneNumber.value,
+        callerId: callerIdSelect.value,
       })
 
       if (tokySession) {
