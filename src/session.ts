@@ -100,6 +100,10 @@ export enum CallDirectionEnum {
   OUTBOUND = 'outbound',
 }
 
+export enum NotRecordingReasons {
+  FEATURE = 'call-recording-paused',
+  SETTINGS = 'outbound-calls-settings',
+}
 export declare interface ISessionImpl {
   callId: string
   callRecordingEnabled: boolean
@@ -674,11 +678,17 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         accessToken: this._accessToken,
       })
         .then(() => {
+          this.emit(SessionStatus.RECORDING)
           this._sessionBeingRecorded = true
           this._recording = true
         })
         .catch(() => {
+          this.emit(SessionStatus.NOT_RECORDING, {
+            code: 690,
+            reason: NotRecordingReasons.SETTINGS,
+          })
           this._sessionBeingRecorded = false
+          this._recording = false
         })
     } else {
       console.error(
@@ -889,17 +899,20 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           this._recording = !this._recording
 
           if (action === RecordingActionEnum.REC_PAUSE) {
-            this.emit(SessionStatus.NOT_RECORDING)
+            this.emit(SessionStatus.NOT_RECORDING, {
+              code: 691,
+              reason: NotRecordingReasons.FEATURE,
+            })
           }
 
           if (action === RecordingActionEnum.REC_CONTINUE) {
             this.emit(SessionStatus.RECORDING)
           }
         } else {
-          throw new Error('Unexpected behaviour at call recording action.')
+          throw new Error('Unexpected behaviour in call recording action.')
         }
       } else {
-        throw new Error('Agent is not authorized to perform this action.')
+        throw new Error('Cannot perform this action on current call.')
       }
     } catch (err) {
       console.error('Error at hold action', err)
