@@ -180,7 +180,7 @@ export const callRecording = ({
           action === RecordingActionEnum.REC_STATUS &&
           !recordingEnabled
         ) {
-          throw new Error('Agent is not authorized to perform this action')
+          throw new Error('Call is not being recorded')
         } else if (
           successResponse &&
           (action === RecordingActionEnum.REC_CONTINUE ||
