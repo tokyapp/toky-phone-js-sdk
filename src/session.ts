@@ -112,7 +112,8 @@ export declare interface ISessionImpl {
 }
 
 interface ICallData {
-  /** URI Data can be Agent SIP Username, in an outbound call
+  /**
+   * URI Data can be Agent SIP Username, in an outbound call
    * can be the URI generated for the Invitation
    */
   uri: string | URI
@@ -125,7 +126,8 @@ interface ICallData {
   phone?: string
   /** Transferred Types Blind or Warm */
   transferredType?: 'blind' | 'warm'
-  /** Applicable for Transferred calls, cause by a rejected blind transferred
+  /**
+   * Applicable for Transferred calls, cause by a rejected blind transferred
    * or an Invite from a Warm transferred that requires to establish the call
    * inmediately
    */
@@ -138,6 +140,7 @@ interface ISettings {
   accessToken: string
   sipUsername: string
   companyId: string
+  callRecordingEnabled?: boolean
 }
 
 export class SessionUA extends EventEmitter implements ISessionImpl {
@@ -154,8 +157,21 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   private _agentId: string
   private _companyId: string
   private _callDirection: CallDirectionEnum
+  /**
+   * _recordingFeatureActivated
+   * Refers to the Agents ability to pause Session recording
+   */
   private _recordingFeatureActivated = false
-  private _recording = true
+  /**
+   * _sessionBeingRecorded
+   * Refers to the Agents settings about calls being recorded
+   */
+  private _sessionBeingRecorded = null
+  /**
+   * _recording
+   * Call state for recording
+   */
+  private _recording = false
   private _established = false
   private _callData: ICallData
   private _wantToWarmTransfer = false
@@ -183,10 +199,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
     this._callData = inboundData
     this._tokyChannel = tokyChannel
 
-    this._senderEnabled = true
     this._hold = false
-    this._recording = true
+    this._senderEnabled = true
     this._isConnected = false
+    this._recording = false
+    this._recordingFeatureActivated = tokySettings.callRecordingEnabled
 
     this._callDirection = direction
 
@@ -657,10 +674,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         accessToken: this._accessToken,
       })
         .then(() => {
-          this._recordingFeatureActivated = true
+          this._sessionBeingRecorded = true
+          this._recording = true
         })
         .catch(() => {
-          this._recordingFeatureActivated = false
+          this._sessionBeingRecorded = false
         })
     } else {
       console.error(
@@ -851,7 +869,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
   public async record(): Promise<void> {
     try {
-      if (this._recordingFeatureActivated) {
+      if (this._recordingFeatureActivated && this._sessionBeingRecorded) {
         let action: RecordingActionEnum = RecordingActionEnum.REC_PAUSE
 
         if (this._recording) {

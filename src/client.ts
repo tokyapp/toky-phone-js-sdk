@@ -1192,6 +1192,7 @@ export class Client extends EventEmitter implements IClientImpl {
             sipUsername: this._account.sipUsername,
             companyId: this._companyId,
             accessToken: this._accessToken,
+            callRecordingEnabled: this._account.callRecordingEnabled,
           },
           {
             uri: this.outboundCallURI(phoneNumber),
