@@ -137,8 +137,12 @@ function setupSessionListeners(currentSession) {
     recordBtn.innerText = 'Pause recording'
   })
 
-  currentSession.on(SessionStatus.NOT_RECORDING, () => {
-    recordBtn.innerText = 'Record call'
+  currentSession.on(SessionStatus.NOT_RECORDING, (data) => {
+    if (data.reason === 'outbound-calls-settings') {
+      recordBtn.disabled = true
+    } else {
+      recordBtn.innerText = 'Record call'
+    }
   })
 
   currentSession.on(SessionStatus.TRANSFER_BLIND_INIT, (data) => {
