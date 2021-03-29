@@ -13,6 +13,7 @@ const modeConfig = (env, dotenv) =>
 const getEnvFile = function (key) {
   const files = {
     master: '.env.prod',
+    main: '.env.prod',
     staging: '.env.staging',
     dev: '.env.dev',
     'dev-bundle': '.env.dev',
