@@ -1153,6 +1153,10 @@ export class Client extends EventEmitter implements IClientImpl {
     }
   }
 
+  refreshAccessToken(accessToken: string): void {
+    this._accessToken = accessToken
+  }
+
   /**
    * In Toky SDK this is done automatically in the constructor
    * with the default register option set in the User Agent (* not anymore)
