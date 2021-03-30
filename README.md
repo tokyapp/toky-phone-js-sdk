@@ -27,28 +27,51 @@ Clone the repository or download the [zip](https://tokystorage.s3.amazonaws.com/
 For the authentication flow, please refer to the documentation related: [docs/authentication.md](docs/authentication.md)
 
 ## Development & Production environment
+
+The two environments require `.env` files and it works like this.
+
+In compilation time, it automatically uses the `.env` file depending of your _git branch_. It looks like this:
+
+`.env.example`
+
+```
+TOKY_API_URL="https://api.toky.co"
+TOKY_RESOURCES_URL="https://app.toky.co"
+PUSHER_KEY=""     # Warm transfer feature
+AGENT_ID=""       # Your Toky Agent Id
+```
+
+```
+Git Branch   Environment file
+==========   ================
+main         .env.prod
+staging      .env.staging
+dev          .env.dev
+```
 ### **Development**
-For the development environment we need an `.env.dev` file
+We can use the `.env.example` for the `.env.dev` file.
+
+In the `main.js` in the `example` folder, replace the variable `currentAppId` with your corresponding generated **App Id**, this in mandatory:
+
+```javascript
+const currentAppId = 'yourappid'
+```
+
+Then you can run:
 
 ```bash
 npm run dev
 ```
-Runs the app in development mode and the example in `/example` folder as well.
+Runs the app in development mode and the Dialer in the `/example` folder.
 
-Open http://localhost:8080 to view it in the browser. It contains an example of the SSO authentication flow.
+It would open a tab in your browser starting the authentication flow.
 ### **Production**
-For the production environment we need an `.env.prod` file
+For the production environment we need an `.env.prod` file also based on the `.env.example`
 
 ```bash
 npm run build
 ```
-Builds the sdk for production to the `/dist` folder.
-
-The `.env` file needs this structure as the example
-```
-TOKY_API_URL=""
-TOKY_RESOURCES_URL=""
-```
+Builds the SDK for production to the `/dist` folder, ready to use as a _Module_ or in a _script tag_.
 ## Connecting and registering
 
 The `.init()` method is making an automatic registration with the phone system.
