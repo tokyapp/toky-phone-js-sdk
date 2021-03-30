@@ -16,7 +16,7 @@ import { IncomingResponse, OutgoingReferRequest, URI } from 'sip.js/lib/core'
 
 import { Channel } from 'pusher-js'
 
-import { stopAudio } from './helpers'
+import { stopAudio, isDevelopment } from './helpers'
 
 import { IMediaAttribute } from './client'
 
@@ -236,12 +236,14 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       this._currentSession
         .invite(inviteOptions)
         .then((request) => {
-          console.log('Successfully sent INVITE')
+          if (isDevelopment) {
+            console.log('Successfully sent INVITE')
 
-          console.log('INVITE request = ', request)
+            console.log('INVITE request = ', request)
+          }
         })
         .catch((error: Error) => {
-          console.error('Failed to send INVITE', error)
+          if (isDevelopment) console.error('Failed to send INVITE', error)
         })
     }
 
@@ -327,7 +329,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
               }
             })
             .catch((err) => {
-              console.error('Call Info is no available', err)
+              if (isDevelopment) console.error('Call Info is no available', err)
               this.emit(SessionStatus.TRANSFER_WARM_INIT, null)
             })
         })
@@ -403,7 +405,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
               }
             })
             .catch((err) => {
-              console.error('Call Info is no available', err)
+              if (isDevelopment) console.error('Call Info is no available', err)
               this.emit(SessionStatus.TRANSFER_WARM_ANSWERED, null)
             })
         }
@@ -451,7 +453,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
               }
             })
             .catch((err) => {
-              console.error('Call Info is no available', err)
+              if (isDevelopment) console.error('Call Info is no available', err)
               this.emit(SessionStatus.TRANSFER_WARM_COMPLETED, null)
             })
         }
@@ -531,7 +533,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
               }
             })
             .catch((err) => {
-              console.error('Call Info is no available', err)
+              if (isDevelopment) console.error('Call Info is no available', err)
               // TODO: fix later
               this.emit(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, null)
             })
@@ -545,7 +547,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       case SessionState.Establishing: {
         if (this._callDirection === CallDirectionEnum.OUTBOUND) {
           this._media.ringAudio.play().then(() => {
-            console.warn('-- audio play succeed on establishing state')
+            if (isDevelopment)
+              console.warn('-- audio play succeed on establishing state')
           })
 
           this._localStream = new MediaStream()
@@ -568,7 +571,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           this._media.localSource.srcObject = this._localStream
 
           this._media.localSource.play().then(() => {
-            console.warn('-- local audio played succesfully...')
+            if (isDevelopment)
+              console.warn('-- local audio played succesfully...')
           })
         }
 
@@ -594,7 +598,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         this._media.remoteSource.srcObject = remoteStream
 
         this._media.remoteSource.play().then(() => {
-          console.warn('-- remote audio played succesfully...')
+          if (isDevelopment)
+            console.warn('-- remote audio played succesfully...')
         })
 
         if (this._callDirection === CallDirectionEnum.INBOUND) {
@@ -607,7 +612,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         break
       }
       case SessionState.Terminated: {
-        console.warn('call direction in terminated event', this._callDirection)
+        if (isDevelopment)
+          console.warn(
+            'call direction in terminated event',
+            this._callDirection
+          )
         /**
          * Warm case: this is because on outbound warm transfer call
          * the server sends an INVITE and then a BYE message and
@@ -637,14 +646,14 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   }
 
   private onRejectHandler(response: IncomingResponse): void {
-    console.log('reject for some reason', response)
+    if (isDevelopment) console.log('reject for some reason', response)
     const message = response.message
 
     if (
       message.reasonPhrase === 'No credit left' ||
       message.statusCode === 402
     ) {
-      console.error('Not credit left')
+      if (isDevelopment) console.error('Not credit left')
 
       this.emit('No credit left', { origin: 'rejectedEvent' })
     }
@@ -661,7 +670,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   }
 
   private acceptedHandler(response: IncomingResponse): void {
-    console.warn('response on acceptedHandler()', response)
+    if (isDevelopment) console.warn('response on acceptedHandler()', response)
 
     const message = response.message
 
@@ -691,15 +700,17 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
           this._recording = false
         })
     } else {
-      console.error(
-        'Unexpected response on accepted session listener, response:',
-        response
-      )
+      if (isDevelopment) {
+        console.error(
+          'Unexpected response on accepted session listener, response:',
+          response
+        )
+      }
     }
   }
 
   private progressHandler(response: IncomingResponse): void {
-    console.warn('--- Call in progress response', response)
+    if (isDevelopment) console.warn('--- Call in progress response', response)
 
     const message = response.message
 
@@ -735,7 +746,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             this.emit(SessionStatus.FAILED)
           }
         } catch (e) {
-          console.error(e)
+          if (isDevelopment) console.error(e)
         }
       }
       /**
@@ -744,7 +755,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
        * the incoming session data
        */
     } else {
-      console.warn('call in progress response is a different type:', response)
+      if (isDevelopment)
+        console.warn('call in progress response is a different type:', response)
     }
   }
 
@@ -769,7 +781,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
   }
 
   private cleanupMedia(): void {
-    console.warn('-- media clean up')
+    if (isDevelopment) console.warn('-- media clean up')
 
     this._media.remoteSource.srcObject = null
     this._media.remoteSource.pause()
@@ -785,7 +797,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
    * @returns {Promise<void>}
    */
   public processDTMF(tone: string): Promise<void> {
-    console.log(`[${this._callId}] sending DTMF...`)
+    if (isDevelopment) console.log(`[${this._callId}] sending DTMF...`)
 
     // Validate tone
     if (!/^[0-9A-D#*,]$/.exec(tone)) {
@@ -796,12 +808,13 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
       return Promise.reject(new Error('Session does not exist.'))
     }
 
-    console.log(`[${this._callId}] Sending DTMF tone: ${tone}`)
+    if (isDevelopment)
+      console.log(`[${this._callId}] Sending DTMF tone: ${tone}`)
 
     const toneAudio = new Audio(defaultDTMFAudio[tone])
 
     toneAudio.play().then(() => {
-      console.log('successfully play DTMF tone', tone)
+      if (isDevelopment) console.log('successfully play DTMF tone', tone)
     })
 
     const dtmf = tone
@@ -841,7 +854,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         this.emit(SessionStatus.MUTED)
       }
     } catch (err) {
-      console.error(err)
+      if (isDevelopment) console.error(err)
     }
   }
 
@@ -872,7 +885,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         }
       }
     } catch (err) {
-      console.error(`Error at hold action, type: ${action}`, err)
+      if (isDevelopment)
+        console.error(`Error at hold action, type: ${action}`, err)
       throw new Error('Error at hold action')
     }
   }
@@ -915,7 +929,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         throw new Error('Cannot perform this action on current call.')
       }
     } catch (err) {
-      console.error('Error at hold action', err)
+      if (isDevelopment) console.error('Error at hold action', err)
       throw new Error(err)
     }
   }
@@ -945,7 +959,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         }
       }
     } catch (err) {
-      console.error('Error at cancel_transfer action', err)
+      if (isDevelopment) console.error('Error at cancel_transfer action', err)
       throw new Error(err)
     }
   }
@@ -990,7 +1004,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             }
           })
           .catch((err) => {
-            console.error('Call Info is no available', err)
+            if (isDevelopment) console.error('Call Info is no available', err)
             this.emit(SessionStatus.TRANSFER_WARM_COMPLETED, null)
           })
       } else {
@@ -1006,9 +1020,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         const incomingSession = this._currentSession as Inviter
 
         incomingSession.cancel().catch((err) => {
-          console.error('Error on cancel inviter', err)
-          // TODO: maybe we can trying again to reject
-          console.warn('Maybe we can try once again...')
+          if (isDevelopment) {
+            console.error('Error on cancel inviter', err)
+            // TODO: maybe we can trying again to reject
+            console.warn('Maybe we can try once again...')
+          }
         })
         /**
          * This case applies for incoming invitation
@@ -1023,9 +1039,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             this.emit(SessionStatus.REJECTED, { origin: 'rejectedInvitation' })
           })
           .catch((err) => {
-            console.error('Error on reject invitation for some reason', err)
-            // TODO: maybe we can trying again to reject
-            console.warn('Maybe we can try once again...')
+            if (isDevelopment) {
+              console.error('Error on reject invitation for some reason', err)
+              // TODO: maybe we can trying again to reject
+              console.warn('Maybe we can try once again...')
+            }
           })
       }
     }
@@ -1070,9 +1088,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
       incomingSession.accept(options)
     } else {
-      console.error(
-        `.acceptCall() is valid for ${CallDirectionEnum.OUTBOUND} calls`
-      )
+      if (isDevelopment) {
+        console.error(
+          `.acceptCall() is valid for ${CallDirectionEnum.OUTBOUND} calls`
+        )
+      }
     }
   }
 
@@ -1131,7 +1151,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
             message.statusCode === 202 &&
             message.reasonPhrase === 'Accepted'
           ) {
-            console.log('--- transfer accepted by toky server', response)
+            if (isDevelopment)
+              console.log('--- transfer accepted by toky server', response)
 
             this._currentSession.stateChange.removeListener(
               this.sessionStateListener.bind(this)
@@ -1169,31 +1190,38 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
                   }
                 })
                 .catch((err) => {
-                  console.error('Call Info is no available', err)
+                  if (isDevelopment)
+                    console.error('Call Info is no available', err)
                   this.emit(SessionStatus.TRANSFER_BLIND_INIT, null)
                 })
             }
           } else {
-            console.warn('status code', message.statusCode)
-            console.warn('reason phrase', message.reasonPhrase)
+            if (isDevelopment) {
+              console.warn('status code', message.statusCode)
+              console.warn('reason phrase', message.reasonPhrase)
+            }
 
             this.emit(SessionStatus.TRANSFER_FAILED, {
               statusCode: message.statusCode,
               reasonPhrase: message.reasonPhrase,
             })
 
-            console.error(
-              'This is not happening, server response does not match expected'
-            )
+            if (isDevelopment) {
+              console.error(
+                'This is not happening, server response does not match expected'
+              )
+            }
           }
         },
         onReject: (response: IncomingResponse): void => {
           const message = response.message
 
           if (message.statusCode === 400) {
-            console.log('--- transfer rejected by toky server', response)
+            if (isDevelopment) {
+              console.log('--- transfer rejected by toky server', response)
 
-            console.error('Invalid destination of transfer.')
+              console.error('Invalid destination of transfer.')
+            }
           }
 
           this.emit(SessionStatus.TRANSFER_FAILED, {
@@ -1206,10 +1234,11 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
     transferContext
       .then((response: OutgoingReferRequest) => {
-        console.warn('--- transfer accepted by transport ', response)
+        if (isDevelopment)
+          console.warn('--- transfer accepted by transport ', response)
       })
       .catch((err) => {
-        console.error('Transfer failed for some reason', err)
+        if (isDevelopment) console.error('Transfer failed for some reason', err)
       })
   }
 }

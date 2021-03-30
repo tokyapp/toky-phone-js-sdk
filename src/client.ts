@@ -26,6 +26,7 @@ import {
   isChrome,
   eqSet,
   getAudio,
+  toKebabCase,
 } from './helpers'
 
 import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
@@ -333,7 +334,9 @@ export class Client extends EventEmitter implements IClientImpl {
         },
         authorizationUsername: this._account.sipUsername,
         authorizationPassword: paramsData.sip.password,
-        userAgentString: `toky/${packageJson.name}-${packageJson.version}/${browserSpecs.name}-${browserSpecs.version}`,
+        userAgentString: `toky/${toKebabCase(this._appName)}/${
+          packageJson.name
+        }-${packageJson.version}/${browserSpecs.name}-${browserSpecs.version}`,
         logBuiltinEnabled: true,
         logLevel: isDevelopment ? 'debug' : 'error',
         allowLegacyNotifications: true,
@@ -359,7 +362,7 @@ export class Client extends EventEmitter implements IClientImpl {
        */
       this._userAgent.delegate = {
         onDisconnect: (error?: Error): void => {
-          console.warn('-- disconnect event')
+          if (isDevelopment) console.warn('-- disconnect event')
 
           if (this._registerer) {
             const registered =
@@ -374,10 +377,12 @@ export class Client extends EventEmitter implements IClientImpl {
                 })
                 .catch((e: Error) => {
                   // Unregister failed
-                  console.error(
-                    'Failed to send UNREGISTERED or failed on Disconnect Event',
-                    e
-                  )
+                  if (isDevelopment) {
+                    console.error(
+                      'Failed to send UNREGISTERED or failed on Disconnect Event',
+                      e
+                    )
+                  }
                 })
             }
             // Only attempt to reconnect if network/server dropped the connection (if there is an error)
@@ -387,7 +392,7 @@ export class Client extends EventEmitter implements IClientImpl {
           }
         },
         onConnect: (): void => {
-          console.warn('-- connected event')
+          if (isDevelopment) console.warn('-- connected event')
 
           if (this._registerer) {
             const isRegistered =
@@ -401,11 +406,15 @@ export class Client extends EventEmitter implements IClientImpl {
               this._registerer
                 .register()
                 .then((request) => {
-                  console.log('Successfully sent REGISTER on Connect event')
-                  console.log('Sent request =', request)
+                  if (isDevelopment) {
+                    console.log('Successfully sent REGISTER on Connect event')
+                    console.log('Sent request =', request)
+                  }
                 })
                 .catch((error) => {
-                  console.error('Failed to send REGISTER', error)
+                  if (isDevelopment) {
+                    console.error('Failed to send REGISTER', error)
+                  }
                 })
             }
           }
@@ -464,7 +473,9 @@ export class Client extends EventEmitter implements IClientImpl {
 
           if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
             this._media.incomingRingAudio.play().then(() => {
-              console.warn('-- audio play succeed on incoming session')
+              if (isDevelopment) {
+                console.warn('-- audio play succeed on incoming session')
+              }
             })
           }
 
@@ -628,7 +639,7 @@ export class Client extends EventEmitter implements IClientImpl {
                 this.isRegistered = false
                 break
               case RegistererState.Terminated:
-                console.error('Terminated')
+                if (isDevelopment) console.error('Terminated')
                 break
             }
           })
@@ -641,16 +652,19 @@ export class Client extends EventEmitter implements IClientImpl {
             this._registerer
               .register()
               .then((request) => {
-                console.log('Successfully sent REGISTER')
-                console.log('Sent request =', request)
+                if (isDevelopment) {
+                  console.log('Successfully sent REGISTER')
+                  console.log('Sent request =', request)
+                }
               })
               .catch((error) => {
-                console.error('Failed to send REGISTER', error)
+                if (isDevelopment)
+                  console.error('Failed to send REGISTER', error)
               })
           }
         })
         .catch((error) => {
-          console.error('Failed to connect', error)
+          if (isDevelopment) console.error('Failed to connect', error)
         })
 
       window.addEventListener('online', () => {
@@ -660,9 +674,11 @@ export class Client extends EventEmitter implements IClientImpl {
 
       window.addEventListener('offline', () => {
         this.emit(ClientStatus.OFFLINE)
-        console.warn(
-          'Browser goes offline. Once online it will try to reconnect.'
-        )
+        if (isDevelopment) {
+          console.warn(
+            'Browser goes offline. Once online it will try to reconnect.'
+          )
+        }
       })
     }
 
@@ -693,7 +709,7 @@ export class Client extends EventEmitter implements IClientImpl {
     // We're attempting a reconnection
     this._attemptingReconnection = true
 
-    console.warn('-- attempting reconnection.')
+    if (isDevelopment) console.warn('-- attempting reconnection.')
 
     setTimeout(
       () => {
@@ -811,7 +827,8 @@ export class Client extends EventEmitter implements IClientImpl {
         })
 
         if (permission.state === 'denied') {
-          console.error('-- ðŸ”¥ Mic access DENIED! Contact support@toky.co')
+          if (isDevelopment)
+            console.error('-- ðŸ”¥ Mic access DENIED! Contact support@toky.co')
 
           this.emit(MediaStatus.PERMISSION_REVOKED)
           this.hasMediaPermissions = false
@@ -889,17 +906,20 @@ export class Client extends EventEmitter implements IClientImpl {
       this.setOutputDevice(this.selectedOutputDevice.id)
     } else {
       // * We can inform this to a service error
-      console.error(`This can't be happening, device info is not present.`)
+      if (isDevelopment)
+        console.error(`This can't be happening, device info is not present.`)
       this.emit(MediaStatus.ERROR)
     }
   }
 
   private handleError(error): void {
-    console.log(
-      'navigator.MediaDevices.getUserMedia error: ',
-      error.message,
-      error.name
-    )
+    if (isDevelopment) {
+      console.error(
+        'navigator.MediaDevices.getUserMedia error: ',
+        error.message,
+        error.name
+      )
+    }
     this.emit(MediaStatus.ERROR)
   }
 
@@ -990,7 +1010,8 @@ export class Client extends EventEmitter implements IClientImpl {
 
         await _incomingRingAudio.setSinkId(id)
 
-        console.warn(`Success, audio output device attached: ${id}`)
+        if (isDevelopment)
+          console.warn(`Success, audio output device attached: ${id}`)
 
         if (typeof Storage === 'undefined') {
           throw new Error('Local Storage is not supported in this browser')
@@ -1002,7 +1023,7 @@ export class Client extends EventEmitter implements IClientImpl {
 
         return { success: true }
       } catch (err) {
-        console.error(err)
+        if (isDevelopment) console.error(err)
 
         return {
           success: false,
@@ -1010,7 +1031,8 @@ export class Client extends EventEmitter implements IClientImpl {
         }
       }
     } else {
-      console.warn('Browser does not support output device selection.')
+      if (isDevelopment)
+        console.warn('Browser does not support output device selection.')
     }
   }
 
@@ -1037,10 +1059,12 @@ export class Client extends EventEmitter implements IClientImpl {
 
         sender.replaceTrack(track)
 
-        console.warn(`Success, audio input device attached: ${id}`)
+        if (isDevelopment)
+          console.warn(`Success, audio input device attached: ${id}`)
 
         if (typeof Storage === 'undefined') {
-          console.warn('Local Storage is not supported in this browser')
+          if (isDevelopment)
+            console.warn('Local Storage is not supported in this browser')
         }
 
         sessionStorage.setItem('toky_default_input', id)
@@ -1067,12 +1091,14 @@ export class Client extends EventEmitter implements IClientImpl {
         })
 
         if (typeof Storage === 'undefined') {
-          console.warn('Local Storage is not supported in this browser')
+          if (isDevelopment)
+            console.warn('Local Storage is not supported in this browser')
         }
 
         sessionStorage.setItem('toky_default_input', id)
 
-        console.warn(`Success, audio input device attached: ${id}`)
+        if (isDevelopment)
+          console.warn(`Success, audio input device attached: ${id}`)
 
         this.emit(MediaStatus.INPUT_UPDATED)
 
@@ -1128,6 +1154,10 @@ export class Client extends EventEmitter implements IClientImpl {
     } else {
       throw new Error('Browser does not support session storage.')
     }
+  }
+
+  refreshAccessToken(accessToken: string): void {
+    this._accessToken = accessToken
   }
 
   /**
@@ -1208,9 +1238,11 @@ export class Client extends EventEmitter implements IClientImpl {
 
         return currentSession
       } else {
-        console.error(
-          'Unable to acquire media, you need to grant media permissions in navigator settings.'
-        )
+        if (isDevelopment) {
+          console.error(
+            'Unable to acquire media, you need to grant media permissions in navigator settings.'
+          )
+        }
 
         this.emit(ClientStatus.INVITE_REJECTED, {
           code: 412,
@@ -1220,7 +1252,9 @@ export class Client extends EventEmitter implements IClientImpl {
         })
       }
     } else {
-      console.warn('need registration first')
+      if (isDevelopment) {
+        console.warn('need registration first')
+      }
       return null
     }
   }
