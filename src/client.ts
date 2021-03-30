@@ -26,6 +26,7 @@ import {
   isChrome,
   eqSet,
   getAudio,
+  toKebabCase,
 } from './helpers'
 
 import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
@@ -333,7 +334,9 @@ export class Client extends EventEmitter implements IClientImpl {
         },
         authorizationUsername: this._account.sipUsername,
         authorizationPassword: paramsData.sip.password,
-        userAgentString: `toky/${packageJson.name}-${packageJson.version}/${browserSpecs.name}-${browserSpecs.version}`,
+        userAgentString: `toky/${toKebabCase(this._appName)}/${
+          packageJson.name
+        }-${packageJson.version}/${browserSpecs.name}-${browserSpecs.version}`,
         logBuiltinEnabled: true,
         logLevel: isDevelopment ? 'debug' : 'error',
         allowLegacyNotifications: true,
