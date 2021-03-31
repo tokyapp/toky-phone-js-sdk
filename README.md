@@ -28,18 +28,9 @@ For the authentication flow, please refer to the documentation related: [docs/au
 
 ## Development & Production environment
 
-The two environments require `.env` files and it works like this.
+The two environments require `.env` files, and it works like this.
 
-In compilation time, it automatically uses the `.env` file depending of your _git branch_. It looks like this:
-
-`.env.example`
-
-```
-TOKY_API_URL="https://api.toky.co"
-TOKY_RESOURCES_URL="https://app.toky.co"
-PUSHER_KEY=""     # Warm transfer feature
-AGENT_ID=""       # Your Toky Agent Id
-```
+In compilation time, it automatically uses the `.env` file depending on your _git branch_. It looks like this:
 
 ```
 Git Branch   Environment file
@@ -48,8 +39,16 @@ main         .env.prod
 staging      .env.staging
 dev          .env.dev
 ```
+`.env.example`
+
+```
+TOKY_API_URL="https://api.toky.co"
+TOKY_RESOURCES_URL="https://app.toky.co"
+PUSHER_KEY="" # Warm transfer feature
+AGENT_ID="" # Your Toky Agent Id
+```
 ### **Development**
-We can use the `.env.example` for the `.env.dev` file.
+You can use the `.env.example` as the base for your `.env.dev` file.
 
 In the `main.js` in the `example` folder, replace the variable `currentAppId` with your corresponding generated **App Id**, this in mandatory:
 
@@ -62,11 +61,11 @@ Then you can run:
 ```bash
 npm run dev
 ```
-Runs the app in development mode and the Dialer in the `/example` folder.
+This script runs the app in development mode and the Dialer in the `/example` folder.
 
-It would open a tab in your browser starting the authentication flow.
+It would open a tab in your browser, starting the authentication flow.
 ### **Production**
-For the production environment we need an `.env.prod` file also based on the `.env.example`
+For the production environment, we need an `.env.prod` file also based on the `.env.example`
 
 ```bash
 npm run build
@@ -82,12 +81,12 @@ import TokySDK from 'toky-phone-js-sdk'
 const { TokyClient } = TokySDK
 
 const Client = new TokyClient({
-  accessToken: '{{access_token}}',
-  account: {
-    user: 'john@doe.com',
-    type: 'agent',
-  },
-  transportLib: 'sip.js',
+ accessToken: '{{access_token}}',
+ account: {
+   user: 'john@doe.com',
+   type: 'agent',
+ },
+ transportLib: 'sip.js',
 })
 
 await Client.init()
@@ -120,17 +119,17 @@ Client.on(MediaStatus.PERMISSION_REVOKED, () => { /* Your code here */ })
 ```
 ## Outgoing call
 
-You can list the available **Phone Numbers** of the company, pick one, and establish a call. 
+You can list the available **Phone Numbers** of the company, pick one, and establish a call.
 
 https://toky-js-sdk.toky.co/reference#agentsdids
 
 ```javascript
 let tokySession = Client.startCall({
-  phoneNumber: '+595217288659' /* example number */,
-  callerId: '+13344413569' /* example caller id from the company */,
+ phoneNumber: '+595217288659' /* example number */,
+ callerId: '+13344413569' /* example caller id from the company */,
 })
 ```
-Once the call is established, we get a session (`tokySession`) of that call and 
+Once the call is established, we get a session (`tokySession`) of that call and
 later we will use it to make the following operations
 
 ## Session instance methods
@@ -144,13 +143,13 @@ tokySession.mute()
 
 ```javascript
 tokySession
-  .hold()
-  .then(() => {
-    console.warn('--- HOLD action success')
-  })
-  .catch(() => {
-    console.warn('--- HOLD action unsuccess')
-  })
+ .hold()
+ .then(() => {
+   console.warn('--- HOLD action success')
+ })
+ .catch(() => {
+   console.warn('--- HOLD action unsuccess')
+ })
 ```
 
 ### Record Call
@@ -159,13 +158,13 @@ This option will work if the agent has the corresponding permissions.
 
 ```javascript
 tokySession
-  .record()
-  .then(() => {
-    console.warn('--- RECORD action success')
-  })
-  .catch(() => {
-    console.warn('--- RECORD action unsuccess')
-  })
+ .record()
+ .then(() => {
+   console.warn('--- RECORD action success')
+ })
+ .catch(() => {
+   console.warn('--- RECORD action unsuccess')
+ })
 ```
 
 ### Transfer call with Blind and Warm options
@@ -174,15 +173,15 @@ tokySession
 const { TransferEnum, TransferOptionsEnum } = TokySDK
 
 tokySession.makeTransfer({
-  type: TransferEnum.AGENT,
-  destination: 'jane@doe.com',
-  option: TransferOptionsEnum.BLIND,
+ type: TransferEnum.AGENT,
+ destination: 'jane@doe.com',
+ option: TransferOptionsEnum.BLIND,
 })
 
 tokySession.makeTransfer({
-  type: TransferEnum.NUMBER,
-  destination: '+595217288659',
-  option: TransferOptionsEnum.BLIND,
+ type: TransferEnum.NUMBER,
+ destination: '+595217288659',
+ option: TransferOptionsEnum.BLIND,
 })
 ```
 
@@ -192,13 +191,13 @@ The cancel transfer option will work only for Warm Transfers.
 
 ```javascript
 tokySession
-  .cancelTransfer()
-  .then(() => {
-    console.warn('--- Cancel Transfer action success')
-  })
-  .catch(() => {
-    console.warn('--- Cancel Transfer action unsuccess')
-  })
+ .cancelTransfer()
+ .then(() => {
+   console.warn('--- Cancel Transfer action success')
+ })
+ .catch(() => {
+   console.warn('--- Cancel Transfer action unsuccess')
+ })
 ```
 
 ### End Call
@@ -221,7 +220,7 @@ tokySession.on(SessionStatus.NOT_RECORDING, () => { /* Your code here */ })
 ## Transfer call events
 We have several call events for transfer calls.
 
- `TRANSFER_FAILED` is related to the phone system rejecting the transfer operation, i.e. use an invalid agent sip username to make a blind transfer.
+`TRANSFER_FAILED` is related to the phone system rejecting the transfer operation, i.e. use an invalid agent sip username to make a blind transfer.
 ```javascript
 tokySession.on(SessionStatus.TRANSFER_BLIND_INIT, () => { /* Your code here */ })
 tokySession.on(SessionStatus.TRANSFER_WARM_INIT, () => { /* Your code here */ })
@@ -240,33 +239,33 @@ The `MediaStatus.READY` is emitted when the user's permissions had been allowed.
 const { MediaStatus } = TokySDK
 
 Client.on(MediaStatus.READY, () => {
-  /* The device id */
-  const outputDevice = '230988012091820398213'
-  Client.setOutputDevice(outputDevice).then(() => {
-    console.log('Output device updated successfully!')
-  })
+ /* The device id */
+ const outputDevice = '230988012091820398213'
+ Client.setOutputDevice(outputDevice).then(() => {
+   console.log('Output device updated successfully!')
+ })
 
-  /**
-   * This is applied for established calls
-   * it allows you to switch audio devices mid-call
-   */
-  const inputSelected = '120398120398123'
-  if (tokySession) {
-    const connection = tokySession.getConnection()
-    Client.setInputDevice(inputSelected, connection).then(() => {
-      console.log('Input device updated successfully!')
-    })
-  } else {
-    Client.setInputDevice(inputSelected).then(() => {
-      console.log('Input device updated successfully!')
-    })
-  }
+ /**
+  * This is applied for established calls
+  * it allows you to switch audio devices mid-call
+  */
+ const inputSelected = '120398120398123'
+ if (tokySession) {
+   const connection = tokySession.getConnection()
+   Client.setInputDevice(inputSelected, connection).then(() => {
+     console.log('Input device updated successfully!')
+   })
+ } else {
+   Client.setInputDevice(inputSelected).then(() => {
+     console.log('Input device updated successfully!')
+   })
+ }
 
-  /* The list of available devices, and can be used to switch devices */
-  console.log(Client.inputs, Client.outputs)
+ /* The list of available devices, and can be used to switch devices */
+ console.log(Client.inputs, Client.outputs)
 
-  /* List current selected devices, input and output respectively */
-  console.log(`Selected input: ${Client.selectedInputDevice.name}`)
-  console.log(`Selected ouput: ${Client.selectedOutputDevice.name}`)
+ /* List current selected devices, input and output respectively */
+ console.log(`Selected input: ${Client.selectedInputDevice.name}`)
+ console.log(`Selected ouput: ${Client.selectedOutputDevice.name}`)
 })
 ```
