@@ -150,6 +150,8 @@ export class Client extends EventEmitter implements IClientImpl {
   _localStream: MediaStream
   _deviceList: IDeviceList[]
   _devicesInfoRaw: MediaDeviceInfo[]
+  _currentSession: SessionUA
+  _activeSession: boolean
 
   /** Related to States */
   acceptInboundCalls = false
@@ -1157,6 +1159,9 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   refreshAccessToken(accessToken: string): void {
+    if (this._activeSession) {
+      this._currentSession.refreshAccessToken(accessToken)
+    }
     this._accessToken = accessToken
   }
 
@@ -1212,7 +1217,7 @@ export class Client extends EventEmitter implements IClientImpl {
 
         this.emit(ClientStatus.CONNECTING)
 
-        let currentSession = new SessionUA(
+        this._currentSession = new SessionUA(
           inviter,
           this._media,
           this._tokyChannel,
@@ -1231,12 +1236,15 @@ export class Client extends EventEmitter implements IClientImpl {
           }
         )
 
-        currentSession.once('__session_terminated', () => {
+        this._activeSession = true
+
+        this._currentSession.once('__session_terminated', () => {
           this.sessionTerminatedHandler()
-          currentSession = null
+          this._currentSession = null
+          this._activeSession = false
         })
 
-        return currentSession
+        return this._currentSession
       } else {
         if (isDevelopment) {
           console.error(

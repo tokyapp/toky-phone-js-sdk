@@ -1241,4 +1241,8 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         if (isDevelopment) console.error('Transfer failed for some reason', err)
       })
   }
+
+  refreshAccessToken(accessToken: string): void {
+    this._accessToken = accessToken
+  }
 }
