@@ -91,6 +91,12 @@ const Client = new TokyClient({
 
 await Client.init()
 ```
+
+## Refresh Token
+The refresh token method is useful when an access token has expired
+```javascript
+Client.refreshToken('yournewaccesstoken')
+```
 ## TokyClient instance events
 
 ### Registration events
