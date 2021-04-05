@@ -471,8 +471,6 @@ export class Client extends EventEmitter implements IClientImpl {
             .getHeader('From')
             .includes(';agent')
 
-          let currentSession = null
-
           if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
             this._media.incomingRingAudio.play().then(() => {
               if (isDevelopment) {
@@ -482,7 +480,7 @@ export class Client extends EventEmitter implements IClientImpl {
           }
 
           if (isFromAgent && this.acceptInboundCalls) {
-            currentSession = new SessionUA(
+            this._currentSession = new SessionUA(
               incomingSession,
               this._media,
               this._tokyChannel,
@@ -500,7 +498,7 @@ export class Client extends EventEmitter implements IClientImpl {
             )
 
             this.emit(ClientStatus.INVITE, {
-              session: currentSession,
+              session: this._currentSession,
               agentData: {
                 agentId: this._account.user,
                 sipUsername: this._account.sipUsername,
@@ -512,10 +510,7 @@ export class Client extends EventEmitter implements IClientImpl {
               },
             })
 
-            currentSession.once('__session_terminated', () => {
-              this.sessionTerminatedHandler()
-              currentSession = null
-            })
+            this.prepateActiveSession()
           }
 
           const isBlindTransfer =
@@ -532,7 +527,7 @@ export class Client extends EventEmitter implements IClientImpl {
            * This case in when in a rejected blind transferred call
            */
           if (isBlindTransfer) {
-            currentSession = new SessionUA(
+            this._currentSession = new SessionUA(
               incomingSession,
               this._media,
               this._tokyChannel,
@@ -552,7 +547,7 @@ export class Client extends EventEmitter implements IClientImpl {
             )
 
             this.emit(ClientStatus.INVITE, {
-              session: currentSession,
+              session: this._currentSession,
               agentData: {
                 agentId: this._account.user,
                 sipUsername: this._account.sipUsername,
@@ -566,14 +561,11 @@ export class Client extends EventEmitter implements IClientImpl {
               },
             })
 
-            currentSession.once('__session_terminated', () => {
-              this.sessionTerminatedHandler()
-              currentSession = null
-            })
+            this.prepateActiveSession()
           }
 
           if (isWarmTransfer) {
-            currentSession = new SessionUA(
+            this._currentSession = new SessionUA(
               incomingSession,
               this._media,
               this._tokyChannel,
@@ -593,7 +585,7 @@ export class Client extends EventEmitter implements IClientImpl {
             )
 
             this.emit(ClientStatus.INVITE, {
-              session: currentSession,
+              session: this._currentSession,
               agentData: {
                 agentId: this._account.user,
                 sipUsername: this._account.sipUsername,
@@ -607,10 +599,7 @@ export class Client extends EventEmitter implements IClientImpl {
               },
             })
 
-            currentSession.once('__session_terminated', () => {
-              this.sessionTerminatedHandler()
-              currentSession = null
-            })
+            this.prepateActiveSession()
           }
         },
       }
@@ -1165,6 +1154,16 @@ export class Client extends EventEmitter implements IClientImpl {
     this._accessToken = accessToken
   }
 
+  prepateActiveSession(): void {
+    this._activeSession = true
+
+    this._currentSession.once('__session_terminated', () => {
+      this.sessionTerminatedHandler()
+      this._currentSession = null
+      this._activeSession = false
+    })
+  }
+
   /**
    * In Toky SDK this is done automatically in the constructor
    * with the default register option set in the User Agent (* not anymore)
@@ -1236,13 +1235,7 @@ export class Client extends EventEmitter implements IClientImpl {
           }
         )
 
-        this._activeSession = true
-
-        this._currentSession.once('__session_terminated', () => {
-          this.sessionTerminatedHandler()
-          this._currentSession = null
-          this._activeSession = false
-        })
+        this.prepateActiveSession()
 
         return this._currentSession
       } else {
