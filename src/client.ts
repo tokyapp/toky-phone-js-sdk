@@ -110,7 +110,6 @@ interface HTMLMediaElementExp extends HTMLMediaElement {
 
 declare interface IClientImpl {
   init: () => Promise<{ connectionCountry: string }>
-  register: () => void
   startCall: (options: {
     phoneNumber: string
     callerId: string
@@ -360,137 +359,23 @@ export class Client extends EventEmitter implements IClientImpl {
       this.emit(ClientStatus.READY)
 
       /**
-       * SIP js Listeners
+       * SIP.js Listeners
        */
       this._userAgent.delegate = {
-        onDisconnect: (error?: Error): void => {
-          if (isDevelopment) console.warn('-- disconnect event')
-
-          if (this._registerer) {
-            const registered =
-              this._registerer.state &&
-              this._registerer.state === RegistererState.Registered
-
-            if (registered) {
-              this._registerer
-                .unregister()
-                .then(() => {
-                  this.isRegistered = false
-                })
-                .catch((e: Error) => {
-                  // Unregister failed
-                  if (isDevelopment) {
-                    console.error(
-                      'Failed to send UNREGISTERED or failed on Disconnect Event',
-                      e
-                    )
-                  }
-                })
-            }
-            // Only attempt to reconnect if network/server dropped the connection (if there is an error)
-            if (error) {
-              this.attemptReconnection()
-            }
-          }
-        },
-        onConnect: (): void => {
-          if (isDevelopment) console.warn('-- connected event')
-
-          if (this._registerer) {
-            const isRegistered =
-              this._registerer.state &&
-              this._registerer.state === RegistererState.Registered
-
-            if (isRegistered) {
-              this.isRegistered = true
-              this.emit(ClientStatus.REGISTERED)
-            } else {
-              this._registerer
-                .register()
-                .then((request) => {
-                  if (isDevelopment) {
-                    console.log('Successfully sent REGISTER on Connect event')
-                    console.log('Sent request =', request)
-                  }
-                })
-                .catch((error) => {
-                  if (isDevelopment) {
-                    console.error('Failed to send REGISTER', error)
-                  }
-                })
-            }
-          }
-        },
+        onDisconnect: this.onDisconnect.bind(this),
+        onConnect: this.onConnect.bind(this),
         onInvite: this.onInvite.bind(this),
       }
 
       this._userAgent
         .start()
-        .then(() => {
-          this._registerer = new Registerer(this._userAgent, {
-            registrar: this.serverUri,
-          })
-
-          this._registerer.stateChange.addListener((newState) => {
-            switch (newState) {
-              case RegistererState.Registered:
-                this.emit(ClientStatus.REGISTERED)
-
-                this.isRegistering = false
-                this.isRegistered = true
-
-                console.log(
-                  '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
-                  'background: blue; color: white; font-size: small'
-                )
-                break
-              case RegistererState.Unregistered:
-                this.emit(ClientStatus.UNREGISTERED)
-
-                this.isRegistered = false
-                break
-              case RegistererState.Terminated:
-                if (isDevelopment) console.error('Terminated')
-                break
-            }
-          })
-
-          if (this.isRegistered === false) {
-            this.emit(ClientStatus.REGISTERING)
-
-            this.isRegistering = true
-
-            this._registerer
-              .register()
-              .then((request) => {
-                if (isDevelopment) {
-                  console.log('Successfully sent REGISTER')
-                  console.log('Sent request =', request)
-                }
-              })
-              .catch((error) => {
-                if (isDevelopment)
-                  console.error('Failed to send REGISTER', error)
-              })
-          }
-        })
+        .then(this.register.bind(this))
         .catch((error) => {
           if (isDevelopment) console.error('Failed to connect', error)
         })
 
-      window.addEventListener('online', () => {
-        this.attemptReconnection()
-        console.warn('browser online, attempting to reconnect')
-      })
-
-      window.addEventListener('offline', () => {
-        this.emit(ClientStatus.OFFLINE)
-        if (isDevelopment) {
-          console.warn(
-            'Browser goes offline. Once online it will try to reconnect.'
-          )
-        }
-      })
+      window.addEventListener('online', this.onOnline.bind(this))
+      window.addEventListener('offline', this.onOffline.bind(this))
     }
 
     return {
@@ -763,17 +648,12 @@ export class Client extends EventEmitter implements IClientImpl {
 
     const transferred = incomingSession.request.getHeader('X-Transferred')
 
-    const transferredTo = incomingSession.request.getHeader(
-      'X-Transferred-To'
-    )
+    const transferredTo = incomingSession.request.getHeader('X-Transferred-To')
 
-    const transferredBy = incomingSession.request.getHeader(
-      'X-Transferred-By'
-    )
+    const transferredBy = incomingSession.request.getHeader('X-Transferred-By')
     const referer = incomingSession.request.getHeader('X-Referer')
 
-    const isFromPSTN =
-      incomingSession.request.getHeader('X-PSTN') === 'yes'
+    const isFromPSTN = incomingSession.request.getHeader('X-PSTN') === 'yes'
 
     const isIncomingWarmTransfer =
       incomingSession.request.getHeader('X-Warm') === 'yes'
@@ -830,9 +710,9 @@ export class Client extends EventEmitter implements IClientImpl {
     /**
      * Incoming Warm Transfer Calls are ignored because an INVITE is generated when the two agents are talking
      * acceptInboundCalls: Toky Client setting to ignore INVITE (inbound calls), defaults to: true
-     * 
+     *
      * @example:
-     * 
+     *
      * ```js
      * new TokyClient({
      *   accessToken: accessToken.value,
@@ -964,6 +844,138 @@ export class Client extends EventEmitter implements IClientImpl {
       })
 
       this.prepateActiveSession()
+    }
+  }
+
+  private onDisconnect(error?: Error): void {
+    if (isDevelopment) console.warn('-- disconnect event')
+
+    if (this._registerer) {
+      const registered =
+        this._registerer.state &&
+        this._registerer.state === RegistererState.Registered
+
+      if (registered) {
+        this._registerer
+          .unregister()
+          .then(() => {
+            this.isRegistered = false
+          })
+          .catch((e: Error) => {
+            // Unregister failed
+            if (isDevelopment) {
+              console.error(
+                'Failed to send UNREGISTERED or failed on Disconnect Event',
+                e
+              )
+            }
+          })
+      }
+      // Only attempt to reconnect if network/server dropped the connection (if there is an error)
+      if (error) {
+        this.attemptReconnection()
+      }
+    }
+  }
+
+  private onConnect(): void {
+    if (isDevelopment) console.warn('-- connected event')
+
+    if (this._registerer) {
+      const isRegistered =
+        this._registerer.state &&
+        this._registerer.state === RegistererState.Registered
+
+      if (isRegistered) {
+        this.isRegistered = true
+        this.emit(ClientStatus.REGISTERED)
+      } else {
+        this._registerer
+          .register()
+          .then((request) => {
+            if (isDevelopment) {
+              console.log('Successfully sent REGISTER on Connect event')
+              console.log('Sent request =', request)
+            }
+          })
+          .catch((error) => {
+            if (isDevelopment) {
+              console.error('Failed to send REGISTER', error)
+            }
+          })
+      }
+    }
+  }
+
+  private register(): void {
+    this._registerer = new Registerer(this._userAgent, {
+      registrar: this.serverUri,
+    })
+
+    this._registerer.stateChange.addListener((newState) => {
+      switch (newState) {
+        case RegistererState.Registered:
+          this.emit(ClientStatus.REGISTERED)
+
+          this.isRegistering = false
+          this.isRegistered = true
+
+          console.log(
+            '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
+            'background: blue; color: white; font-size: small'
+          )
+          break
+        case RegistererState.Unregistered:
+          this.emit(ClientStatus.UNREGISTERED)
+
+          this.isRegistered = false
+          break
+        case RegistererState.Terminated:
+          if (isDevelopment) console.error('Terminated')
+          break
+      }
+    })
+
+    if (this.isRegistered === false) {
+      this.emit(ClientStatus.REGISTERING)
+
+      this.isRegistering = true
+
+      this._registerer
+        .register()
+        .then((request) => {
+          if (isDevelopment) {
+            console.log('Successfully sent REGISTER')
+            console.log('Sent request =', request)
+          }
+        })
+        .catch((error) => {
+          if (isDevelopment) console.error('Failed to send REGISTER', error)
+        })
+    }
+  }
+
+  private onOnline(): void {
+    this.attemptReconnection()
+    console.warn('browser online, attempting to reconnect')
+  }
+
+  private prepateActiveSession(): void {
+    this._activeSession = true
+
+    this._currentSession.once('__session_terminated', () => {
+      this.sessionTerminatedHandler()
+      this._currentSession = null
+      this._activeSession = false
+    })
+  }
+
+  private onOffline(): void {
+    this.emit(ClientStatus.OFFLINE)
+    if (isDevelopment) {
+      console.warn(
+        'Browser goes offline. Once online it will try to reconnect.'
+      )
     }
   }
 
@@ -1176,29 +1188,11 @@ export class Client extends EventEmitter implements IClientImpl {
     }
   }
 
-  refreshAccessToken(accessToken: string): void {
+  public refreshAccessToken(accessToken: string): void {
     if (this._activeSession) {
       this._currentSession.refreshAccessToken(accessToken)
     }
     this._accessToken = accessToken
-  }
-
-  prepateActiveSession(): void {
-    this._activeSession = true
-
-    this._currentSession.once('__session_terminated', () => {
-      this.sessionTerminatedHandler()
-      this._currentSession = null
-      this._activeSession = false
-    })
-  }
-
-  /**
-   * In Toky SDK this is done automatically in the constructor
-   * with the default register option set in the User Agent (* not anymore)
-   */
-  public register(): void {
-    // TODO: implement later
   }
 
   public startCall({
