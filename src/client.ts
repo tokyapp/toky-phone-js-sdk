@@ -421,214 +421,7 @@ export class Client extends EventEmitter implements IClientImpl {
             }
           }
         },
-        onInvite: (invitation: Invitation): void => {
-          const incomingSession = invitation
-
-          const transferred = incomingSession.request.getHeader('X-Transferred')
-
-          const transferredTo = incomingSession.request.getHeader(
-            'X-Transferred-To'
-          )
-
-          const transferredBy = incomingSession.request.getHeader(
-            'X-Transferred-By'
-          )
-          const referer = incomingSession.request.getHeader('X-Referer')
-
-          const isFromPSTN =
-            incomingSession.request.getHeader('X-PSTN') === 'yes'
-
-          const isIncomingWarmTransfer =
-            incomingSession.request.getHeader('X-Warm') === 'yes'
-
-          const companyID = incomingSession.request.getHeader('X-Company')
-
-          const sectionId = incomingSession.request.getHeader('X-Section')
-
-          const sectionOptionId = incomingSession.request.getHeader('X-Option')
-
-          const ivrID = incomingSession.request.getHeader('X-IVR')
-
-          const ivrOptionPressed = incomingSession.request.getHeader(
-            'X-IVR-Option-Pressed'
-          )
-
-          const customerHasInfo =
-            incomingSession.request.getHeader('X-Has-Info') !== undefined
-
-          const customerUsername = incomingSession.request.getHeader(
-            'X-Toky-Username'
-          )
-          const customerUri = incomingSession.remoteIdentity.uri.user
-
-          const customerIsAnon = customerUri.indexOf('.invalid') > -1
-
-          const customerLocation = incomingSession.request.getHeader(
-            'X-Connection-Country'
-          )
-
-          /**
-           * Call from another Agent
-           */
-          const isFromAgent = incomingSession.request
-            .getHeader('From')
-            .includes(';agent')
-
-          /**
-           * Blind transfer call
-           */
-          const isBlindTransfer =
-            transferred &&
-            transferredBy === this._account.sipUsername &&
-            !isIncomingWarmTransfer
-
-          /**
-           * Warm transfer call
-           */
-          const isWarmTransfer =
-            transferred &&
-            transferredBy === this._account.sipUsername &&
-            isIncomingWarmTransfer
-
-          /**
-           * Incoming Warm Transfer Calls are ignored because an INVITE is generated when the two agents are talking
-           * acceptInboundCalls: Toky Client setting to ignore INVITE (inbound calls), defaults to: true
-           * 
-           * @example:
-           * 
-           * ```js
-           * new TokyClient({
-           *   accessToken: accessToken.value,
-           *   account: {
-           *     user: agentId,
-           *     type: 'agent',
-           *   },
-           *   transportLib: 'sip.js',
-           *   acceptInboundCalls: false
-           * })
-           * ```
-           */
-          if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
-            this._media.incomingRingAudio.play().then(() => {
-              if (isDevelopment) {
-                console.warn('-- audio play succeed on incoming session')
-              }
-            })
-          }
-
-          if (isFromAgent && this.acceptInboundCalls) {
-            this._currentSession = new SessionUA(
-              incomingSession,
-              this._media,
-              this._tokyChannel,
-              CallDirectionEnum.INBOUND,
-              {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-                accessToken: this._accessToken,
-              },
-              {
-                uri: customerUri,
-                type: 'agent',
-              }
-            )
-
-            this.emit(ClientStatus.INVITE, {
-              session: this._currentSession,
-              agentData: {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-              },
-              callData: {
-                remoteUserId: customerUri,
-                remoteUserType: 'agent',
-              },
-            })
-
-            this.prepateActiveSession()
-          }
-
-          /**
-           * Case for a rejected Blind Transferred Call
-           */
-          if (isBlindTransfer) {
-            this._currentSession = new SessionUA(
-              incomingSession,
-              this._media,
-              this._tokyChannel,
-              CallDirectionEnum.INBOUND,
-              {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-                accessToken: this._accessToken,
-              },
-              {
-                uri: customerUri,
-                type: 'agent',
-                transferredType: 'blind',
-                cause: 'rejected',
-              }
-            )
-
-            this.emit(ClientStatus.INVITE, {
-              session: this._currentSession,
-              agentData: {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-              },
-              callData: {
-                remoteUserId: customerUri,
-                remoteUserType: 'agent',
-                transferredType: 'blind',
-                cause: 'rejected',
-              },
-            })
-
-            this.prepateActiveSession()
-          }
-
-          if (isWarmTransfer) {
-            this._currentSession = new SessionUA(
-              incomingSession,
-              this._media,
-              this._tokyChannel,
-              CallDirectionEnum.INBOUND,
-              {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-                accessToken: this._accessToken,
-              },
-              {
-                uri: customerUri,
-                type: 'agent',
-                transferredType: 'warm',
-                action: 'establish',
-              }
-            )
-
-            this.emit(ClientStatus.INVITE, {
-              session: this._currentSession,
-              agentData: {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-              },
-              callData: {
-                remoteUserUri: customerUri,
-                remoteUserType: 'agent',
-                transferredType: 'warm',
-                action: 'establish',
-              },
-            })
-
-            this.prepateActiveSession()
-          }
-        },
+        onInvite: this.onInvite.bind(this),
       }
 
       this._userAgent
@@ -962,6 +755,215 @@ export class Client extends EventEmitter implements IClientImpl {
       this.emit(ClientStatus.REGISTERED)
     } else {
       this.isRegistered = false
+    }
+  }
+
+  private onInvite(invitation: Invitation): void {
+    const incomingSession = invitation
+
+    const transferred = incomingSession.request.getHeader('X-Transferred')
+
+    const transferredTo = incomingSession.request.getHeader(
+      'X-Transferred-To'
+    )
+
+    const transferredBy = incomingSession.request.getHeader(
+      'X-Transferred-By'
+    )
+    const referer = incomingSession.request.getHeader('X-Referer')
+
+    const isFromPSTN =
+      incomingSession.request.getHeader('X-PSTN') === 'yes'
+
+    const isIncomingWarmTransfer =
+      incomingSession.request.getHeader('X-Warm') === 'yes'
+
+    const companyID = incomingSession.request.getHeader('X-Company')
+
+    const sectionId = incomingSession.request.getHeader('X-Section')
+
+    const sectionOptionId = incomingSession.request.getHeader('X-Option')
+
+    const ivrID = incomingSession.request.getHeader('X-IVR')
+
+    const ivrOptionPressed = incomingSession.request.getHeader(
+      'X-IVR-Option-Pressed'
+    )
+
+    const customerHasInfo =
+      incomingSession.request.getHeader('X-Has-Info') !== undefined
+
+    const customerUsername = incomingSession.request.getHeader(
+      'X-Toky-Username'
+    )
+    const customerUri = incomingSession.remoteIdentity.uri.user
+
+    const customerIsAnon = customerUri.indexOf('.invalid') > -1
+
+    const customerLocation = incomingSession.request.getHeader(
+      'X-Connection-Country'
+    )
+
+    /**
+     * Call from another Agent
+     */
+    const isFromAgent = incomingSession.request
+      .getHeader('From')
+      .includes(';agent')
+
+    /**
+     * Blind transfer call
+     */
+    const isBlindTransfer =
+      transferred &&
+      transferredBy === this._account.sipUsername &&
+      !isIncomingWarmTransfer
+
+    /**
+     * Warm transfer call
+     */
+    const isWarmTransfer =
+      transferred &&
+      transferredBy === this._account.sipUsername &&
+      isIncomingWarmTransfer
+
+    /**
+     * Incoming Warm Transfer Calls are ignored because an INVITE is generated when the two agents are talking
+     * acceptInboundCalls: Toky Client setting to ignore INVITE (inbound calls), defaults to: true
+     * 
+     * @example:
+     * 
+     * ```js
+     * new TokyClient({
+     *   accessToken: accessToken.value,
+     *   account: {
+     *     user: agentId,
+     *     type: 'agent',
+     *   },
+     *   transportLib: 'sip.js',
+     *   acceptInboundCalls: false
+     * })
+     * ```
+     */
+    if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
+      this._media.incomingRingAudio.play().then(() => {
+        if (isDevelopment) {
+          console.warn('-- audio play succeed on incoming session')
+        }
+      })
+    }
+
+    if (isFromAgent && this.acceptInboundCalls) {
+      this._currentSession = new SessionUA(
+        incomingSession,
+        this._media,
+        this._tokyChannel,
+        CallDirectionEnum.INBOUND,
+        {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+          accessToken: this._accessToken,
+        },
+        {
+          uri: customerUri,
+          type: 'agent',
+        }
+      )
+
+      this.emit(ClientStatus.INVITE, {
+        session: this._currentSession,
+        agentData: {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+        },
+        callData: {
+          remoteUserId: customerUri,
+          remoteUserType: 'agent',
+        },
+      })
+
+      this.prepateActiveSession()
+    }
+
+    /**
+     * Case for a rejected Blind Transferred Call
+     */
+    if (isBlindTransfer) {
+      this._currentSession = new SessionUA(
+        incomingSession,
+        this._media,
+        this._tokyChannel,
+        CallDirectionEnum.INBOUND,
+        {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+          accessToken: this._accessToken,
+        },
+        {
+          uri: customerUri,
+          type: 'agent',
+          transferredType: 'blind',
+          cause: 'rejected',
+        }
+      )
+
+      this.emit(ClientStatus.INVITE, {
+        session: this._currentSession,
+        agentData: {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+        },
+        callData: {
+          remoteUserId: customerUri,
+          remoteUserType: 'agent',
+          transferredType: 'blind',
+          cause: 'rejected',
+        },
+      })
+
+      this.prepateActiveSession()
+    }
+
+    if (isWarmTransfer) {
+      this._currentSession = new SessionUA(
+        incomingSession,
+        this._media,
+        this._tokyChannel,
+        CallDirectionEnum.INBOUND,
+        {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+          accessToken: this._accessToken,
+        },
+        {
+          uri: customerUri,
+          type: 'agent',
+          transferredType: 'warm',
+          action: 'establish',
+        }
+      )
+
+      this.emit(ClientStatus.INVITE, {
+        session: this._currentSession,
+        agentData: {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+        },
+        callData: {
+          remoteUserUri: customerUri,
+          remoteUserType: 'agent',
+          transferredType: 'warm',
+          action: 'establish',
+        },
+      })
+
+      this.prepateActiveSession()
     }
   }
 
