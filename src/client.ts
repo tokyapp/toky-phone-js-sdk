@@ -270,10 +270,8 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   /**
-   * Init is where we call the Toky API to get call params
-   * and it establish communication with the Toky Server
+   * .init() is where we get the Toky Phone Params to establish communication with the Toky Phone System
    */
-
   public async init(): Promise<{
     connectionCountry: string
     sipUsername: string
