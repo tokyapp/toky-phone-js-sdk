@@ -37,8 +37,8 @@ export class MediaSingleton extends EventEmitter {
   _devicesInfoRaw: MediaDeviceInfo[]
   _deviceList: IDeviceList[]
   _localStream: MediaStream
-
   _source: IMediaAttribute
+
   hasMediaPermissions = false
 
   public async init(): Promise<void> {
@@ -70,7 +70,6 @@ export class MediaSingleton extends EventEmitter {
          * we store the first time and then compare with the current because .ondevicechange()
          * triggers two times (see behavior) when devices change
          */
-
         if (this._devicesInfoRaw) {
           const newIds = new Set(devicesInfo.map((d) => d.deviceId))
 

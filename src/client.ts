@@ -77,11 +77,6 @@ interface IIceServerAttribute {
   credential?: string
 }
 
-interface HTMLMediaElementExp extends HTMLMediaElement {
-  // Listed as experimental in https://developer.mozilla.org/es/docs/Web/API/HTMLMediaElement
-  setSinkId: any
-}
-
 declare interface IClientImpl {
   init: () => Promise<{ connectionCountry: string }>
   startCall: (options: {
@@ -250,7 +245,11 @@ export class Client extends EventEmitter implements IClientImpl {
       accessToken: this._accessToken,
     })
 
-    Media.init()
+    Media.init().then(() => {
+      if (isDevelopment) {
+        console.warn('Media init success...')
+      }
+    })
 
     const paramsData = response.data
 
@@ -354,7 +353,6 @@ export class Client extends EventEmitter implements IClientImpl {
   /**
    * Handlers for event listeners
    */
-
   private sessionTerminatedHandler(): void {
     this.isRegistered = false
 
