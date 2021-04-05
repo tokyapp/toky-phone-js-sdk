@@ -384,7 +384,7 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   // Function which recursively attempts reconnection
-  attemptReconnection = (reconnectionAttempt = 1): void => {
+  private attemptReconnection = (reconnectionAttempt = 1): void => {
     // If not intentionally connected, don't reconnect.
     if (!this._shouldBeConnected) {
       return
@@ -616,12 +616,6 @@ export class Client extends EventEmitter implements IClientImpl {
     }
     this.emit(MediaStatus.ERROR)
   }
-
-  private outboundCallURI = (phoneNumber: string): URI =>
-    UserAgent.makeURI(
-      `sip:service@${this._tokyDomain};company=${this._companyId};dnis=${phoneNumber}`
-    )
-
   /**
    * Handlers for event listeners
    */
@@ -976,6 +970,11 @@ export class Client extends EventEmitter implements IClientImpl {
       )
     }
   }
+
+  private outboundCallURI = (phoneNumber: string): URI =>
+    UserAgent.makeURI(
+      `sip:service@${this._tokyDomain};company=${this._companyId};dnis=${phoneNumber}`
+    )
 
   /**
    * PUBLIC METHODS
