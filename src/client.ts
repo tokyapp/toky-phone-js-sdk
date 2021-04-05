@@ -116,16 +116,22 @@ export class Client extends EventEmitter implements IClient {
     if (
       !account.user ||
       !account.type ||
-      !account.hasOwnProperty('user') ||
-      !account.hasOwnProperty('type')
+      !Object.prototype.hasOwnProperty.call(account, 'user') ||
+      !Object.prototype.hasOwnProperty.call(account, 'type')
     ) {
       let errorMessage = 'Required options should be provided: '
 
-      if (!account.hasOwnProperty('user') || !account.user) {
+      if (
+        !Object.prototype.hasOwnProperty.call(account, 'user') ||
+        !account.user
+      ) {
         errorMessage += 'account.user '
       }
 
-      if (!account.hasOwnProperty('type') || !account.type) {
+      if (
+        !Object.prototype.hasOwnProperty.call(account, 'type') ||
+        !account.type
+      ) {
         errorMessage += 'account.type '
       }
 
@@ -137,7 +143,7 @@ export class Client extends EventEmitter implements IClient {
      * review behaviour for warm rejected transferred calls
      */
 
-    if (!account.hasOwnProperty('acceptInboundCalls')) {
+    if (!Object.prototype.hasOwnProperty.call(account, 'acceptInboundCalls')) {
       this.acceptInboundCalls = true
     } else {
       this.acceptInboundCalls = Boolean(account.acceptInboundCalls)
@@ -159,17 +165,23 @@ export class Client extends EventEmitter implements IClient {
 
     if (media) {
       if (
-        media.hasOwnProperty('incomingRingAudio') &&
+        Object.prototype.hasOwnProperty.call(media, 'incomingRingAudio') &&
         media.incomingRingAudio
       ) {
         _incomingRingAudio = media.incomingRingAudio
       }
 
-      if (media.hasOwnProperty('errorAudio') && media.errorAudio) {
+      if (
+        Object.prototype.hasOwnProperty.call(media, 'errorAudio') &&
+        media.errorAudio
+      ) {
         _errorAudio = media.errorAudio
       }
 
-      if (media.hasOwnProperty('ringAudio') && media.ringAudio) {
+      if (
+        Object.prototype.hasOwnProperty.call(media, 'ringAudio') &&
+        media.ringAudio
+      ) {
         _ringAudio = media.ringAudio
       }
     }
