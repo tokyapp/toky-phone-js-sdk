@@ -38,7 +38,7 @@ const pusher = new Pusher(process.env.PUSHER_KEY, {
 
 export enum ClientStatus {
   INVITE = 'invite',
-  INVITE_REJECTED = 'INVITE_REJECTED',
+  INVITE_REJECTED = 'invite_rejected',
   REGISTERING = 'registering',
   CONNECTING = 'connecting',
   ONLINE = 'online',
