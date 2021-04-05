@@ -4,16 +4,7 @@ import { isDevelopment, isChrome, eqSet } from './helpers'
 
 import { IDeviceList, ISource, HTMLMediaElementExp } from './interfaces'
 
-export enum MediaStatus {
-  READY = 'ready',
-  UPDATED = 'updated',
-  ERROR = 'error',
-  UNSUPPORTED = 'unsupported',
-  PERMISSION_GRANTED = 'permission_granted',
-  PERMISSION_REVOKED = 'permission_revoked',
-  INPUT_UPDATED = 'input_updated',
-  OUTPUT_UPDATED = 'output_updated',
-}
+import { MediaStatus } from './constants'
 
 export class MediaSingleton extends EventEmitter {
   _devicesInfoRaw: MediaDeviceInfo[]

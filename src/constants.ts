@@ -61,3 +61,14 @@ export enum NotRecordingReasons {
   FEATURE = 'call-recording-paused',
   SETTINGS = 'outbound-calls-settings',
 }
+
+export enum MediaStatus {
+  READY = 'ready',
+  UPDATED = 'updated',
+  ERROR = 'error',
+  UNSUPPORTED = 'unsupported',
+  PERMISSION_GRANTED = 'permission_granted',
+  PERMISSION_REVOKED = 'permission_revoked',
+  INPUT_UPDATED = 'input_updated',
+  OUTPUT_UPDATED = 'output_updated',
+}
