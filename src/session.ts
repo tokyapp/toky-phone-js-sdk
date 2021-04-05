@@ -18,7 +18,7 @@ import { Channel } from 'pusher-js'
 
 import { stopAudio, isDevelopment } from './helpers'
 
-import { ISource } from './media'
+import { ISource } from './interfaces'
 
 import { ISession, ISettings, ICallData, IGetConnection } from './interfaces'
 

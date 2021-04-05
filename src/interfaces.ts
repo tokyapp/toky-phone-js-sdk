@@ -5,9 +5,9 @@ import { SessionStatus, ClientStatus } from './constants'
 export interface IAccount {
   /** Agent id registered in Toky */
   user: string
-  /** Type of user that request the service */
+  // /** Type of user that request the service */
   type: 'agent'
-  /** SIP username in Toky Telephone Service */
+  // /** SIP username in Toky Telephone Service */
   sipUsername?: string
   /** Option to accept inbound calls */
   acceptInboundCalls?: boolean
@@ -80,4 +80,24 @@ export interface ISettings {
   sipUsername: string
   companyId: string
   callRecordingEnabled?: boolean
+}
+
+export interface HTMLMediaElementExp extends HTMLMediaElement {
+  // Listed as experimental in https://developer.mozilla.org/es/docs/Web/API/HTMLMediaElement
+  setSinkId: any
+}
+
+export interface IDeviceList {
+  id: string
+  name: string
+  kind: string
+}
+
+export interface ISource {
+  /** Url of the ring audio that would be used */
+  remoteSource: HTMLAudioElement
+  localSource: HTMLAudioElement
+  ringAudio: HTMLAudioElement
+  errorAudio: HTMLAudioElement
+  incomingRingAudio: HTMLAudioElement
 }
