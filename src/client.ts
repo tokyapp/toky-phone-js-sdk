@@ -23,13 +23,13 @@ import {
   browserSpecs,
   isDevelopment,
   appendMediaElements,
-  isChrome,
-  eqSet,
   getAudio,
   toKebabCase,
 } from './helpers'
 
 import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
+
+import { Media } from './media'
 
 const pusher = new Pusher(process.env.PUSHER_KEY, {
   cluster: 'us2',
@@ -49,17 +49,6 @@ export enum ClientStatus {
   DEFAULT = 'default',
   READY = 'ready',
   DISCONNECTED = 'disconnected',
-}
-
-export enum MediaStatus {
-  READY = 'ready',
-  UPDATED = 'updated',
-  ERROR = 'error',
-  UNSUPPORTED = 'unsupported',
-  PERMISSION_GRANTED = 'permission_granted',
-  PERMISSION_REVOKED = 'permission_revoked',
-  INPUT_UPDATED = 'input_updated',
-  OUTPUT_UPDATED = 'output_updated',
 }
 
 interface IAccountAttribute {
@@ -82,25 +71,10 @@ interface IMediaSpec {
   incomingRingAudio: string
 }
 
-export interface IMediaAttribute {
-  /** Url of the ring audio that would be used */
-  remoteSource: HTMLAudioElement
-  localSource: HTMLAudioElement
-  ringAudio: HTMLAudioElement
-  errorAudio: HTMLAudioElement
-  incomingRingAudio: HTMLAudioElement
-}
-
 interface IIceServerAttribute {
   urls: string[]
   username?: string
   credential?: string
-}
-
-interface IDeviceList {
-  id: string
-  name: string
-  kind: string
 }
 
 interface HTMLMediaElementExp extends HTMLMediaElement {
@@ -140,21 +114,15 @@ export class Client extends EventEmitter implements IClientImpl {
   _tokyIceServers: IIceServerAttribute[]
   _tokyChannel: Channel
 
-  _media: IMediaAttribute
-
   _transportLib: 'sip.js' | 'jsSIP'
   _userAgent: UserAgent
   _userAgentSession: Session
   _registerer: Registerer
-  _localStream: MediaStream
-  _deviceList: IDeviceList[]
-  _devicesInfoRaw: MediaDeviceInfo[]
   _currentSession: SessionUA
   _activeSession: boolean
 
   /** Related to States */
   acceptInboundCalls = false
-  hasMediaPermissions = false
   isRegistering = false
   isRegistered = false
   isTransportConnecting = false
@@ -258,7 +226,7 @@ export class Client extends EventEmitter implements IClientImpl {
     ringAudio.loop = true
     incomingRingAudio.loop = true
 
-    this._media = {
+    Media.source = {
       remoteSource: getAudio('__tokyRemoteAudio'),
       localSource: getAudio('__tokyLocalAudio'),
       ringAudio,
@@ -282,7 +250,7 @@ export class Client extends EventEmitter implements IClientImpl {
       accessToken: this._accessToken,
     })
 
-    this.mediaInit()
+    Media.init()
 
     const paramsData = response.data
 
@@ -383,239 +351,6 @@ export class Client extends EventEmitter implements IClientImpl {
     }
   }
 
-  // Function which recursively attempts reconnection
-  private attemptReconnection = (reconnectionAttempt = 1): void => {
-    // If not intentionally connected, don't reconnect.
-    if (!this._shouldBeConnected) {
-      return
-    }
-
-    // Reconnection attempt already in progress
-    if (this._attemptingReconnection) {
-      return
-    }
-
-    // Reconnection maximum attempts reached
-    if (reconnectionAttempt > this._reconnectionAttempts) {
-      return
-    }
-
-    // We're attempting a reconnection
-    this._attemptingReconnection = true
-
-    if (isDevelopment) console.warn('-- attempting reconnection.')
-
-    setTimeout(
-      () => {
-        // If not intentionally connected, don't reconnect.
-        if (!this._shouldBeConnected) {
-          this._attemptingReconnection = false
-          return
-        }
-        // Attempt reconnect
-        this._userAgent
-          .reconnect()
-          .then(() => {
-            // Reconnect attempt succeeded
-            this._attemptingReconnection = false
-            this.emit(ClientStatus.ONLINE)
-          })
-          .catch((error: Error) => {
-            // Reconnect attempt failed
-            this._attemptingReconnection = false
-            this.attemptReconnection(++reconnectionAttempt)
-          })
-      },
-      reconnectionAttempt === 1 ? 0 : this._reconnectionDelay * 1000
-    )
-  }
-
-  /**
-   * Devices
-   *
-   * @remarks
-   * Media related methods, now mixed with Client class
-   * maybe later can exists in its own class
-   */
-
-  private async enumerateDevices(): Promise<MediaDeviceInfo[]> {
-    const devices = await navigator.mediaDevices.enumerateDevices()
-
-    // * If label info is not available is a sign
-    // * that devices permission are denied
-    if (devices.length && devices[0].label) return devices
-
-    this.emit(MediaStatus.PERMISSION_REVOKED)
-
-    return undefined
-  }
-
-  private getDeviceList(): void {
-    const constraints = {
-      audio: true,
-      video: false,
-    }
-
-    navigator.mediaDevices
-      .getUserMedia(constraints)
-      .then(this.gotStream.bind(this))
-      .then(this.gotDevices.bind(this))
-      .finally(() => {
-        if (this._localStream) {
-          this.closeStream(this._localStream)
-        }
-
-        this.emit(MediaStatus.READY)
-      })
-      .catch(this.handleError.bind(this))
-  }
-
-  private async mediaInit(): Promise<void> {
-    if (this._localStream) {
-      this.closeStream(this._localStream)
-    }
-
-    let isGetUserMediaSupported = false
-
-    if (navigator.getUserMedia) {
-      isGetUserMediaSupported = true
-    } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      isGetUserMediaSupported = true
-    } else {
-      this.emit(MediaStatus.UNSUPPORTED)
-
-      throw new Error(
-        '<< .getUserMedia() unsupported >> Browser not supported for SDK.'
-      )
-    }
-
-    if (isGetUserMediaSupported) {
-      navigator.mediaDevices.ondevicechange = async (): Promise<void> => {
-        const devicesInfo = await this.enumerateDevices()
-
-        /**
-         * @remarks
-         * We're doing a comparison between the listed devices
-         * we store the first time and then compare with the current because .ondevicechange()
-         * triggers two times (see behavior) when devices change
-         */
-
-        if (this._devicesInfoRaw) {
-          const newIds = new Set(devicesInfo.map((d) => d.deviceId))
-
-          const oldIds = new Set(this._devicesInfoRaw.map((d) => d.deviceId))
-
-          if (!eqSet(newIds, oldIds)) {
-            this.gotDevices(devicesInfo)
-            this._devicesInfoRaw = devicesInfo
-          }
-        } else if (devicesInfo) {
-          this.gotDevices(devicesInfo)
-          this._devicesInfoRaw = devicesInfo
-        }
-      }
-
-      if (isChrome) {
-        const permission = await navigator.permissions.query({
-          name: 'microphone',
-        })
-
-        if (permission.state === 'denied') {
-          if (isDevelopment)
-            console.error('-- ðŸ”¥ Mic access DENIED! Contact support@toky.co')
-
-          this.emit(MediaStatus.PERMISSION_REVOKED)
-          this.hasMediaPermissions = false
-        }
-
-        if (permission.state === 'prompt') {
-          this.getDeviceList()
-        }
-
-        if (permission.state === 'granted') {
-          const devicesInfo = await this.enumerateDevices()
-
-          if (devicesInfo) {
-            this.emit(MediaStatus.PERMISSION_GRANTED)
-
-            this.gotDevices(devicesInfo)
-          } else {
-            this.emit(MediaStatus.ERROR)
-
-            throw new Error('Media error: We should not be here.')
-          }
-        }
-      } else {
-        this.getDeviceList()
-      }
-    }
-  }
-
-  private closeStream(stream: MediaStream): void {
-    stream.getTracks().forEach((track) => track.stop())
-  }
-
-  private gotStream(stream: MediaStream): Promise<MediaDeviceInfo[]> {
-    this._localStream = stream
-
-    this.emit(MediaStatus.PERMISSION_GRANTED)
-
-    return this.enumerateDevices()
-  }
-
-  private gotDevices(deviceInfos: MediaDeviceInfo[]): void {
-    if (deviceInfos) {
-      const devicesMapped = deviceInfos
-        .filter((d) => d.kind === 'audiooutput' || d.kind === 'audioinput')
-        .map((d) => {
-          if (!d.label) return undefined
-          return {
-            id: d.deviceId,
-            name: d.label,
-            kind: d.kind,
-          }
-        })
-        .filter((d) => d !== undefined)
-
-      if (this._deviceList) {
-        const newIds = new Set(devicesMapped.map((d) => d.id))
-
-        const oldIds = new Set(this._deviceList.map((d) => d.id))
-
-        if (!eqSet(newIds, oldIds)) {
-          this._deviceList = devicesMapped
-
-          this.emit(MediaStatus.UPDATED)
-
-          return
-        }
-      }
-
-      this._deviceList = devicesMapped
-
-      this.hasMediaPermissions = true
-
-      this.emit(MediaStatus.READY)
-
-      this.setOutputDevice(this.selectedOutputDevice.id)
-    } else {
-      // * We can inform this to a service error
-      if (isDevelopment)
-        console.error(`This can't be happening, device info is not present.`)
-      this.emit(MediaStatus.ERROR)
-    }
-  }
-
-  private handleError(error): void {
-    if (isDevelopment) {
-      console.error(
-        'navigator.MediaDevices.getUserMedia error: ',
-        error.message,
-        error.name
-      )
-    }
-    this.emit(MediaStatus.ERROR)
-  }
   /**
    * Handlers for event listeners
    */
@@ -718,7 +453,7 @@ export class Client extends EventEmitter implements IClientImpl {
      * ```
      */
     if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
-      this._media.incomingRingAudio.play().then(() => {
+      Media.source.incomingRingAudio.play().then(() => {
         if (isDevelopment) {
           console.warn('-- audio play succeed on incoming session')
         }
@@ -728,7 +463,7 @@ export class Client extends EventEmitter implements IClientImpl {
     if (isFromAgent && this.acceptInboundCalls) {
       this._currentSession = new SessionUA(
         incomingSession,
-        this._media,
+        Media.source,
         this._tokyChannel,
         CallDirectionEnum.INBOUND,
         {
@@ -765,7 +500,7 @@ export class Client extends EventEmitter implements IClientImpl {
     if (isBlindTransfer) {
       this._currentSession = new SessionUA(
         incomingSession,
-        this._media,
+        Media.source,
         this._tokyChannel,
         CallDirectionEnum.INBOUND,
         {
@@ -803,7 +538,7 @@ export class Client extends EventEmitter implements IClientImpl {
     if (isWarmTransfer) {
       this._currentSession = new SessionUA(
         incomingSession,
-        this._media,
+        Media.source,
         this._tokyChannel,
         CallDirectionEnum.INBOUND,
         {
@@ -837,6 +572,53 @@ export class Client extends EventEmitter implements IClientImpl {
 
       this.prepateActiveSession()
     }
+  }
+
+  // Function which recursively attempts reconnection
+  private attemptReconnection = (reconnectionAttempt = 1): void => {
+    // If not intentionally connected, don't reconnect.
+    if (!this._shouldBeConnected) {
+      return
+    }
+
+    // Reconnection attempt already in progress
+    if (this._attemptingReconnection) {
+      return
+    }
+
+    // Reconnection maximum attempts reached
+    if (reconnectionAttempt > this._reconnectionAttempts) {
+      return
+    }
+
+    // We're attempting a reconnection
+    this._attemptingReconnection = true
+
+    if (isDevelopment) console.warn('-- attempting reconnection.')
+
+    setTimeout(
+      () => {
+        // If not intentionally connected, don't reconnect.
+        if (!this._shouldBeConnected) {
+          this._attemptingReconnection = false
+          return
+        }
+        // Attempt reconnect
+        this._userAgent
+          .reconnect()
+          .then(() => {
+            // Reconnect attempt succeeded
+            this._attemptingReconnection = false
+            this.emit(ClientStatus.ONLINE)
+          })
+          .catch((error: Error) => {
+            // Reconnect attempt failed
+            this._attemptingReconnection = false
+            this.attemptReconnection(++reconnectionAttempt)
+          })
+      },
+      reconnectionAttempt === 1 ? 0 : this._reconnectionDelay * 1000
+    )
   }
 
   private onDisconnect(error?: Error): void {
@@ -979,212 +761,6 @@ export class Client extends EventEmitter implements IClientImpl {
   /**
    * PUBLIC METHODS
    */
-
-  get devices(): IDeviceList[] {
-    return this._deviceList
-  }
-
-  get inputs(): IDeviceList[] {
-    const inputDevices = this._deviceList.filter((d) => d.kind === 'audioinput')
-
-    if (this.selectedInputDevice) {
-      const _selectedInputDevice = this.selectedInputDevice.id
-
-      return [
-        inputDevices.find((d) => d.id === _selectedInputDevice),
-        ...inputDevices.filter((d) => d.id !== _selectedInputDevice),
-      ]
-    } else {
-      return inputDevices
-    }
-  }
-
-  get outputs(): IDeviceList[] {
-    const outputDevices = this._deviceList.filter(
-      (d) => d.kind === 'audiooutput'
-    )
-
-    if (this.selectedOutputDevice) {
-      const _selectedOutputDevice = this.selectedOutputDevice.id
-
-      return [
-        outputDevices.find((d) => d.id === _selectedOutputDevice),
-        ...outputDevices.filter((d) => d.id !== _selectedOutputDevice),
-      ]
-    } else {
-      return outputDevices
-    }
-  }
-
-  private getDeviceById(id: string): IDeviceList {
-    return this._deviceList.find((d) => d.id === id)
-  }
-
-  public async setOutputDevice(
-    id: string
-  ): Promise<{ success: boolean; message?: any }> {
-    if ('sinkId' in HTMLMediaElement.prototype) {
-      const _remoteSource = this._media.remoteSource as HTMLMediaElementExp
-      const _ringAudio = this._media.ringAudio as HTMLMediaElementExp
-      const _errorAudio = this._media.errorAudio as HTMLMediaElementExp
-      // prettier-ignore
-      const _incomingRingAudio = this._media.incomingRingAudio as HTMLMediaElementExp
-
-      try {
-        await _remoteSource.setSinkId(id)
-
-        await _ringAudio.setSinkId(id)
-
-        await _errorAudio.setSinkId(id)
-
-        await _incomingRingAudio.setSinkId(id)
-
-        if (isDevelopment)
-          console.warn(`Success, audio output device attached: ${id}`)
-
-        if (typeof Storage === 'undefined') {
-          throw new Error('Local Storage is not supported in this browser')
-        }
-
-        sessionStorage.setItem('toky_default_output', id)
-
-        this.emit(MediaStatus.OUTPUT_UPDATED)
-
-        return { success: true }
-      } catch (err) {
-        if (isDevelopment) console.error(err)
-
-        return {
-          success: false,
-          message: err,
-        }
-      }
-    } else {
-      if (isDevelopment)
-        console.warn('Browser does not support output device selection.')
-    }
-  }
-
-  public async setInputDevice(id: string, connection = null): Promise<any> {
-    if (connection) {
-      try {
-        const pc = connection.pc
-        const currentStream = connection.localStream
-
-        currentStream.getTracks().forEach((track) => {
-          track.stop()
-        })
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: id },
-          video: false,
-        })
-
-        const track = stream.getAudioTracks()[0]
-
-        const sender = pc.getSenders().find(function (s) {
-          return s.track.kind === track.kind
-        })
-
-        sender.replaceTrack(track)
-
-        if (isDevelopment)
-          console.warn(`Success, audio input device attached: ${id}`)
-
-        if (typeof Storage === 'undefined') {
-          if (isDevelopment)
-            console.warn('Local Storage is not supported in this browser')
-        }
-
-        sessionStorage.setItem('toky_default_input', id)
-
-        this.emit(MediaStatus.INPUT_UPDATED)
-
-        return {
-          success: true,
-        }
-      } catch (err) {
-        if (isDevelopment) {
-          console.error(err)
-        }
-        return {
-          success: false,
-          message: err,
-        }
-      }
-    } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: id },
-          video: false,
-        })
-
-        if (typeof Storage === 'undefined') {
-          if (isDevelopment)
-            console.warn('Local Storage is not supported in this browser')
-        }
-
-        sessionStorage.setItem('toky_default_input', id)
-
-        if (isDevelopment)
-          console.warn(`Success, audio input device attached: ${id}`)
-
-        this.emit(MediaStatus.INPUT_UPDATED)
-
-        // Close the stream
-        this.closeStream(stream)
-
-        return {
-          success: true,
-        }
-      } catch (err) {
-        if (isDevelopment) {
-          console.error(err)
-        }
-        return {
-          success: false,
-          message: err,
-        }
-      }
-    }
-  }
-
-  get defaultInputDevice(): IDeviceList {
-    return this._deviceList
-      .filter((d) => d.kind === 'audioinput')
-      .find((d) => d.id === 'default')
-  }
-
-  get defaultOutputDevice(): IDeviceList {
-    return this._deviceList
-      .filter((d) => d.kind === 'audiooutput')
-      .find((d) => d.id === 'default')
-  }
-
-  get selectedInputDevice(): IDeviceList {
-    if (typeof Storage !== 'undefined') {
-      if (sessionStorage.getItem('toky_default_input')) {
-        return this.getDeviceById(sessionStorage.getItem('toky_default_input'))
-      } else {
-        return this.getDeviceById(this.defaultInputDevice.id)
-      }
-    } else {
-      throw new Error('Browser does not support session storage.')
-    }
-  }
-
-  get selectedOutputDevice(): IDeviceList {
-    if (typeof Storage !== 'undefined') {
-      if (sessionStorage.getItem('toky_default_output')) {
-        return this.getDeviceById(sessionStorage.getItem('toky_default_output'))
-      } else {
-        return this.getDeviceById(this.defaultOutputDevice.id)
-      }
-    } else {
-      throw new Error('Browser does not support session storage.')
-    }
-  }
-
   public refreshAccessToken(accessToken: string): void {
     if (this._activeSession) {
       this._currentSession.refreshAccessToken(accessToken)
@@ -1227,7 +803,7 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      if (this.hasMediaPermissions) {
+      if (Media.hasMediaPermissions) {
         const inviter = new Inviter(
           this._userAgent,
           this.outboundCallURI(phoneNumber),
@@ -1238,7 +814,7 @@ export class Client extends EventEmitter implements IClientImpl {
 
         this._currentSession = new SessionUA(
           inviter,
-          this._media,
+          Media.source,
           this._tokyChannel,
           CallDirectionEnum.OUTBOUND,
           {

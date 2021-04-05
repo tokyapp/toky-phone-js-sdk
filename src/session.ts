@@ -18,7 +18,7 @@ import { Channel } from 'pusher-js'
 
 import { stopAudio, isDevelopment } from './helpers'
 
-import { IMediaAttribute } from './client'
+import { IMediaAttribute } from './media'
 
 import {
   holdCall,
