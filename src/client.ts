@@ -467,10 +467,47 @@ export class Client extends EventEmitter implements IClientImpl {
             'X-Connection-Country'
           )
 
+          /**
+           * Call from another Agent
+           */
           const isFromAgent = incomingSession.request
             .getHeader('From')
             .includes(';agent')
 
+          /**
+           * Blind transfer call
+           */
+          const isBlindTransfer =
+            transferred &&
+            transferredBy === this._account.sipUsername &&
+            !isIncomingWarmTransfer
+
+          /**
+           * Warm transfer call
+           */
+          const isWarmTransfer =
+            transferred &&
+            transferredBy === this._account.sipUsername &&
+            isIncomingWarmTransfer
+
+          /**
+           * Incoming Warm Transfer Calls are ignored because an INVITE is generated when the two agents are talking
+           * acceptInboundCalls: Toky Client setting to ignore INVITE (inbound calls), defaults to: true
+           * 
+           * @example:
+           * 
+           * ```js
+           * new TokyClient({
+           *   accessToken: accessToken.value,
+           *   account: {
+           *     user: agentId,
+           *     type: 'agent',
+           *   },
+           *   transportLib: 'sip.js',
+           *   acceptInboundCalls: false
+           * })
+           * ```
+           */
           if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
             this._media.incomingRingAudio.play().then(() => {
               if (isDevelopment) {
@@ -513,18 +550,8 @@ export class Client extends EventEmitter implements IClientImpl {
             this.prepateActiveSession()
           }
 
-          const isBlindTransfer =
-            transferred &&
-            transferredBy === this._account.sipUsername &&
-            !isIncomingWarmTransfer
-
-          const isWarmTransfer =
-            transferred &&
-            transferredBy === this._account.sipUsername &&
-            isIncomingWarmTransfer
-
           /**
-           * This case in when in a rejected blind transferred call
+           * Case for a rejected Blind Transferred Call
            */
           if (isBlindTransfer) {
             this._currentSession = new SessionUA(
