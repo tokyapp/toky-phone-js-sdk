@@ -25,6 +25,7 @@ import {
   IIceServer,
   IClient,
   ISession,
+  IClientSetting,
 } from './interfaces'
 
 import { ClientStatus, CallDirectionEnum } from './constants'
@@ -205,13 +206,11 @@ export class Client extends EventEmitter implements IClient {
   }
 
   /**
-   * .init() is where we get the Toky Phone Params to establish communication with the Toky Phone System
+   * Toky Client .init() is were we get the Toky Phone Params to establish communication with the Toky Phone System
+   *
+   * @returns {IClientSetting} - Returns data related to the Agent Settings
    */
-  public async init(): Promise<{
-    connectionCountry: string
-    sipUsername: string
-    callRecordingEnabled: boolean
-  }> {
+  public async init(): Promise<IClientSetting> {
     const response = await getCallParams({
       agentId: this._account.user,
       accessToken: this._accessToken,
@@ -408,7 +407,7 @@ export class Client extends EventEmitter implements IClient {
      * Incoming Warm Transfer Calls are ignored because an INVITE is generated when the two agents are talking
      * acceptInboundCalls: Toky Client setting to ignore INVITE (inbound calls), defaults to: true
      *
-     * @example:
+     * @example
      *
      * ```js
      * new TokyClient({
@@ -581,7 +580,7 @@ export class Client extends EventEmitter implements IClient {
             this._attemptingReconnection = false
             this.emit(ClientStatus.ONLINE)
           })
-          .catch((error: Error) => {
+          .catch(() => {
             // Reconnect attempt failed
             this._attemptingReconnection = false
             this.attemptReconnection(++reconnectionAttempt)
@@ -723,13 +722,23 @@ export class Client extends EventEmitter implements IClient {
     }
   }
 
+  /**
+   * Internal method to build the Toky SIP URI
+   *
+   * @param {string} phoneNumber - Phone Number to create the Toky SIP URI
+   * @returns {URI} - Returns a builded Toky SIP URI
+   */
   private outboundCallURI = (phoneNumber: string): URI =>
     UserAgent.makeURI(
       `sip:service@${this._tokyDomain};company=${this._companyId};dnis=${phoneNumber}`
     )
 
   /**
-   * PUBLIC METHODS
+   * Method for Access Token Refresh after expiration
+   *
+   * @param {string} accessToken - new Access Token provided by Toky API
+   *
+   * @returns {void}
    */
   public refreshAccessToken(accessToken: string): void {
     if (this._activeSession) {
@@ -738,6 +747,15 @@ export class Client extends EventEmitter implements IClient {
     this._accessToken = accessToken
   }
 
+  /**
+   * Main Start Call method that establish a call and returns an ISession
+   *
+   * @param {Object} callData - Object with call data params
+   * @param {string} callData.phoneNumber - Phone Number to call
+   * @param {string} callData.callerId - Caller Id to use for the call
+   *
+   * @returns {ISession} - Returns a successfully established session or null if something went wrong
+   */
   public startCall({
     phoneNumber,
     callerId,
@@ -817,6 +835,7 @@ export class Client extends EventEmitter implements IClient {
           msg:
             'Unable to acquire media, you need to grant media permissions in navigator settings.',
         })
+        return null
       }
     } else {
       if (isDevelopment) {

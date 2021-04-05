@@ -15,6 +15,12 @@ export interface IAccount {
   callRecordingEnabled: boolean
 }
 
+export interface IClientSetting {
+  connectionCountry: string
+  sipUsername: string
+  callRecordingEnabled: boolean
+}
+
 export interface IMediaSpec {
   /** Url of the ring audio that would be used */
   ringAudio: string
