@@ -24,7 +24,7 @@ export interface IDeviceList {
   kind: string
 }
 
-export interface IMediaAttribute {
+export interface ISource {
   /** Url of the ring audio that would be used */
   remoteSource: HTMLAudioElement
   localSource: HTMLAudioElement
@@ -37,7 +37,7 @@ export class MediaSingleton extends EventEmitter {
   _devicesInfoRaw: MediaDeviceInfo[]
   _deviceList: IDeviceList[]
   _localStream: MediaStream
-  _source: IMediaAttribute
+  _source: ISource
 
   hasMediaPermissions = false
 
@@ -121,11 +121,11 @@ export class MediaSingleton extends EventEmitter {
     }
   }
 
-  set source(media: IMediaAttribute) {
+  set source(media: ISource) {
     this._source = media
   }
 
-  get source(): IMediaAttribute {
+  get source(): ISource {
     return this._source
   }
 

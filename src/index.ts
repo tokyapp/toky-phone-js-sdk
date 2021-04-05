@@ -1,6 +1,6 @@
-import { Client, ClientStatus } from './client'
+import { Client } from './client'
+import { ClientStatus, SessionStatus, TransferEnum } from './constants'
 import { Media, MediaStatus } from './media'
-import { SessionStatus, TransferEnum } from './session'
 
 export default {
   TokyClient: Client,

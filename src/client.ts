@@ -20,6 +20,16 @@ import { getCallParams, IWSServers } from './toky-services'
 import packageJson from '../package.json'
 
 import {
+  IAccount,
+  IMediaSpec,
+  IIceServer,
+  IClient,
+  ISession,
+} from './interfaces'
+
+import { ClientStatus, CallDirectionEnum } from './constants'
+
+import {
   browserSpecs,
   isDevelopment,
   appendMediaElements,
@@ -27,7 +37,7 @@ import {
   toKebabCase,
 } from './helpers'
 
-import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
+import { SessionUA } from './session'
 
 import { Media } from './media'
 
@@ -35,56 +45,6 @@ const pusher = new Pusher(process.env.PUSHER_KEY, {
   cluster: 'us2',
   encrypted: true,
 })
-
-export enum ClientStatus {
-  INVITE = 'invite',
-  INVITE_REJECTED = 'invite_rejected',
-  REGISTERING = 'registering',
-  CONNECTING = 'connecting',
-  ONLINE = 'online',
-  OFFLINE = 'offline',
-  UNREGISTERED = 'unregistered',
-  REGISTRATION_FAILED = 'registration_failed',
-  REGISTERED = 'registered',
-  DEFAULT = 'default',
-  READY = 'ready',
-  DISCONNECTED = 'disconnected',
-}
-
-interface IAccountAttribute {
-  /** Agent id registered in Toky */
-  user: string
-  /** Type of user that request the service */
-  type: 'agent'
-  /** SIP username in Toky Telephone Service */
-  sipUsername?: string
-  /** Option to accept inbound calls */
-  acceptInboundCalls?: boolean
-  /** Recording permissions */
-  callRecordingEnabled: boolean
-}
-
-interface IMediaSpec {
-  /** Url of the ring audio that would be used */
-  ringAudio: string
-  errorAudio: string
-  incomingRingAudio: string
-}
-
-interface IIceServerAttribute {
-  urls: string[]
-  username?: string
-  credential?: string
-}
-
-declare interface IClientImpl {
-  init: () => Promise<{ connectionCountry: string }>
-  startCall: (options: {
-    phoneNumber: string
-    callerId: string
-  }) => ISessionImpl
-  on: (event: ClientStatus, listener: () => void) => void
-}
 
 const tokyResourcesUrl = process.env.TOKY_RESOURCES_URL
 
@@ -98,15 +58,15 @@ const defaultAudio = {
   errorAudio: `${tokyResourcesUrl}/resources/audio/error.ogg`,
 }
 
-export class Client extends EventEmitter implements IClientImpl {
+export class Client extends EventEmitter implements IClient {
   /** Related to Toky Settings */
   _accessToken: string
-  _account: IAccountAttribute
+  _account: IAccount
   _companyId: string
   _tokyDomain: string
   _connectionCountry: string
   _appName: string
-  _tokyIceServers: IIceServerAttribute[]
+  _tokyIceServers: IIceServer[]
   _tokyChannel: Channel
 
   _transportLib: 'sip.js' | 'jsSIP'
@@ -143,7 +103,7 @@ export class Client extends EventEmitter implements IClientImpl {
     media,
   }: {
     accessToken: string
-    account: IAccountAttribute
+    account: IAccount
     transportLib: 'sip.js' | 'jsSIP'
     media: IMediaSpec
   }) {
@@ -266,7 +226,7 @@ export class Client extends EventEmitter implements IClientImpl {
     if (this._transportLib === 'sip.js') {
       const paramsTurnServers = paramsData.sip.turn_servers
 
-      const iceServers: IIceServerAttribute[] = [
+      const iceServers: IIceServer[] = [
         {
           urls: paramsTurnServers.urls,
           username: paramsTurnServers.username,
@@ -772,7 +732,7 @@ export class Client extends EventEmitter implements IClientImpl {
   }: {
     phoneNumber: string
     callerId: string
-  }): ISessionImpl {
+  }): ISession {
     if (this.isRegistered) {
       const extraHeaders: string[] = [
         `X-Connection-Country: ${this._connectionCountry}`,
