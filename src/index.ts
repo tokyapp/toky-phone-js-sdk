@@ -1,5 +1,10 @@
 import { Client } from './client'
-import { ClientStatus, SessionStatus, TransferEnum, MediaStatus } from './constants'
+import {
+  ClientStatus,
+  SessionStatus,
+  TransferEnum,
+  MediaStatus,
+} from './constants'
 import { Media } from './media'
 
 export default {
