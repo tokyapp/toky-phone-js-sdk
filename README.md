@@ -239,15 +239,17 @@ tokySession.on(SessionStatus.TRANSFER_FAILED, () => { /* Your code here */ })
 ```
 ## Audio device selection
 
+`TokyMedia` is the singleton in charge of everything related to Devices/Media.
+
 The `MediaStatus.READY` is emitted when the user's permissions had been allowed.
 
 ```javascript
-const { MediaStatus } = TokySDK
+const { TokyMedia, MediaStatus } = TokySDK
 
-Client.on(MediaStatus.READY, () => {
+TokyMedia.on(TokyMedia.READY, () => {
  /* The device id */
- const outputDevice = '230988012091820398213'
- Client.setOutputDevice(outputDevice).then(() => {
+ const outputDevice = '123asd123asd123'
+ TokyMedia.setOutputDevice(outputDevice).then(() => {
    console.log('Output device updated successfully!')
  })
 
@@ -255,23 +257,26 @@ Client.on(MediaStatus.READY, () => {
   * This is applied for established calls
   * it allows you to switch audio devices mid-call
   */
- const inputSelected = '120398120398123'
+ const inputSelected = 'asd123asd123asd'
  if (tokySession) {
    const connection = tokySession.getConnection()
-   Client.setInputDevice(inputSelected, connection).then(() => {
+   TokyMedia.setInputDevice(inputSelected, connection).then(() => {
      console.log('Input device updated successfully!')
    })
  } else {
-   Client.setInputDevice(inputSelected).then(() => {
+   TokyMedia.setInputDevice(inputSelected).then(() => {
      console.log('Input device updated successfully!')
    })
  }
 
  /* The list of available devices, and can be used to switch devices */
- console.log(Client.inputs, Client.outputs)
+ console.log(TokyMedia.inputs, TokyMedia.outputs)
 
  /* List current selected devices, input and output respectively */
- console.log(`Selected input: ${Client.selectedInputDevice.name}`)
- console.log(`Selected ouput: ${Client.selectedOutputDevice.name}`)
+ console.log(`Selected input: ${TokyMedia.selectedInputDevice.name}`)
+ console.log(`Selected ouput: ${TokyMedia.selectedOutputDevice.name}`)
 })
 ```
+## License
+
+[`MIT Licence`](./LICENSE) © [Toky](https://toky.co)
