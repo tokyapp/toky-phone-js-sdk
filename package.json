@@ -1,6 +1,6 @@
 {
   "name": "toky-phone-js-sdk",
-  "version": "0.5.14",
+  "version": "0.5.15",
   "description": "Toky Phone JS SDK v1",
   "main": "dist/toky-sdk-alpha.js",
   "module": "dist/toky-sdk-alpha.js",
