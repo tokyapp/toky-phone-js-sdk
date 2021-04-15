@@ -20,103 +20,32 @@ import { getCallParams, IWSServers } from './toky-services'
 import packageJson from '../package.json'
 
 import {
+  IAccount,
+  IMediaSpec,
+  IIceServer,
+  IClient,
+  ISession,
+  IClientSetting,
+} from './interfaces'
+
+import { ClientStatus, CallDirectionEnum } from './constants'
+
+import {
   browserSpecs,
   isDevelopment,
   appendMediaElements,
-  isChrome,
-  eqSet,
   getAudio,
   toKebabCase,
 } from './helpers'
 
-import { SessionUA, ISessionImpl, CallDirectionEnum } from './session'
+import { SessionUA } from './session'
+
+import { Media } from './media'
 
 const pusher = new Pusher(process.env.PUSHER_KEY, {
   cluster: 'us2',
   encrypted: true,
 })
-
-export enum ClientStatus {
-  INVITE = 'invite',
-  INVITE_REJECTED = 'INVITE_REJECTED',
-  REGISTERING = 'registering',
-  CONNECTING = 'connecting',
-  ONLINE = 'online',
-  OFFLINE = 'offline',
-  UNREGISTERED = 'unregistered',
-  REGISTRATION_FAILED = 'registration_failed',
-  REGISTERED = 'registered',
-  DEFAULT = 'default',
-  READY = 'ready',
-  DISCONNECTED = 'disconnected',
-}
-
-export enum MediaStatus {
-  READY = 'ready',
-  UPDATED = 'updated',
-  ERROR = 'error',
-  UNSUPPORTED = 'unsupported',
-  PERMISSION_GRANTED = 'permission_granted',
-  PERMISSION_REVOKED = 'permission_revoked',
-  INPUT_UPDATED = 'input_updated',
-  OUTPUT_UPDATED = 'output_updated',
-}
-
-interface IAccountAttribute {
-  /** Agent id registered in Toky */
-  user: string
-  /** Type of user that request the service */
-  type: 'agent'
-  /** SIP username in Toky Telephone Service */
-  sipUsername?: string
-  /** Option to accept inbound calls */
-  acceptInboundCalls?: boolean
-  /** Recording permissions */
-  callRecordingEnabled: boolean
-}
-
-interface IMediaSpec {
-  /** Url of the ring audio that would be used */
-  ringAudio: string
-  errorAudio: string
-  incomingRingAudio: string
-}
-
-export interface IMediaAttribute {
-  /** Url of the ring audio that would be used */
-  remoteSource: HTMLAudioElement
-  localSource: HTMLAudioElement
-  ringAudio: HTMLAudioElement
-  errorAudio: HTMLAudioElement
-  incomingRingAudio: HTMLAudioElement
-}
-
-interface IIceServerAttribute {
-  urls: string[]
-  username?: string
-  credential?: string
-}
-
-interface IDeviceList {
-  id: string
-  name: string
-  kind: string
-}
-
-interface HTMLMediaElementExp extends HTMLMediaElement {
-  // Listed as experimental in https://developer.mozilla.org/es/docs/Web/API/HTMLMediaElement
-  setSinkId: any
-}
-
-declare interface IClientImpl {
-  init: () => Promise<{ connectionCountry: string }>
-  register: () => void
-  startCall: (options: {
-    phoneNumber: string
-    callerId: string
-  }) => ISessionImpl
-  on: (event: ClientStatus, listener: () => void) => void
-}
 
 const tokyResourcesUrl = process.env.TOKY_RESOURCES_URL
 
@@ -130,32 +59,26 @@ const defaultAudio = {
   errorAudio: `${tokyResourcesUrl}/resources/audio/error.ogg`,
 }
 
-export class Client extends EventEmitter implements IClientImpl {
+export class Client extends EventEmitter implements IClient {
   /** Related to Toky Settings */
   _accessToken: string
-  _account: IAccountAttribute
+  _account: IAccount
   _companyId: string
   _tokyDomain: string
   _connectionCountry: string
   _appName: string
-  _tokyIceServers: IIceServerAttribute[]
+  _tokyIceServers: IIceServer[]
   _tokyChannel: Channel
-
-  _media: IMediaAttribute
 
   _transportLib: 'sip.js' | 'jsSIP'
   _userAgent: UserAgent
   _userAgentSession: Session
   _registerer: Registerer
-  _localStream: MediaStream
-  _deviceList: IDeviceList[]
-  _devicesInfoRaw: MediaDeviceInfo[]
   _currentSession: SessionUA
   _activeSession: boolean
 
   /** Related to States */
   acceptInboundCalls = false
-  hasMediaPermissions = false
   isRegistering = false
   isRegistered = false
   isTransportConnecting = false
@@ -181,7 +104,7 @@ export class Client extends EventEmitter implements IClientImpl {
     media,
   }: {
     accessToken: string
-    account: IAccountAttribute
+    account: IAccount
     transportLib: 'sip.js' | 'jsSIP'
     media: IMediaSpec
   }) {
@@ -194,16 +117,22 @@ export class Client extends EventEmitter implements IClientImpl {
     if (
       !account.user ||
       !account.type ||
-      !account.hasOwnProperty('user') ||
-      !account.hasOwnProperty('type')
+      !Object.prototype.hasOwnProperty.call(account, 'user') ||
+      !Object.prototype.hasOwnProperty.call(account, 'type')
     ) {
       let errorMessage = 'Required options should be provided: '
 
-      if (!account.hasOwnProperty('user') || !account.user) {
+      if (
+        !Object.prototype.hasOwnProperty.call(account, 'user') ||
+        !account.user
+      ) {
         errorMessage += 'account.user '
       }
 
-      if (!account.hasOwnProperty('type') || !account.type) {
+      if (
+        !Object.prototype.hasOwnProperty.call(account, 'type') ||
+        !account.type
+      ) {
         errorMessage += 'account.type '
       }
 
@@ -215,7 +144,7 @@ export class Client extends EventEmitter implements IClientImpl {
      * review behaviour for warm rejected transferred calls
      */
 
-    if (!account.hasOwnProperty('acceptInboundCalls')) {
+    if (!Object.prototype.hasOwnProperty.call(account, 'acceptInboundCalls')) {
       this.acceptInboundCalls = true
     } else {
       this.acceptInboundCalls = Boolean(account.acceptInboundCalls)
@@ -237,17 +166,23 @@ export class Client extends EventEmitter implements IClientImpl {
 
     if (media) {
       if (
-        media.hasOwnProperty('incomingRingAudio') &&
+        Object.prototype.hasOwnProperty.call(media, 'incomingRingAudio') &&
         media.incomingRingAudio
       ) {
         _incomingRingAudio = media.incomingRingAudio
       }
 
-      if (media.hasOwnProperty('errorAudio') && media.errorAudio) {
+      if (
+        Object.prototype.hasOwnProperty.call(media, 'errorAudio') &&
+        media.errorAudio
+      ) {
         _errorAudio = media.errorAudio
       }
 
-      if (media.hasOwnProperty('ringAudio') && media.ringAudio) {
+      if (
+        Object.prototype.hasOwnProperty.call(media, 'ringAudio') &&
+        media.ringAudio
+      ) {
         _ringAudio = media.ringAudio
       }
     }
@@ -259,7 +194,7 @@ export class Client extends EventEmitter implements IClientImpl {
     ringAudio.loop = true
     incomingRingAudio.loop = true
 
-    this._media = {
+    Media.source = {
       remoteSource: getAudio('__tokyRemoteAudio'),
       localSource: getAudio('__tokyLocalAudio'),
       ringAudio,
@@ -271,21 +206,21 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   /**
-   * Init is where we call the Toky API to get call params
-   * and it establish communication with the Toky Server
+   * Toky Client .init() is were we get the Toky Phone Params to establish communication with the Toky Phone System
+   *
+   * @returns {IClientSetting} - Returns data related to the Agent Settings
    */
-
-  public async init(): Promise<{
-    connectionCountry: string
-    sipUsername: string
-    callRecordingEnabled: boolean
-  }> {
+  public async init(): Promise<IClientSetting> {
     const response = await getCallParams({
       agentId: this._account.user,
       accessToken: this._accessToken,
     })
 
-    this.mediaInit()
+    Media.init().then(() => {
+      if (isDevelopment) {
+        console.warn('Media init success...')
+      }
+    })
 
     const paramsData = response.data
 
@@ -302,7 +237,7 @@ export class Client extends EventEmitter implements IClientImpl {
     if (this._transportLib === 'sip.js') {
       const paramsTurnServers = paramsData.sip.turn_servers
 
-      const iceServers: IIceServerAttribute[] = [
+      const iceServers: IIceServer[] = [
         {
           urls: paramsTurnServers.urls,
           username: paramsTurnServers.username,
@@ -360,328 +295,23 @@ export class Client extends EventEmitter implements IClientImpl {
       this.emit(ClientStatus.READY)
 
       /**
-       * SIP js Listeners
+       * SIP.js Listeners
        */
       this._userAgent.delegate = {
-        onDisconnect: (error?: Error): void => {
-          if (isDevelopment) console.warn('-- disconnect event')
-
-          if (this._registerer) {
-            const registered =
-              this._registerer.state &&
-              this._registerer.state === RegistererState.Registered
-
-            if (registered) {
-              this._registerer
-                .unregister()
-                .then(() => {
-                  this.isRegistered = false
-                })
-                .catch((e: Error) => {
-                  // Unregister failed
-                  if (isDevelopment) {
-                    console.error(
-                      'Failed to send UNREGISTERED or failed on Disconnect Event',
-                      e
-                    )
-                  }
-                })
-            }
-            // Only attempt to reconnect if network/server dropped the connection (if there is an error)
-            if (error) {
-              this.attemptReconnection()
-            }
-          }
-        },
-        onConnect: (): void => {
-          if (isDevelopment) console.warn('-- connected event')
-
-          if (this._registerer) {
-            const isRegistered =
-              this._registerer.state &&
-              this._registerer.state === RegistererState.Registered
-
-            if (isRegistered) {
-              this.isRegistered = true
-              this.emit(ClientStatus.REGISTERED)
-            } else {
-              this._registerer
-                .register()
-                .then((request) => {
-                  if (isDevelopment) {
-                    console.log('Successfully sent REGISTER on Connect event')
-                    console.log('Sent request =', request)
-                  }
-                })
-                .catch((error) => {
-                  if (isDevelopment) {
-                    console.error('Failed to send REGISTER', error)
-                  }
-                })
-            }
-          }
-        },
-        onInvite: (invitation: Invitation): void => {
-          const incomingSession = invitation
-
-          const transferred = incomingSession.request.getHeader('X-Transferred')
-
-          const transferredTo = incomingSession.request.getHeader(
-            'X-Transferred-To'
-          )
-
-          const transferredBy = incomingSession.request.getHeader(
-            'X-Transferred-By'
-          )
-          const referer = incomingSession.request.getHeader('X-Referer')
-
-          const isFromPSTN =
-            incomingSession.request.getHeader('X-PSTN') === 'yes'
-
-          const isIncomingWarmTransfer =
-            incomingSession.request.getHeader('X-Warm') === 'yes'
-
-          const companyID = incomingSession.request.getHeader('X-Company')
-
-          const sectionId = incomingSession.request.getHeader('X-Section')
-
-          const sectionOptionId = incomingSession.request.getHeader('X-Option')
-
-          const ivrID = incomingSession.request.getHeader('X-IVR')
-
-          const ivrOptionPressed = incomingSession.request.getHeader(
-            'X-IVR-Option-Pressed'
-          )
-
-          const customerHasInfo =
-            incomingSession.request.getHeader('X-Has-Info') !== undefined
-
-          const customerUsername = incomingSession.request.getHeader(
-            'X-Toky-Username'
-          )
-          const customerUri = incomingSession.remoteIdentity.uri.user
-
-          const customerIsAnon = customerUri.indexOf('.invalid') > -1
-
-          const customerLocation = incomingSession.request.getHeader(
-            'X-Connection-Country'
-          )
-
-          const isFromAgent = incomingSession.request
-            .getHeader('From')
-            .includes(';agent')
-
-          let currentSession = null
-
-          if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
-            this._media.incomingRingAudio.play().then(() => {
-              if (isDevelopment) {
-                console.warn('-- audio play succeed on incoming session')
-              }
-            })
-          }
-
-          if (isFromAgent && this.acceptInboundCalls) {
-            currentSession = new SessionUA(
-              incomingSession,
-              this._media,
-              this._tokyChannel,
-              CallDirectionEnum.INBOUND,
-              {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-                accessToken: this._accessToken,
-              },
-              {
-                uri: customerUri,
-                type: 'agent',
-              }
-            )
-
-            this.emit(ClientStatus.INVITE, {
-              session: currentSession,
-              agentData: {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-              },
-              callData: {
-                remoteUserId: customerUri,
-                remoteUserType: 'agent',
-              },
-            })
-
-            currentSession.once('__session_terminated', () => {
-              this.sessionTerminatedHandler()
-              currentSession = null
-            })
-          }
-
-          const isBlindTransfer =
-            transferred &&
-            transferredBy === this._account.sipUsername &&
-            !isIncomingWarmTransfer
-
-          const isWarmTransfer =
-            transferred &&
-            transferredBy === this._account.sipUsername &&
-            isIncomingWarmTransfer
-
-          /**
-           * This case in when in a rejected blind transferred call
-           */
-          if (isBlindTransfer) {
-            currentSession = new SessionUA(
-              incomingSession,
-              this._media,
-              this._tokyChannel,
-              CallDirectionEnum.INBOUND,
-              {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-                accessToken: this._accessToken,
-              },
-              {
-                uri: customerUri,
-                type: 'agent',
-                transferredType: 'blind',
-                cause: 'rejected',
-              }
-            )
-
-            this.emit(ClientStatus.INVITE, {
-              session: currentSession,
-              agentData: {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-              },
-              callData: {
-                remoteUserId: customerUri,
-                remoteUserType: 'agent',
-                transferredType: 'blind',
-                cause: 'rejected',
-              },
-            })
-
-            currentSession.once('__session_terminated', () => {
-              this.sessionTerminatedHandler()
-              currentSession = null
-            })
-          }
-
-          if (isWarmTransfer) {
-            currentSession = new SessionUA(
-              incomingSession,
-              this._media,
-              this._tokyChannel,
-              CallDirectionEnum.INBOUND,
-              {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-                accessToken: this._accessToken,
-              },
-              {
-                uri: customerUri,
-                type: 'agent',
-                transferredType: 'warm',
-                action: 'establish',
-              }
-            )
-
-            this.emit(ClientStatus.INVITE, {
-              session: currentSession,
-              agentData: {
-                agentId: this._account.user,
-                sipUsername: this._account.sipUsername,
-                companyId: this._companyId,
-              },
-              callData: {
-                remoteUserUri: customerUri,
-                remoteUserType: 'agent',
-                transferredType: 'warm',
-                action: 'establish',
-              },
-            })
-
-            currentSession.once('__session_terminated', () => {
-              this.sessionTerminatedHandler()
-              currentSession = null
-            })
-          }
-        },
+        onDisconnect: this.onDisconnect.bind(this),
+        onConnect: this.onConnect.bind(this),
+        onInvite: this.onInvite.bind(this),
       }
 
       this._userAgent
         .start()
-        .then(() => {
-          this._registerer = new Registerer(this._userAgent, {
-            registrar: this.serverUri,
-          })
-
-          this._registerer.stateChange.addListener((newState) => {
-            switch (newState) {
-              case RegistererState.Registered:
-                this.emit(ClientStatus.REGISTERED)
-
-                this.isRegistering = false
-                this.isRegistered = true
-
-                console.log(
-                  '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
-                  'background: blue; color: white; font-size: small'
-                )
-                break
-              case RegistererState.Unregistered:
-                this.emit(ClientStatus.UNREGISTERED)
-
-                this.isRegistered = false
-                break
-              case RegistererState.Terminated:
-                if (isDevelopment) console.error('Terminated')
-                break
-            }
-          })
-
-          if (this.isRegistered === false) {
-            this.emit(ClientStatus.REGISTERING)
-
-            this.isRegistering = true
-
-            this._registerer
-              .register()
-              .then((request) => {
-                if (isDevelopment) {
-                  console.log('Successfully sent REGISTER')
-                  console.log('Sent request =', request)
-                }
-              })
-              .catch((error) => {
-                if (isDevelopment)
-                  console.error('Failed to send REGISTER', error)
-              })
-          }
-        })
+        .then(this.register.bind(this))
         .catch((error) => {
           if (isDevelopment) console.error('Failed to connect', error)
         })
 
-      window.addEventListener('online', () => {
-        this.attemptReconnection()
-        console.warn('browser online, attempting to reconnect')
-      })
-
-      window.addEventListener('offline', () => {
-        this.emit(ClientStatus.OFFLINE)
-        if (isDevelopment) {
-          console.warn(
-            'Browser goes offline. Once online it will try to reconnect.'
-          )
-        }
-      })
+      window.addEventListener('online', this.onOnline.bind(this))
+      window.addEventListener('offline', this.onOffline.bind(this))
     }
 
     return {
@@ -691,8 +321,230 @@ export class Client extends EventEmitter implements IClientImpl {
     }
   }
 
+  /**
+   * Handlers for event listeners
+   */
+  private sessionTerminatedHandler(): void {
+    this.isRegistered = false
+
+    const isRegistered =
+      this._registerer.state &&
+      this._registerer.state === RegistererState.Registered
+
+    if (isRegistered) {
+      this.isRegistered = true
+      this.emit(ClientStatus.REGISTERED)
+    } else {
+      this.isRegistered = false
+    }
+  }
+
+  private onInvite(invitation: Invitation): void {
+    const incomingSession = invitation
+
+    const transferred = incomingSession.request.getHeader('X-Transferred')
+
+    const transferredTo = incomingSession.request.getHeader('X-Transferred-To')
+
+    const transferredBy = incomingSession.request.getHeader('X-Transferred-By')
+    const referer = incomingSession.request.getHeader('X-Referer')
+
+    const isFromPSTN = incomingSession.request.getHeader('X-PSTN') === 'yes'
+
+    const isIncomingWarmTransfer =
+      incomingSession.request.getHeader('X-Warm') === 'yes'
+
+    const companyID = incomingSession.request.getHeader('X-Company')
+
+    const sectionId = incomingSession.request.getHeader('X-Section')
+
+    const sectionOptionId = incomingSession.request.getHeader('X-Option')
+
+    const ivrID = incomingSession.request.getHeader('X-IVR')
+
+    const ivrOptionPressed = incomingSession.request.getHeader(
+      'X-IVR-Option-Pressed'
+    )
+
+    const customerHasInfo =
+      incomingSession.request.getHeader('X-Has-Info') !== undefined
+
+    const customerUsername = incomingSession.request.getHeader(
+      'X-Toky-Username'
+    )
+    const customerUri = incomingSession.remoteIdentity.uri.user
+
+    const customerIsAnon = customerUri.indexOf('.invalid') > -1
+
+    const customerLocation = incomingSession.request.getHeader(
+      'X-Connection-Country'
+    )
+
+    /**
+     * Call from another Agent
+     */
+    const isFromAgent = incomingSession.request
+      .getHeader('From')
+      .includes(';agent')
+
+    /**
+     * Blind transfer call
+     */
+    const isBlindTransfer =
+      transferred &&
+      transferredBy === this._account.sipUsername &&
+      !isIncomingWarmTransfer
+
+    /**
+     * Warm transfer call
+     */
+    const isWarmTransfer =
+      transferred &&
+      transferredBy === this._account.sipUsername &&
+      isIncomingWarmTransfer
+
+    /**
+     * Incoming Warm Transfer Calls are ignored because an INVITE is generated when the two agents are talking
+     * acceptInboundCalls: Toky Client setting to ignore INVITE (inbound calls), defaults to: true
+     *
+     * @example
+     *
+     * ```js
+     * new TokyClient({
+     *   accessToken: accessToken.value,
+     *   account: {
+     *     user: agentId,
+     *     type: 'agent',
+     *   },
+     *   transportLib: 'sip.js',
+     *   acceptInboundCalls: false
+     * })
+     * ```
+     */
+    if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
+      Media.source.incomingRingAudio.play().then(() => {
+        if (isDevelopment) {
+          console.warn('-- audio play succeed on incoming session')
+        }
+      })
+    }
+
+    if (isFromAgent && this.acceptInboundCalls) {
+      this._currentSession = new SessionUA(
+        incomingSession,
+        Media.source,
+        this._tokyChannel,
+        CallDirectionEnum.INBOUND,
+        {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+          accessToken: this._accessToken,
+        },
+        {
+          uri: customerUri,
+          type: 'agent',
+        }
+      )
+
+      this.emit(ClientStatus.INVITE, {
+        session: this._currentSession,
+        agentData: {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+        },
+        callData: {
+          remoteUserId: customerUri,
+          remoteUserType: 'agent',
+        },
+      })
+
+      this.prepateActiveSession()
+    }
+
+    /**
+     * Case for a rejected Blind Transferred Call
+     */
+    if (isBlindTransfer) {
+      this._currentSession = new SessionUA(
+        incomingSession,
+        Media.source,
+        this._tokyChannel,
+        CallDirectionEnum.INBOUND,
+        {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+          accessToken: this._accessToken,
+        },
+        {
+          uri: customerUri,
+          type: 'agent',
+          transferredType: 'blind',
+          cause: 'rejected',
+        }
+      )
+
+      this.emit(ClientStatus.INVITE, {
+        session: this._currentSession,
+        agentData: {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+        },
+        callData: {
+          remoteUserId: customerUri,
+          remoteUserType: 'agent',
+          transferredType: 'blind',
+          cause: 'rejected',
+        },
+      })
+
+      this.prepateActiveSession()
+    }
+
+    if (isWarmTransfer) {
+      this._currentSession = new SessionUA(
+        incomingSession,
+        Media.source,
+        this._tokyChannel,
+        CallDirectionEnum.INBOUND,
+        {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+          accessToken: this._accessToken,
+        },
+        {
+          uri: customerUri,
+          type: 'agent',
+          transferredType: 'warm',
+          action: 'establish',
+        }
+      )
+
+      this.emit(ClientStatus.INVITE, {
+        session: this._currentSession,
+        agentData: {
+          agentId: this._account.user,
+          sipUsername: this._account.sipUsername,
+          companyId: this._companyId,
+        },
+        callData: {
+          remoteUserUri: customerUri,
+          remoteUserType: 'agent',
+          transferredType: 'warm',
+          action: 'establish',
+        },
+      })
+
+      this.prepateActiveSession()
+    }
+  }
+
   // Function which recursively attempts reconnection
-  attemptReconnection = (reconnectionAttempt = 1): void => {
+  private attemptReconnection = (reconnectionAttempt = 1): void => {
     // If not intentionally connected, don't reconnect.
     if (!this._shouldBeConnected) {
       return
@@ -728,7 +580,7 @@ export class Client extends EventEmitter implements IClientImpl {
             this._attemptingReconnection = false
             this.emit(ClientStatus.ONLINE)
           })
-          .catch((error: Error) => {
+          .catch(() => {
             // Reconnect attempt failed
             this._attemptingReconnection = false
             this.attemptReconnection(++reconnectionAttempt)
@@ -738,427 +590,157 @@ export class Client extends EventEmitter implements IClientImpl {
     )
   }
 
-  /**
-   * Devices
-   *
-   * @remarks
-   * Media related methods, now mixed with Client class
-   * maybe later can exists in its own class
-   */
+  private onDisconnect(error?: Error): void {
+    if (isDevelopment) console.warn('-- disconnect event')
 
-  private async enumerateDevices(): Promise<MediaDeviceInfo[]> {
-    const devices = await navigator.mediaDevices.enumerateDevices()
+    if (this._registerer) {
+      const registered =
+        this._registerer.state &&
+        this._registerer.state === RegistererState.Registered
 
-    // * If label info is not available is a sign
-    // * that devices permission are denied
-    if (devices.length && devices[0].label) return devices
-
-    this.emit(MediaStatus.PERMISSION_REVOKED)
-
-    return undefined
-  }
-
-  private getDeviceList(): void {
-    const constraints = {
-      audio: true,
-      video: false,
-    }
-
-    navigator.mediaDevices
-      .getUserMedia(constraints)
-      .then(this.gotStream.bind(this))
-      .then(this.gotDevices.bind(this))
-      .finally(() => {
-        if (this._localStream) {
-          this.closeStream(this._localStream)
-        }
-
-        this.emit(MediaStatus.READY)
-      })
-      .catch(this.handleError.bind(this))
-  }
-
-  private async mediaInit(): Promise<void> {
-    if (this._localStream) {
-      this.closeStream(this._localStream)
-    }
-
-    let isGetUserMediaSupported = false
-
-    if (navigator.getUserMedia) {
-      isGetUserMediaSupported = true
-    } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      isGetUserMediaSupported = true
-    } else {
-      this.emit(MediaStatus.UNSUPPORTED)
-
-      throw new Error(
-        '<< .getUserMedia() unsupported >> Browser not supported for SDK.'
-      )
-    }
-
-    if (isGetUserMediaSupported) {
-      navigator.mediaDevices.ondevicechange = async (): Promise<void> => {
-        const devicesInfo = await this.enumerateDevices()
-
-        /**
-         * @remarks
-         * We're doing a comparison between the listed devices
-         * we store the first time and then compare with the current because .ondevicechange()
-         * triggers two times (see behavior) when devices change
-         */
-
-        if (this._devicesInfoRaw) {
-          const newIds = new Set(devicesInfo.map((d) => d.deviceId))
-
-          const oldIds = new Set(this._devicesInfoRaw.map((d) => d.deviceId))
-
-          if (!eqSet(newIds, oldIds)) {
-            this.gotDevices(devicesInfo)
-            this._devicesInfoRaw = devicesInfo
-          }
-        } else if (devicesInfo) {
-          this.gotDevices(devicesInfo)
-          this._devicesInfoRaw = devicesInfo
-        }
+      if (registered) {
+        this._registerer
+          .unregister()
+          .then(() => {
+            this.isRegistered = false
+          })
+          .catch((e: Error) => {
+            // Unregister failed
+            if (isDevelopment) {
+              console.error(
+                'Failed to send UNREGISTERED or failed on Disconnect Event',
+                e
+              )
+            }
+          })
       }
+      // Only attempt to reconnect if network/server dropped the connection (if there is an error)
+      if (error) {
+        this.attemptReconnection()
+      }
+    }
+  }
 
-      if (isChrome) {
-        const permission = await navigator.permissions.query({
-          name: 'microphone',
-        })
+  private onConnect(): void {
+    if (isDevelopment) console.warn('-- connected event')
 
-        if (permission.state === 'denied') {
-          if (isDevelopment)
-            console.error('-- ðŸ”¥ Mic access DENIED! Contact support@toky.co')
+    if (this._registerer) {
+      const isRegistered =
+        this._registerer.state &&
+        this._registerer.state === RegistererState.Registered
 
-          this.emit(MediaStatus.PERMISSION_REVOKED)
-          this.hasMediaPermissions = false
-        }
-
-        if (permission.state === 'prompt') {
-          this.getDeviceList()
-        }
-
-        if (permission.state === 'granted') {
-          const devicesInfo = await this.enumerateDevices()
-
-          if (devicesInfo) {
-            this.emit(MediaStatus.PERMISSION_GRANTED)
-
-            this.gotDevices(devicesInfo)
-          } else {
-            this.emit(MediaStatus.ERROR)
-
-            throw new Error('Media error: We should not be here.')
-          }
-        }
+      if (isRegistered) {
+        this.isRegistered = true
+        this.emit(ClientStatus.REGISTERED)
       } else {
-        this.getDeviceList()
+        this._registerer
+          .register()
+          .then((request) => {
+            if (isDevelopment) {
+              console.log('Successfully sent REGISTER on Connect event')
+              console.log('Sent request =', request)
+            }
+          })
+          .catch((error) => {
+            if (isDevelopment) {
+              console.error('Failed to send REGISTER', error)
+            }
+          })
       }
     }
   }
 
-  private closeStream(stream: MediaStream): void {
-    stream.getTracks().forEach((track) => track.stop())
-  }
+  private register(): void {
+    this._registerer = new Registerer(this._userAgent, {
+      registrar: this.serverUri,
+    })
 
-  private gotStream(stream: MediaStream): Promise<MediaDeviceInfo[]> {
-    this._localStream = stream
+    this._registerer.stateChange.addListener((newState) => {
+      switch (newState) {
+        case RegistererState.Registered:
+          this.emit(ClientStatus.REGISTERED)
 
-    this.emit(MediaStatus.PERMISSION_GRANTED)
+          this.isRegistering = false
+          this.isRegistered = true
 
-    return this.enumerateDevices()
-  }
+          console.log(
+            '%c ᕙ༼ຈل͜ຈ༽ᕗ powered by toky.co ',
+            'background: blue; color: white; font-size: small'
+          )
+          break
+        case RegistererState.Unregistered:
+          this.emit(ClientStatus.UNREGISTERED)
 
-  private gotDevices(deviceInfos: MediaDeviceInfo[]): void {
-    if (deviceInfos) {
-      const devicesMapped = deviceInfos
-        .filter((d) => d.kind === 'audiooutput' || d.kind === 'audioinput')
-        .map((d) => {
-          if (!d.label) return undefined
-          return {
-            id: d.deviceId,
-            name: d.label,
-            kind: d.kind,
+          this.isRegistered = false
+          break
+        case RegistererState.Terminated:
+          if (isDevelopment) console.error('Terminated')
+          break
+      }
+    })
+
+    if (this.isRegistered === false) {
+      this.emit(ClientStatus.REGISTERING)
+
+      this.isRegistering = true
+
+      this._registerer
+        .register()
+        .then((request) => {
+          if (isDevelopment) {
+            console.log('Successfully sent REGISTER')
+            console.log('Sent request =', request)
           }
         })
-        .filter((d) => d !== undefined)
-
-      if (this._deviceList) {
-        const newIds = new Set(devicesMapped.map((d) => d.id))
-
-        const oldIds = new Set(this._deviceList.map((d) => d.id))
-
-        if (!eqSet(newIds, oldIds)) {
-          this._deviceList = devicesMapped
-
-          this.emit(MediaStatus.UPDATED)
-
-          return
-        }
-      }
-
-      this._deviceList = devicesMapped
-
-      this.hasMediaPermissions = true
-
-      this.emit(MediaStatus.READY)
-
-      this.setOutputDevice(this.selectedOutputDevice.id)
-    } else {
-      // * We can inform this to a service error
-      if (isDevelopment)
-        console.error(`This can't be happening, device info is not present.`)
-      this.emit(MediaStatus.ERROR)
+        .catch((error) => {
+          if (isDevelopment) console.error('Failed to send REGISTER', error)
+        })
     }
   }
 
-  private handleError(error): void {
+  private onOnline(): void {
+    this.attemptReconnection()
+    console.warn('browser online, attempting to reconnect')
+  }
+
+  private prepateActiveSession(): void {
+    this._activeSession = true
+
+    this._currentSession.once('__session_terminated', () => {
+      this.sessionTerminatedHandler()
+      this._currentSession = null
+      this._activeSession = false
+    })
+  }
+
+  private onOffline(): void {
+    this.emit(ClientStatus.OFFLINE)
     if (isDevelopment) {
-      console.error(
-        'navigator.MediaDevices.getUserMedia error: ',
-        error.message,
-        error.name
+      console.warn(
+        'Browser goes offline. Once online it will try to reconnect.'
       )
     }
-    this.emit(MediaStatus.ERROR)
   }
 
+  /**
+   * Internal method to build the Toky SIP URI
+   *
+   * @param {string} phoneNumber - Phone Number to create the Toky SIP URI
+   * @returns {URI} - Returns a builded Toky SIP URI
+   */
   private outboundCallURI = (phoneNumber: string): URI =>
     UserAgent.makeURI(
       `sip:service@${this._tokyDomain};company=${this._companyId};dnis=${phoneNumber}`
     )
 
   /**
-   * Handlers for event listeners
+   * Method for Access Token Refresh after expiration
+   *
+   * @param {string} accessToken - new Access Token provided by Toky API
+   *
+   * @returns {void}
    */
-
-  private sessionTerminatedHandler(): void {
-    this.isRegistered = false
-
-    const isRegistered =
-      this._registerer.state &&
-      this._registerer.state === RegistererState.Registered
-
-    if (isRegistered) {
-      this.isRegistered = true
-      this.emit(ClientStatus.REGISTERED)
-    } else {
-      this.isRegistered = false
-    }
-  }
-
-  /**
-   * PUBLIC METHODS
-   */
-
-  get devices(): IDeviceList[] {
-    return this._deviceList
-  }
-
-  get inputs(): IDeviceList[] {
-    const inputDevices = this._deviceList.filter((d) => d.kind === 'audioinput')
-
-    if (this.selectedInputDevice) {
-      const _selectedInputDevice = this.selectedInputDevice.id
-
-      return [
-        inputDevices.find((d) => d.id === _selectedInputDevice),
-        ...inputDevices.filter((d) => d.id !== _selectedInputDevice),
-      ]
-    } else {
-      return inputDevices
-    }
-  }
-
-  get outputs(): IDeviceList[] {
-    const outputDevices = this._deviceList.filter(
-      (d) => d.kind === 'audiooutput'
-    )
-
-    if (this.selectedOutputDevice) {
-      const _selectedOutputDevice = this.selectedOutputDevice.id
-
-      return [
-        outputDevices.find((d) => d.id === _selectedOutputDevice),
-        ...outputDevices.filter((d) => d.id !== _selectedOutputDevice),
-      ]
-    } else {
-      return outputDevices
-    }
-  }
-
-  private getDeviceById(id: string): IDeviceList {
-    return this._deviceList.find((d) => d.id === id)
-  }
-
-  public async setOutputDevice(
-    id: string
-  ): Promise<{ success: boolean; message?: any }> {
-    if ('sinkId' in HTMLMediaElement.prototype) {
-      const _remoteSource = this._media.remoteSource as HTMLMediaElementExp
-      const _ringAudio = this._media.ringAudio as HTMLMediaElementExp
-      const _errorAudio = this._media.errorAudio as HTMLMediaElementExp
-      // prettier-ignore
-      const _incomingRingAudio = this._media.incomingRingAudio as HTMLMediaElementExp
-
-      try {
-        await _remoteSource.setSinkId(id)
-
-        await _ringAudio.setSinkId(id)
-
-        await _errorAudio.setSinkId(id)
-
-        await _incomingRingAudio.setSinkId(id)
-
-        if (isDevelopment)
-          console.warn(`Success, audio output device attached: ${id}`)
-
-        if (typeof Storage === 'undefined') {
-          throw new Error('Local Storage is not supported in this browser')
-        }
-
-        sessionStorage.setItem('toky_default_output', id)
-
-        this.emit(MediaStatus.OUTPUT_UPDATED)
-
-        return { success: true }
-      } catch (err) {
-        if (isDevelopment) console.error(err)
-
-        return {
-          success: false,
-          message: err,
-        }
-      }
-    } else {
-      if (isDevelopment)
-        console.warn('Browser does not support output device selection.')
-    }
-  }
-
-  public async setInputDevice(id: string, connection = null): Promise<any> {
-    if (connection) {
-      try {
-        const pc = connection.pc
-        const currentStream = connection.localStream
-
-        currentStream.getTracks().forEach((track) => {
-          track.stop()
-        })
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: id },
-          video: false,
-        })
-
-        const track = stream.getAudioTracks()[0]
-
-        const sender = pc.getSenders().find(function (s) {
-          return s.track.kind === track.kind
-        })
-
-        sender.replaceTrack(track)
-
-        if (isDevelopment)
-          console.warn(`Success, audio input device attached: ${id}`)
-
-        if (typeof Storage === 'undefined') {
-          if (isDevelopment)
-            console.warn('Local Storage is not supported in this browser')
-        }
-
-        sessionStorage.setItem('toky_default_input', id)
-
-        this.emit(MediaStatus.INPUT_UPDATED)
-
-        return {
-          success: true,
-        }
-      } catch (err) {
-        if (isDevelopment) {
-          console.error(err)
-        }
-        return {
-          success: false,
-          message: err,
-        }
-      }
-    } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: id },
-          video: false,
-        })
-
-        if (typeof Storage === 'undefined') {
-          if (isDevelopment)
-            console.warn('Local Storage is not supported in this browser')
-        }
-
-        sessionStorage.setItem('toky_default_input', id)
-
-        if (isDevelopment)
-          console.warn(`Success, audio input device attached: ${id}`)
-
-        this.emit(MediaStatus.INPUT_UPDATED)
-
-        // Close the stream
-        this.closeStream(stream)
-
-        return {
-          success: true,
-        }
-      } catch (err) {
-        if (isDevelopment) {
-          console.error(err)
-        }
-        return {
-          success: false,
-          message: err,
-        }
-      }
-    }
-  }
-
-  get defaultInputDevice(): IDeviceList {
-    return this._deviceList
-      .filter((d) => d.kind === 'audioinput')
-      .find((d) => d.id === 'default')
-  }
-
-  get defaultOutputDevice(): IDeviceList {
-    return this._deviceList
-      .filter((d) => d.kind === 'audiooutput')
-      .find((d) => d.id === 'default')
-  }
-
-  get selectedInputDevice(): IDeviceList {
-    if (typeof Storage !== 'undefined') {
-      if (sessionStorage.getItem('toky_default_input')) {
-        return this.getDeviceById(sessionStorage.getItem('toky_default_input'))
-      } else {
-        return this.getDeviceById(this.defaultInputDevice.id)
-      }
-    } else {
-      throw new Error('Browser does not support session storage.')
-    }
-  }
-
-  get selectedOutputDevice(): IDeviceList {
-    if (typeof Storage !== 'undefined') {
-      if (sessionStorage.getItem('toky_default_output')) {
-        return this.getDeviceById(sessionStorage.getItem('toky_default_output'))
-      } else {
-        return this.getDeviceById(this.defaultOutputDevice.id)
-      }
-    } else {
-      throw new Error('Browser does not support session storage.')
-    }
-  }
-
-  refreshAccessToken(accessToken: string): void {
+  public refreshAccessToken(accessToken: string): void {
     if (this._activeSession) {
       this._currentSession.refreshAccessToken(accessToken)
     }
@@ -1166,20 +748,21 @@ export class Client extends EventEmitter implements IClientImpl {
   }
 
   /**
-   * In Toky SDK this is done automatically in the constructor
-   * with the default register option set in the User Agent (* not anymore)
+   * Main Start Call method that establish a call and returns an ISession
+   *
+   * @param {Object} callData - Object with call data params
+   * @param {string} callData.phoneNumber - Phone Number to call
+   * @param {string} callData.callerId - Caller Id to use for the call
+   *
+   * @returns {ISession} - Returns a successfully established session or null if something went wrong
    */
-  public register(): void {
-    // TODO: implement later
-  }
-
   public startCall({
     phoneNumber,
     callerId,
   }: {
     phoneNumber: string
     callerId: string
-  }): ISessionImpl {
+  }): ISession {
     if (this.isRegistered) {
       const extraHeaders: string[] = [
         `X-Connection-Country: ${this._connectionCountry}`,
@@ -1208,7 +791,7 @@ export class Client extends EventEmitter implements IClientImpl {
         },
       }
 
-      if (this.hasMediaPermissions) {
+      if (Media.hasMediaPermissions) {
         const inviter = new Inviter(
           this._userAgent,
           this.outboundCallURI(phoneNumber),
@@ -1219,7 +802,7 @@ export class Client extends EventEmitter implements IClientImpl {
 
         this._currentSession = new SessionUA(
           inviter,
-          this._media,
+          Media.source,
           this._tokyChannel,
           CallDirectionEnum.OUTBOUND,
           {
@@ -1236,13 +819,7 @@ export class Client extends EventEmitter implements IClientImpl {
           }
         )
 
-        this._activeSession = true
-
-        this._currentSession.once('__session_terminated', () => {
-          this.sessionTerminatedHandler()
-          this._currentSession = null
-          this._activeSession = false
-        })
+        this.prepateActiveSession()
 
         return this._currentSession
       } else {
@@ -1258,6 +835,7 @@ export class Client extends EventEmitter implements IClientImpl {
           msg:
             'Unable to acquire media, you need to grant media permissions in navigator settings.',
         })
+        return null
       }
     } else {
       if (isDevelopment) {

@@ -38,6 +38,7 @@ const currentAppId = ''
 
 const {
   TokyClient,
+  TokyMedia,
   ClientStatus,
   SessionStatus,
   TransferEnum,
@@ -333,9 +334,9 @@ async function main() {
             setupSessionListeners(tokySession)
           })
 
-          Client.on(MediaStatus.READY, () => {
+          TokyMedia.on(MediaStatus.READY, () => {
             audioSelectOutput.addEventListener('change', () => {
-              Client.setOutputDevice(audioSelectOutput.value).then(() => {
+              TokyMedia.setOutputDevice(audioSelectOutput.value).then(() => {
                 console.log('Output device updated successfully!')
               })
             })
@@ -344,41 +345,41 @@ async function main() {
               const inputSelected = audioSelectInput.value
               if (tokySession) {
                 const connection = tokySession.getConnection()
-                Client.setInputDevice(inputSelected, connection).then(() => {
+                TokyMedia.setInputDevice(inputSelected, connection).then(() => {
                   console.log('Input device updated successfully!')
                 })
               } else {
-                Client.setInputDevice(inputSelected).then(() => {
+                TokyMedia.setInputDevice(inputSelected).then(() => {
                   console.log('Input device updated successfully!')
                 })
               }
             })
 
-            createDeviceOptions(Client.inputs, Client.outputs)
+            createDeviceOptions(TokyMedia.inputs, TokyMedia.outputs)
 
-            inputDeviceStatusSub.textContent = `Selected input: ${Client.selectedInputDevice.name}`
-            outputDeviceStatusSub.textContent = `Selected ouput: ${Client.selectedOutputDevice.name}`
+            inputDeviceStatusSub.textContent = `Selected input: ${TokyMedia.selectedInputDevice.name}`
+            outputDeviceStatusSub.textContent = `Selected ouput: ${TokyMedia.selectedOutputDevice.name}`
           })
 
-          Client.on(MediaStatus.UPDATED, () => {
-            createDeviceOptions(Client.inputs, Client.outputs)
+          TokyMedia.on(MediaStatus.UPDATED, () => {
+            createDeviceOptions(TokyMedia.inputs, TokyMedia.outputs)
           })
 
-          Client.on(MediaStatus.INPUT_UPDATED, () => {
-            inputDeviceStatusSub.textContent = `Selected input: ${Client.selectedInputDevice.name}`
+          TokyMedia.on(MediaStatus.INPUT_UPDATED, () => {
+            inputDeviceStatusSub.textContent = `Selected input: ${TokyMedia.selectedInputDevice.name}`
           })
 
-          Client.on(MediaStatus.OUTPUT_UPDATED, () => {
-            outputDeviceStatusSub.textContent = `Selected ouput: ${Client.selectedOutputDevice.name}`
+          TokyMedia.on(MediaStatus.OUTPUT_UPDATED, () => {
+            outputDeviceStatusSub.textContent = `Selected ouput: ${TokyMedia.selectedOutputDevice.name}`
           })
 
-          Client.on(MediaStatus.PERMISSION_REVOKED, () => {
+          TokyMedia.on(MediaStatus.PERMISSION_REVOKED, () => {
             console.error('-- Microphone permission not granted')
             deviceStatusTile.classList.add('is-danger')
             deviceStatusSub.textContent = 'Permission not granted'
           })
 
-          Client.on(MediaStatus.PERMISSION_GRANTED, () => {
+          TokyMedia.on(MediaStatus.PERMISSION_GRANTED, () => {
             console.warn('-- Microphone permission granted')
             deviceStatusTile.classList.add('is-primary')
             deviceStatusSub.textContent = 'Permission granted'
