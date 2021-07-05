@@ -1,171 +1,439 @@
-<html>
-  <head>
-    <meta name="generator" content="" />
-    <title>Toky SDK Demo</title>
-    <meta charset="UTF-8" />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css"
-    />
-  </head>
-  <body>
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="" />
+  <title>Toky SDK Demo</title>
+  <link rel="icon" type="image/vnd.microsoft.icon" href="favicon.ico">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.2/css/bulma.min.css" />
+  <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+</head>
+
+<body>
+  <nav class="navbar is-info has-shadow" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+      <h1 class="navbar-item">Toky SDK JS</h1>
+    </div>
+    <div class="navbar-end">
+      <div class="navbar-item">
+        <div class="buttons">
+          <a target="_blank" href="https://github.com/tokyapp/toky-phone-js-sdk" class="button">
+            <span class="icon">
+              <em class="fab fa-github"></em>
+            </span>
+            <span>
+              Github
+            </span>
+          </a>
+          <a target="_blank" href="https://toky-js-sdk.toky.co/reference" class="button">
+            <span class="icon">
+              <em class="fab fa-readme"></em>
+            </span>
+            <span>
+              SDK API Docs
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  
+  <section class="section">
     <div class="container">
       <div class="columns">
-        <div class="column is-half">
-          <div class="field">
-            <label for="audioInput" class="label">Audio input:</label>
-            <div class="control select is-primary is-small">
-              <select id="audioInput"></select>
+        <div id="messages" class="column is-6">
+          <p class="mb-2"><strong>Required values:</strong><br />- Configure this values on the main.js file.</p>
+          <table class="table is-bordered is-striped is-fullwidth" aria-describedby="Required values">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Current value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="info-app-id">
+                <td>SDK Application ID</th>
+                <td class="is-family-monospace"></td>
+              </tr>
+              <tr id="info-api-url">
+                <td>Toky API URL</th>
+                <td class="is-family-monospace"></td>
+              </tr>
+              <tr id="info-sso-url">
+                <td>Single Sign On URL</th>
+                <td class="is-family-monospace"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="messages" class="column is-6">
+          <p class="mb-2"><strong>Required information:</strong><br />- Use the components below to get these
+            informations.</p>
+          <table class="table is-bordered is-striped is-fullwidth" aria-describedby="Required information">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Current value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="info-agent-id">
+                <td>Agent ID</th>
+                <td class="is-family-monospace"></td>
+              </tr>
+              <tr id="info-auth-code">
+                <td>Authorization Code</th>
+                <td class="is-family-monospace"></td>
+              </tr>
+              <tr id="info-access-token">
+                <td>Access Token</th>
+                <td class="is-family-monospace"></td>
+              </tr>
+              <tr id="info-refresh-token">
+                <td>Refresh Token</th>
+                <td class="is-family-monospace"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <hr />
+
+      <div class="columns">
+        <div class="column is-4">
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title">
+                <span class="tag is-info is-light">1</span>
+                <span class="ml-2">Toky Agent ID</span>
+              </p>
+            </header>
+            <div class="card-content">
+              <div class="content">
+                <p>Set your Toky Agent ID.</p>
+                <p><input id="agent-id-input" class="input" type="text" placeholder="myemail@domain.com"></p>
+                <div class="buttons">
+                  <button id="set-agent-id-btn" class="button is-info is-light is-fullwidth">Set Agent ID</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column is-4">
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title">
+                <span class="tag is-info is-light">2</span>
+                <span class="ml-2">SSO Authorization Code</span>
+              </p>
+            </header>
+            <div class="card-content">
+              <div class="content">
+                <p>Get a new Authorization Code.<br /><span class="is-size-7">* this would redirect your browser to the
+                    SSO URL and refresh the entire page.</span></p>
+                <div class="buttons">
+                  <button id="get-auth-code-btn" class="button is-info is-disabled is-light is-fullwidth" disabled>Get a
+                    new Authorization Code</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column is-4">
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title">
+                <span class="tag is-info is-light">3</span>
+                <span class="ml-2">Access Token</span>
+              </p>
+            </header>
+            <div class="card-content">
+              <div class="content">
+                <p>Get a new Access Token.</p>
+                <div class="buttons">
+                  <button id="get-access-token-btn" class="button is-info is-disabled is-light is-fullwidth"
+                    disabled>Get a new Access Token</button>
+                  <button id="refresh-access-token-btn" class="button is-warning is-disabled is-light is-fullwidth"
+                    disabled>Refresh Access Token</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr />
+
+      <div class="columns">
+        <div class="column is-4">
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title">
+                <span>SDK Options</span>
+              </p>
+            </header>
+            <div class="card-content">
+              <div class="content">
+                <div class="buttons">
+                  <button id="start-sdk-btn" class="button is-primary is-fullwidth" disabled>Start the SDK</button>
+                </div>
+
+                <hr |>
+
+                <div class="field">
+                  <label class="label">Caller ID</label>
+                  <div class="control has-icons-left">
+                    <div class="select is-fullwidth">
+                      <select id="caller-id-select" class="sdk" disabled>
+                      </select>
+                    </div>
+                    <div class="icon is-small is-left has-text-success">
+                      <em class="fas fa-phone-square"></em>
+                    </div>
+                  </div>
+                </div>
+
+                <hr |>
+
+                <div class="field">
+                  <label class="label">Audio Input</label>
+                  <div class="control has-icons-left">
+                    <div class="select is-fullwidth">
+                      <select id="audio-input-select" class="sdk" disabled>
+                      </select>
+                    </div>
+                    <div class="icon is-small is-left has-text-danger">
+                      <em class="fas fa-microphone-alt"></em>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label">Audio Output</label>
+                  <div class="control has-icons-left">
+                    <div class="select is-fullwidth">
+                      <select id="audio-output-select" class="sdk" disabled>
+                      </select>
+                    </div>
+                    <div class="icon is-small is-left has-text-info">
+                      <em class="fas fa-headphones"></em>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column is-4">
+          <div class="box">
+            <div id="outbound-call-group">
+              <div class="field">
+                <label class="label">Calling from [Caller ID]</label>
+                <p class="control">
+                  <input id="caller-id-input" class="input" type="text" placeholder="+595991123123" readonly disabled>
+                </p>
+                <p id="caller-id-friendly-name" class="help"></p>
+              </div>
+  
+              <div class="field">
+                <label class="label">Calling to [Phone number]</label>
+                <div class="control">
+                  <input id="phone-number-input" class="input" type="text" placeholder="+595991123123" disabled>
+                </div>
+                <p class="help">International format <a target="_blank"
+                    href="https://en.wikipedia.org/wiki/List_of_country_calling_codes">read more &#128279;</a></p>
+              </div>
+            </div>
+
+            <div id="inbound-call-group" style="display: none;">
+              <ul>
+                <li>
+                  <strong>Caller ID:</strong>
+                  <span id="inbound-call-id">*</span>
+                </li>
+                <li id="inbound-call-contact-name-line" style="display: none;">
+                  <strong>Contact name:</strong>
+                  <span id="inbound-call-contact-name">*</span>
+                </li>
+                <li>
+                  <strong>Type:</strong>
+                  <span id="inbound-call-type">*</span>
+                </li>
+                <li>
+                  <strong>Location:</strong>
+                  <span id="inbound-call-location">*</span>
+                </li>
+                <li>
+                  <strong>User Agent:</strong>
+                  <span id="inbound-call-user-agent">*</span>
+                </li>
+                <li id="inbound-call-ivr-name-line" style="display: none;">
+                  <strong>IVR name:</strong>
+                  <span id="inbound-call-ivr-name">*</span>
+                </li>
+                <li id="inbound-call-ivr-extension-line" style="display: none;">
+                  <strong>IVR extension:</strong>
+                  <span id="inbound-call-ivr-extension">*</span>
+                </li>
+              </ul>
+              <hr />
+            </div>
+
+            <div class="buttons is-centered mt-4">
+              <button id="start-call-btn" class="button" disabled>
+                <span class="icon is-small">
+                  <em class="fas fa-phone"></em>
+                </span>
+                <span id="start-call-label">Start Call</span>
+              </button>
+              <button id="end-call-btn" class="button" disabled>
+                <span class="icon is-small">
+                  <em class="fas fa-phone-slash"></em>
+                </span>
+                <span id="end-call-label">End Call</span>
+              </button>
+            </div>
+
+            <div class="buttons is-centered">
+              <button id="mute-btn" class="call-options button" disabled>
+                <span class="icon is-small">
+                  <em class="fas fa-microphone-slash"></em>
+                </span>
+                <span id="mute-call-label">Mute</span>
+              </button>
+              <button id="hold-btn" class="call-options button" disabled>
+                <span class="icon is-small">
+                  <em class="fas fa-pause"></em>
+                </span>
+                <span id="hold-call-label">Hold</span>
+              </button>
+              <button id="record-btn" class="call-options button" disabled>
+                <span class="icon is-small">
+                  <em class="fas fa-file-audio"></em>
+                </span>
+                <span id="record-call-label">Record</span>
+              </button>
             </div>
           </div>
 
-          <div class="field">
-            <label for="audioOutput" class="label">Audio output:</label>
-            <div class="control select is-primary is-small">
-              <select id="audioOutput"></select>
-            </div>
-          </div>
-
-          <button class="button is-small" id="startCall" disabled>Start Call</button>
-          <button class="button is-small" id="endCall" disabled>
-            End Call
-          </button>
-          <button class="button is-small" id="mute" disabled>Mute</button>
-          <button class="button is-small" id="hold" disabled>Hold</button>
-          <button class="button is-small" id="record" disabled>
-            Record
-          </button>
-          <button class="button is-small" id="transfer" disabled>
-            Make transfer
-          </button>
-          <button class="button is-small" id="cancelTransfer" disabled>
-            Cancel transfer
-          </button>
-
-          <div class="field">
-            <label for="agent" class="label">Agent:</label>
-            <div class="control">
-              <input
-                id="agent"
-                class="input is-small"
-                type="email"
-                placeholder="ex: carvallo@toky.co"
-              />
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="phone-number" class="label">Phone number (international format):</label>
-            <div class="control">
-              <input id="phone-number" type="tel" class="input is-small" />
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="caller-id" class="label">Caller id (international format):</label>
-            <div class="control select is-primary is-small">
-              <select id="caller-id"></select>
-            </div>
-          </div>
-
-          <div class="field is-grouped">
-            <label class="label">Transfer options:</label>
+          <div class="box">
             <div class="field">
+              <label class="label">Transfer Call</label>
               <div class="control">
-                <div class="select is-small">
-                  <select id="transferType">
-                    <option>Agent</option>
-                    <option>Group</option>
-                    <option>Number</option>
+                <label class="checkbox">
+                  <input id="transfer-type-blind" type="checkbox" class="transfer-options" checked disabled>
+                  Blind transfer
+                </label>
+                <label class="checkbox">
+                  <input id="transfer-type-warm" type="checkbox" class="transfer-options" disabled>
+                  Warm transfer
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label">Transfer to</label>
+              <div class="control has-icons-left">
+                <div class="select is-fullwidth">
+                  <select id="transfer-to-select" class="transfer-options" disabled>
+                    <option value="agent">Agent</option>
+                    <option value="group">Group</option>
+                    <option value="number">Number</option>
                   </select>
+                </div>
+                <div class="icon is-small is-left has-text-info">
+                  <em class="fas fa-random"></em>
                 </div>
               </div>
             </div>
 
             <div class="field">
               <div class="control">
-                <input
-                  id="transferData"
-                  class="input is-small"
-                  type="email"
-                  placeholder="Transfer to..."
-                />
+                <input id="transfer-to-input" class="transfer-options input" type="text" placeholder="agent id" disabled>
               </div>
             </div>
 
-            <label class="checkbox">
-              <input id="warmOption" type="checkbox" />
-              Warm Transfer
-            </label>
-          </div>
-
-          <div class="field has-addons">
-            <label for="accessToken" class="label">Access Token:</label>
-            <div class="control is-expanded">
-              <input
-                id="accessToken"
-                class="input is-small"
-                placeholder="XXXX"
-              />
-            </div>
-            <div class="control">
-              <a id="startBtn" class="button is-success is-small">
-                Start
-              </a>
+            <div class="buttons is-centered">
+              <button id="make-transfer-btn" class="button" disabled>
+                <span class="icon is-small">
+                  <em class="fas fa-random"></em>
+                </span>
+                <span>Transfer call</span>
+              </button>
+              <button id="cancel-transfer-btn" class="button" disabled>
+                <span class="icon is-small">
+                  <em class="fas fa-ban"></em>
+                </span>
+                <span>Cancel transfer</span>
+              </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div class="tile">
-        <div class="tile is-parent is-vertical">
-          <article id="call-status" class="tile is-child notification">
-            <p class="title">Call status...</p>
-            <p id="call-status-sub" class="subtitle"></p>
-          </article>
-          <article id="device-status" class="tile is-child notification">
-            <p class="title">Devices...</p>
-            <p id="device-sub" class="subtitle"></p>
-          </article>
+          <div class="box">
+            <div class="field">
+              <label class="label">DMTF tones</label>
+            </div>
+
+            <div class="buttons is-centered">
+              <button class="keypad button is-family-monospace" disabled>1</button>
+              <button class="keypad button is-family-monospace" disabled>2</button>
+              <button class="keypad button is-family-monospace" disabled>3</button>
+            </div>
+            <div class="buttons is-centered">
+              <button class="keypad button is-family-monospace" disabled>4</button>
+              <button class="keypad button is-family-monospace" disabled>5</button>
+              <button class="keypad button is-family-monospace" disabled>6</button>
+            </div>
+            <div class="buttons is-centered">
+              <button class="keypad button is-family-monospace" disabled>7</button>
+              <button class="keypad button is-family-monospace" disabled>8</button>
+              <button class="keypad button is-family-monospace" disabled>9</button>
+            </div>
+            <div class="buttons is-centered">
+              <button class="keypad button is-family-monospace" disabled>*</button>
+              <button class="keypad button is-family-monospace" disabled>0</button>
+              <button class="keypad button is-family-monospace" disabled>#</button>
+            </div>
+          </div>
         </div>
 
-        <div class="tile is-parent">
-          <article
-            id="general-article"
-            class="tile is-child notification is-info"
-          >
-            <p class="title">Toky JS SDK Demo</p>
-            <p id="general-message" class="subtitle"></p>
-            <p id="input-device-sub" class="subtitle"></p>
-            <p id="output-device-sub" class="subtitle"></p>
+        <div class="column is-4">
+          <article id="client-status-message" class="message">
+            <div class="message-body">
+              <p class="title is-4">Client Status</p>
+              <p id="client-status-description" class="subtitle is-6 is-family-monospace"></p>
+            </div>
           </article>
-        </div>
-      </div>
 
-      <div class="dtmf">DTMF sent: <span id="dtmf"></span></div>
-      <div>
-        <div>
-          <button class="keypad" disabled>1</button>
-          <button class="keypad" disabled>2</button>
-          <button class="keypad" disabled>3</button>
-        </div>
-        <div>
-          <button class="keypad" disabled>4</button>
-          <button class="keypad" disabled>5</button>
-          <button class="keypad" disabled>6</button>
-        </div>
-        <div>
-          <button class="keypad" disabled>7</button>
-          <button class="keypad" disabled>8</button>
-          <button class="keypad" disabled>9</button>
-        </div>
-        <div>
-          <button class="keypad" disabled>*</button>
-          <button class="keypad" disabled>0</button>
-          <button class="keypad" disabled>#</button>
+          <article id="microphone-permission-message" class="message">
+            <div class="message-body">
+              <p class="title is-4">Microphone Permission</p>
+              <p id="microphone-permission-description" class="subtitle is-6 is-family-monospace"></p>
+            </div>
+          </article>
+
+          <article class="message">
+            <div class="message-body">
+              <p class="title is-4">Input Device</p>
+              <p id="input-device-description" class="subtitle is-6 is-family-monospace"></p>
+            </div>
+          </article>
+
+          <article class="message">
+            <div class="message-body">
+              <p class="title is-4">Output Device</p>
+              <p id="output-device-description" class="subtitle is-6 is-family-monospace"></p>
+            </div>
+          </article>
         </div>
       </div>
     </div>
-    <script type="module" src="./main.js"></script>
-  </body>
+  </section>
+  <script type="module" src="./main.js"></script>
+</body>
 </html>
