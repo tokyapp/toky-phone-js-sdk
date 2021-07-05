@@ -20,10 +20,12 @@ export enum SessionStatus {
   REJECTED = 'rejected',
   HOLD = 'hold',
   UNHOLD = 'unhold',
+  HOLD_NOT_AVAILABLE = 'hold_not_available',
   MUTED = 'muted',
   UNMUTED = 'unmuted',
   RECORDING = 'recording',
   NOT_RECORDING = 'not_recording',
+  RECORDING_NOT_AVAILABLE = 'recording_not_available',
   /**
    * @remarks
    * TRANSFER_FAILED indicates that the server rejects the transfer for some reason
