@@ -26,6 +26,7 @@ import {
   IClient,
   ISession,
   IClientSetting,
+  ICallDataEvent,
 } from './interfaces'
 
 import { ClientStatus, CallDirectionEnum } from './constants'
@@ -36,6 +37,7 @@ import {
   appendMediaElements,
   getAudio,
   toKebabCase,
+  getUserAgentKey,
 } from './helpers'
 
 import { SessionUA } from './session'
@@ -342,23 +344,29 @@ export class Client extends EventEmitter implements IClient {
   private onInvite(invitation: Invitation): void {
     const incomingSession = invitation
 
-    const transferred = incomingSession.request.getHeader('X-Transferred')
+    const userAgent = incomingSession.request.getHeader('User-Agent')
 
-    const transferredTo = incomingSession.request.getHeader('X-Transferred-To')
+    const callingTo = incomingSession.request.getHeader('X-Calling-To')
 
-    const transferredBy = incomingSession.request.getHeader('X-Transferred-By')
-    const referer = incomingSession.request.getHeader('X-Referer')
-
-    const isFromPSTN = incomingSession.request.getHeader('X-PSTN') === 'yes'
+    const companyID = incomingSession.request.getHeader('X-Company')
 
     const isIncomingWarmTransfer =
       incomingSession.request.getHeader('X-Warm') === 'yes'
 
-    const companyID = incomingSession.request.getHeader('X-Company')
+    // transferred header is deprecated
+    const transferred = incomingSession.request.getHeader('X-Transferred')
 
-    const sectionId = incomingSession.request.getHeader('X-Section')
+    const transferredBy = incomingSession.request.getHeader('X-Transferred-By')
 
-    const sectionOptionId = incomingSession.request.getHeader('X-Option')
+    const transferredTo = incomingSession.request.getHeader('X-Transferred-To')
+
+    const referer = incomingSession.request.getHeader('X-Referer')
+
+    const isFromPSTN = incomingSession.request.getHeader('X-PSTN') === 'yes'
+
+    const sectionID = incomingSession.request.getHeader('X-Section')
+
+    const sectionOptionID = incomingSession.request.getHeader('X-Option')
 
     const ivrID = incomingSession.request.getHeader('X-IVR')
 
@@ -372,6 +380,7 @@ export class Client extends EventEmitter implements IClient {
     const customerUsername = incomingSession.request.getHeader(
       'X-Toky-Username'
     )
+
     const customerUri = incomingSession.remoteIdentity.uri.user
 
     const customerIsAnon = customerUri.indexOf('.invalid') > -1
@@ -383,20 +392,20 @@ export class Client extends EventEmitter implements IClient {
     /**
      * Call from another Agent
      */
-    const isFromAgent = incomingSession.request
-      .getHeader('From')
-      .includes(';agent')
+    const isFromAgent =
+      incomingSession.request.getHeader('X-Direct-Agent-Call') === 'yes' ||
+      incomingSession.request.getHeader('From').includes(';agent')
 
     /**
-     * Blind transfer call
+     * Rejected Blind Transfer
      */
-    const isBlindTransfer =
+    const isRejectedBlindTransfer =
       transferred &&
       transferredBy === this._account.sipUsername &&
       !isIncomingWarmTransfer
 
     /**
-     * Warm transfer call
+     * Warm Transfer
      */
     const isWarmTransfer =
       transferred &&
@@ -422,14 +431,54 @@ export class Client extends EventEmitter implements IClient {
      * ```
      */
     if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
-      Media.source.incomingRingAudio.play().then(() => {
-        if (isDevelopment) {
-          console.warn('-- audio play succeed on incoming session')
-        }
-      })
-    }
+      // User Type
+      let userType: 'contact' | 'agent' | 'anon' = 'contact'
+      if (isFromAgent) {
+        userType = 'agent'
+      }
 
-    if (isFromAgent && this.acceptInboundCalls) {
+      if (customerIsAnon) {
+        userType = 'anon'
+      }
+
+      let callData: ICallDataEvent = {
+        remoteUserId: customerUri,
+        remoteUserType: userType,
+      }
+
+      // Location
+      if (customerLocation) {
+        callData = {
+          ...callData,
+          remoteUserLocation: customerLocation,
+        }
+      }
+
+      // DID
+      if (callingTo) {
+        callData = {
+          ...callData,
+          did: callingTo,
+        }
+      }
+
+      // IVR
+      if (ivrID) {
+        callData = {
+          ...callData,
+          ivrId: ivrID,
+          ivrOptionPressed: ivrOptionPressed,
+        }
+      }
+
+      // User Agent
+      if (userAgent) {
+        callData = {
+          ...callData,
+          userAgent: getUserAgentKey(isFromPSTN, userAgent),
+        }
+      }
+
       this._currentSession = new SessionUA(
         incomingSession,
         Media.source,
@@ -443,7 +492,7 @@ export class Client extends EventEmitter implements IClient {
         },
         {
           uri: customerUri,
-          type: 'agent',
+          type: userType,
         }
       )
 
@@ -454,19 +503,16 @@ export class Client extends EventEmitter implements IClient {
           sipUsername: this._account.sipUsername,
           companyId: this._companyId,
         },
-        callData: {
-          remoteUserId: customerUri,
-          remoteUserType: 'agent',
-        },
+        callData: callData,
       })
 
       this.prepateActiveSession()
     }
 
     /**
-     * Case for a rejected Blind Transferred Call
+     * Rejected Blind Transfer
      */
-    if (isBlindTransfer) {
+    if (isRejectedBlindTransfer) {
       this._currentSession = new SessionUA(
         incomingSession,
         Media.source,

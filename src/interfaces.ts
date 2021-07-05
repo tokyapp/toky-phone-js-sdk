@@ -80,6 +80,16 @@ export interface ICallData {
   action?: 'establish'
 }
 
+export interface ICallDataEvent {
+  remoteUserId: string | URI
+  remoteUserType: 'agent' | 'anon' | 'contact'
+  remoteUserLocation?: string
+  did?: string
+  ivrId?: string
+  ivrOptionPressed?: string
+  userAgent?: string
+}
+
 export interface ISettings {
   agentId: string
   accessToken: string

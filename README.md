@@ -85,6 +85,7 @@ const Client = new TokyClient({
  account: {
    user: 'john@doe.com',
    type: 'agent',
+   acceptInboundCalls: false,
  },
  transportLib: 'sip.js',
 })
@@ -111,6 +112,10 @@ The **Connecting** event is emitted whenever a call is starting and is the first
 const { ClientStatus } = TokySDK
 
 Client.on(ClientStatus.CONNECTING, () => { /* Your code here */ })
+```
+The **Invite** event is emitted when you are receiving a call (only if the ***acceptInboundCalls*** param is true)
+```javascript
+Client.on(ClientStatus.INVITE, () => { /* Your code here */ })
 ```
 ### Media status events
 ```javascript
@@ -219,8 +224,10 @@ tokySession.on(SessionStatus.MUTED, () => { /* Your code here */ })
 tokySession.on(SessionStatus.UNMUTED, () => { /* Your code here */ })
 tokySession.on(SessionStatus.HOLD, () => { /* Your code here */ })
 tokySession.on(SessionStatus.UNHOLD, () => { /* Your code here */ })
+tokySession.on(SessionStatus.HOLD_NOT_AVAILABLE, () => { /* Your code here */ })
 tokySession.on(SessionStatus.RECORDING, () => { /* Your code here */ })
 tokySession.on(SessionStatus.NOT_RECORDING, () => { /* Your code here */ })
+tokySession.on(SessionStatus.RECORDING_NOT_AVAILABLE, () => { /* Your code here */ })
 ```
 
 ## Transfer call events
