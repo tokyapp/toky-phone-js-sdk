@@ -18,9 +18,13 @@ import { Channel } from 'pusher-js'
 
 import { stopAudio, isDevelopment } from './helpers'
 
-import { ISource } from './interfaces'
-
-import { ISession, ISettings, ICallData, IGetConnection } from './interfaces'
+import {
+  ISource,
+  ISession,
+  ISettings,
+  ICallData,
+  IGetConnection,
+} from './interfaces'
 
 import {
   CallDirectionEnum,
@@ -522,6 +526,17 @@ export class SessionUA extends EventEmitter implements ISession {
         }
 
         this._established = true
+
+        if (
+          this._callData.type === 'agent' &&
+          this._callData.transferredType === undefined
+        ) {
+          this.emit(SessionStatus.HOLD_NOT_AVAILABLE)
+        }
+
+        if (this._callDirection === CallDirectionEnum.INBOUND) {
+          this.emit(SessionStatus.RECORDING_NOT_AVAILABLE)
+        }
 
         break
       }
