@@ -68,13 +68,54 @@ export function getAudio(id: string): HTMLAudioElement {
 }
 
 export function toKebabCase(str: string) {
-  return (
-    str &&
-    str
-      .match(
-        /[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g
-      )
-      .map((x) => x.toLowerCase())
-      .join('-')
-  )
+  try {
+    return (
+      str &&
+      str
+        .match(
+          /[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g
+        )
+        .map((x) => x.toLowerCase())
+        .join('-')
+    )
+  } catch (err) {
+    return ''
+  }
+}
+
+export function getUserAgentKey(
+  isFromPstn: boolean,
+  userAgent: string
+): string {
+  let key = ''
+
+  if (isFromPstn) {
+    key = 'telephone-network'
+  } else {
+    if (userAgent.toLowerCase().includes('desktop-app')) {
+      key = 'desktop-app'
+    } else if (userAgent.toLowerCase().includes('b2bua')) {
+      key = 'call-queued'
+    } else if (userAgent.toLowerCase().includes('firefox')) {
+      key = 'firefox'
+      if (userAgent.toLowerCase().includes('mobile')) {
+        key += '-mobile'
+      }
+    } else if (userAgent.toLowerCase().includes('chrome')) {
+      key = 'chrome'
+      if (userAgent.toLowerCase().includes('mobile')) {
+        key += '-mobile'
+      }
+    } else if (userAgent.toLowerCase().includes('android')) {
+      key = 'android'
+    } else if (userAgent.toLowerCase().includes('opera')) {
+      key = 'opera'
+    } else if (userAgent.toLowerCase().includes('intercom-messeger')) {
+      key = 'intercom-messeger'
+    } else {
+      key = 'toky'
+    }
+  }
+
+  return key
 }

@@ -18,7 +18,21 @@ import { Channel } from 'pusher-js'
 
 import { stopAudio, isDevelopment } from './helpers'
 
-import { IMediaAttribute } from './client'
+import {
+  ISource,
+  ISession,
+  ISettings,
+  ICallData,
+  IGetConnection,
+} from './interfaces'
+
+import {
+  CallDirectionEnum,
+  SessionStatus,
+  TransferOptionsEnum,
+  TransferEnum,
+  NotRecordingReasons,
+} from './constants'
 
 import {
   holdCall,
@@ -51,107 +65,11 @@ const defaultDTMFAudio = {
   star: `${tokyResourcesUrl}/resources/audio/dtmf/star.wav`,
 }
 
-export interface IGetConnection {
-  pc: RTCPeerConnection
-  localStream: MediaStream
-}
-
-export enum SessionStatus {
-  TRYING = 'trying',
-  RINGING = 'ringing',
-  CONNECTED = 'connected',
-  REJECTED = 'rejected',
-  HOLD = 'hold',
-  UNHOLD = 'unhold',
-  MUTED = 'muted',
-  UNMUTED = 'unmuted',
-  RECORDING = 'recording',
-  NOT_RECORDING = 'not_recording',
-  /**
-   * @remarks
-   * TRANSFER_FAILED indicates that the server rejects the transfer for some reason
-   * one of the reasons can be, transferred agent doesn't exists
-   */
-  TRANSFER_FAILED = 'transfer_failed',
-  TRANSFER_BLIND_INIT = 'transfer_blind_init',
-  TRANSFER_WARM_INIT = 'transfer_warm_init',
-  TRANSFER_WARM_ANSWERED = 'transfer_warm_answered',
-  TRANSFER_WARM_NOT_ANSWERED = 'transfer_warm_not_answered',
-  TRANSFER_WARM_COMPLETED = 'transfer_warm_completed',
-  TRANSFER_WARM_NOT_COMPLETED = 'transfer_warm_not_completed',
-  TRANSFER_WARM_CANCELED = 'transfer_warm_canceled',
-  FAILED = 'failed',
-  BYE = 'bye',
-}
-
-export enum TransferEnum {
-  AGENT = 'agent',
-  GROUP = 'group',
-  NUMBER = 'number',
-}
-
-export enum TransferOptionsEnum {
-  BLIND = 'blind',
-  WARM = 'warm',
-}
-
-export enum CallDirectionEnum {
-  INBOUND = 'inbound',
-  OUTBOUND = 'outbound',
-}
-
-export enum NotRecordingReasons {
-  FEATURE = 'call-recording-paused',
-  SETTINGS = 'outbound-calls-settings',
-}
-export declare interface ISessionImpl {
-  callId: string
-  callRecordingEnabled: boolean
-  mute: () => void
-  hold?: () => void
-  record?: () => void
-  endCall: () => void
-  getConnection: () => IGetConnection
-  on: (event: SessionStatus, listener: () => void) => void
-}
-
-interface ICallData {
-  /**
-   * URI Data can be Agent SIP Username, in an outbound call
-   * can be the URI generated for the Invitation
-   */
-  uri: string | URI
-  /** Type of user involved in the call */
-  type: 'agent' | 'anon' | 'contact'
-  /**
-   * Applicable for outbound calls or maybe inbound calls
-   * with phone data
-   */
-  phone?: string
-  /** Transferred Types Blind or Warm */
-  transferredType?: 'blind' | 'warm'
-  /**
-   * Applicable for Transferred calls, cause by a rejected blind transferred
-   * or an Invite from a Warm transferred that requires to establish the call
-   * inmediately
-   */
-  cause?: 'rejected'
-  action?: 'establish'
-}
-
-interface ISettings {
-  agentId: string
-  accessToken: string
-  sipUsername: string
-  companyId: string
-  callRecordingEnabled?: boolean
-}
-
-export class SessionUA extends EventEmitter implements ISessionImpl {
+export class SessionUA extends EventEmitter implements ISession {
   private _callId: string
   private _peerConnection: RTCPeerConnection
   private _currentSession: Session | Inviter
-  private _media: IMediaAttribute
+  private _media: ISource
   private _localStream: MediaStream
   private _senderEnabled: boolean
   private _isConnected: boolean
@@ -186,7 +104,7 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
 
   constructor(
     session: Session,
-    media: IMediaAttribute,
+    media: ISource,
     tokyChannel: Channel,
     direction: CallDirectionEnum,
     tokySettings: ISettings,
@@ -608,6 +526,17 @@ export class SessionUA extends EventEmitter implements ISessionImpl {
         }
 
         this._established = true
+
+        if (
+          this._callData.type === 'agent' &&
+          this._callData.transferredType === undefined
+        ) {
+          this.emit(SessionStatus.HOLD_NOT_AVAILABLE)
+        }
+
+        if (this._callDirection === CallDirectionEnum.INBOUND) {
+          this.emit(SessionStatus.RECORDING_NOT_AVAILABLE)
+        }
 
         break
       }
