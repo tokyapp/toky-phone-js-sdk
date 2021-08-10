@@ -57,7 +57,6 @@ const currentAppId = 'yourappid'
 ```
 
 Then you can run:
-
 ```bash
 npm run dev
 ```
@@ -81,13 +80,13 @@ import TokySDK from 'toky-phone-js-sdk'
 const { TokyClient } = TokySDK
 
 const Client = new TokyClient({
- accessToken: '{{access_token}}',
- account: {
-   user: 'john@doe.com',
-   type: 'agent',
-   acceptInboundCalls: false,
- },
- transportLib: 'sip.js',
+  accessToken: '{{access_token}}',
+  account: {
+    user: 'john@doe.com',
+    type: 'agent',
+    acceptInboundCalls: false,
+  },
+  transportLib: 'sip.js',
 })
 
 await Client.init()
@@ -136,8 +135,8 @@ https://toky-js-sdk.toky.co/reference#agentsdids
 
 ```javascript
 let tokySession = Client.startCall({
- phoneNumber: '+595217288659' /* example number */,
- callerId: '+13344413569' /* example caller id from the company */,
+  phoneNumber: '+595217288659' /* example number */,
+  callerId: '+13344413569' /* example caller id from the company */,
 })
 ```
 Once the call is established, we get a session (`tokySession`) of that call and
@@ -154,13 +153,13 @@ tokySession.mute()
 
 ```javascript
 tokySession
- .hold()
- .then(() => {
-   console.warn('--- HOLD action success')
- })
- .catch(() => {
-   console.warn('--- HOLD action unsuccess')
- })
+  .hold()
+  .then(() => {
+    console.warn('--- HOLD action success')
+  })
+  .catch(() => {
+    console.warn('--- HOLD action unsuccess')
+  })
 ```
 
 ### Record Call
@@ -169,13 +168,13 @@ This option will work if the agent has the corresponding permissions.
 
 ```javascript
 tokySession
- .record()
- .then(() => {
-   console.warn('--- RECORD action success')
- })
- .catch(() => {
-   console.warn('--- RECORD action unsuccess')
- })
+  .record()
+  .then(() => {
+    console.warn('--- RECORD action success')
+  })
+  .catch(() => {
+    console.warn('--- RECORD action unsuccess')
+  })
 ```
 
 ### Transfer call with Blind and Warm options
@@ -184,15 +183,15 @@ tokySession
 const { TransferEnum, TransferOptionsEnum } = TokySDK
 
 tokySession.makeTransfer({
- type: TransferEnum.AGENT,
- destination: 'jane@doe.com',
- option: TransferOptionsEnum.BLIND,
+  type: TransferEnum.AGENT,
+  destination: 'jane@doe.com',
+  option: TransferOptionsEnum.BLIND,
 })
 
 tokySession.makeTransfer({
- type: TransferEnum.NUMBER,
- destination: '+595217288659',
- option: TransferOptionsEnum.BLIND,
+  type: TransferEnum.NUMBER,
+  destination: '+595217288659',
+  option: TransferOptionsEnum.BLIND,
 })
 ```
 
@@ -202,13 +201,13 @@ The cancel transfer option will work only for Warm Transfers.
 
 ```javascript
 tokySession
- .cancelTransfer()
- .then(() => {
-   console.warn('--- Cancel Transfer action success')
- })
- .catch(() => {
-   console.warn('--- Cancel Transfer action unsuccess')
- })
+  .cancelTransfer()
+  .then(() => {
+    console.warn('--- Cancel Transfer action success')
+  })
+  .catch(() => {
+    console.warn('--- Cancel Transfer action unsuccess')
+  })
 ```
 
 ### End Call
@@ -254,34 +253,34 @@ The `MediaStatus.READY` is emitted when the user's permissions had been allowed.
 const { TokyMedia, MediaStatus } = TokySDK
 
 TokyMedia.on(TokyMedia.READY, () => {
- /* The device id */
- const outputDevice = '123asd123asd123'
- TokyMedia.setOutputDevice(outputDevice).then(() => {
-   console.log('Output device updated successfully!')
- })
+  /* The device id */
+  const outputDevice = '123asd123asd123'
+  TokyMedia.setOutputDevice(outputDevice).then(() => {
+    console.log('Output device updated successfully!')
+  })
 
- /**
+  /**
   * This is applied for established calls
   * it allows you to switch audio devices mid-call
   */
- const inputSelected = 'asd123asd123asd'
- if (tokySession) {
-   const connection = tokySession.getConnection()
-   TokyMedia.setInputDevice(inputSelected, connection).then(() => {
-     console.log('Input device updated successfully!')
-   })
- } else {
-   TokyMedia.setInputDevice(inputSelected).then(() => {
-     console.log('Input device updated successfully!')
-   })
- }
+  const inputSelected = 'asd123asd123asd'
+  if (tokySession) {
+    const connection = tokySession.getConnection()
+    TokyMedia.setInputDevice(inputSelected, connection).then(() => {
+      console.log('Input device updated successfully!')
+    })
+  } else {
+    TokyMedia.setInputDevice(inputSelected).then(() => {
+      console.log('Input device updated successfully!')
+    })
+  }
 
- /* The list of available devices, and can be used to switch devices */
- console.log(TokyMedia.inputs, TokyMedia.outputs)
+  /* The list of available devices, and can be used to switch devices */
+  console.log(TokyMedia.inputs, TokyMedia.outputs)
 
- /* List current selected devices, input and output respectively */
- console.log(`Selected input: ${TokyMedia.selectedInputDevice.name}`)
- console.log(`Selected ouput: ${TokyMedia.selectedOutputDevice.name}`)
+  /* List current selected devices, input and output respectively */
+  console.log(`Selected input: ${TokyMedia.selectedInputDevice.name}`)
+  console.log(`Selected ouput: ${TokyMedia.selectedOutputDevice.name}`)
 })
 ```
 ## License
