@@ -3,6 +3,7 @@ import {
   AUTH_CODE_KEY,
   ACCESS_TOKEN_KEY,
   REFRESH_TOKEN_KEY,
+  ACCESS_TOKEN_TYPE_KEY,
 } from './constants.js'
 
 import {
@@ -39,13 +40,19 @@ const callerIdSelect = document.getElementById('caller-id-select')
 const audioInputSelect = document.getElementById('audio-input-select')
 const audioOutputSelect = document.getElementById('audio-output-select')
 const transferToSelect = document.getElementById('transfer-to-select')
+const accessTokenTypeSelect = document.getElementById(
+  'access-token-type-select'
+)
 
 /**
  * Buttons
  */
 const setAgentIdBtn = document.getElementById('set-agent-id-btn')
 const getAuthCodeBtn = document.getElementById('get-auth-code-btn')
-const getAccessTokenBtn = document.getElementById('get-access-token-btn')
+const getAccessTokenSsoBtn = document.getElementById('get-access-token-sso-btn')
+const getAccessTokenAppIdBtn = document.getElementById(
+  'get-access-token-app-id-btn'
+)
 const refreshAccessTokenBtn = document.getElementById(
   'refresh-access-token-btn'
 )
@@ -94,6 +101,8 @@ const callerIdFriendlyName = document.getElementById('caller-id-friendly-name')
 const keypad = getHtmlCollectionAsArray('keypad')
 const callOptions = getHtmlCollectionAsArray('call-options')
 const transferOptions = getHtmlCollectionAsArray('transfer-options')
+const accessTokenSso = document.getElementById('access-token-sso')
+const accessTokenAppId = document.getElementById('access-token-app-id')
 
 /**
  * Call details
@@ -128,6 +137,7 @@ const tokyApiUrl = 'https://api.toky.co'
 const tokySsoURL = 'https://app.toky.co'
 
 const currentAppId = ''
+const currentAppKey = ''
 
 /**
  * Toky Client
@@ -154,6 +164,7 @@ function checkAgentId() {
   if (agentId) {
     agentIdInput.value = agentId
     getAuthCodeBtn.disabled = false
+    getAccessTokenAppIdBtn.disabled = false
   }
 }
 
@@ -188,16 +199,37 @@ function grabAuthorizationCode() {
 
   if (authorizationCode) {
     setItem(AUTH_CODE_KEY, authorizationCode)
-    getAccessTokenBtn.disabled = false
+    getAccessTokenSsoBtn.disabled = false
   }
 }
 
 /**
  * Access Token
  */
+function accessTokenTypeSelection() {
+  if (accessTokenTypeSelect.value === 'sso') {
+    setItem(ACCESS_TOKEN_TYPE_KEY, 'sso')
+    accessTokenSso.style.display = 'block'
+    accessTokenAppId.style.display = 'none'
+  } else {
+    setItem(ACCESS_TOKEN_TYPE_KEY, 'app-id')
+    accessTokenSso.style.display = 'none'
+    accessTokenAppId.style.display = 'block'
+  }
+}
+accessTokenTypeSelect.addEventListener('change', accessTokenTypeSelection)
+
 function checkAccessToken() {
+  const accessTokenType = getItem(ACCESS_TOKEN_TYPE_KEY)
   const accessToken = getItem(ACCESS_TOKEN_KEY)
   const refreshToken = getItem(REFRESH_TOKEN_KEY)
+
+  if (accessTokenType === 'app-id') {
+    accessTokenTypeSelect.value = 'app-id'
+  } else {
+    accessTokenTypeSelect.value = 'sso'
+  }
+  accessTokenTypeSelection()
 
   checkRequiredValue(infoAccessToken, accessToken)
   checkRequiredValue(infoRefreshToken, refreshToken)
@@ -208,7 +240,7 @@ function checkAccessToken() {
   }
 }
 
-function getAccessToken() {
+function getAccessTokenSsoMethod() {
   const agentId = getItem(AGENT_ID_KEY)
   const authorizationCode = getItem(AUTH_CODE_KEY)
 
@@ -216,6 +248,9 @@ function getAccessToken() {
    * ref: https://toky-js-sdk.toky.co/reference#access_token
    */
   fetch(`${tokyApiUrl}/v1/access_token`, {
+    headers: {
+      'X-App-Key': currentAppKey,
+    },
     method: 'POST',
     body: JSON.stringify({
       scope: 'dialer',
@@ -236,7 +271,40 @@ function getAccessToken() {
     })
     .catch((err) => console.error(err))
 }
-getAccessTokenBtn.addEventListener('click', getAccessToken)
+getAccessTokenSsoBtn.addEventListener('click', getAccessTokenSsoMethod)
+
+function getAccessTokenAppIdMethod() {
+  const agentId = getItem(AGENT_ID_KEY)
+  /**
+   * ref: https://toky-js-sdk.toky.co/reference#access_token
+   */
+  fetch(`${tokyApiUrl}/v1/access_token`, {
+    headers: {
+      'X-App-Key': currentAppKey,
+    },
+    method: 'POST',
+    body: JSON.stringify({
+      scope: 'dialer',
+      agent_id: agentId,
+      app_id: currentAppId,
+      grant_type: 'app_id',
+    }),
+  })
+    .then((response) => response.json())
+    .then((result) => {
+      const accessToken = result.data ? result.data.access_token : ''
+      const refreshToken = result.data ? result.data.refresh_token : ''
+
+      setItem(ACCESS_TOKEN_KEY, accessToken)
+      setItem(REFRESH_TOKEN_KEY, refreshToken)
+
+      checkRequiredValue(infoAuthCode, '-')
+
+      checkAccessToken()
+    })
+    .catch((err) => console.error(err))
+}
+getAccessTokenAppIdBtn.addEventListener('click', getAccessTokenAppIdMethod)
 
 function refreshAccessToken() {
   const refreshToken = getItem(REFRESH_TOKEN_KEY)
@@ -245,6 +313,9 @@ function refreshAccessToken() {
    * ref: https://toky-js-sdk.toky.co/reference#refresh
    */
   fetch(`${tokyApiUrl}/v1/access_token/refresh`, {
+    headers: {
+      'X-App-Key': currentAppKey,
+    },
     method: 'POST',
     body: new URLSearchParams({
       token: refreshToken,
@@ -684,9 +755,8 @@ function setupTokyClientEventListeners() {
 }
 
 function updateCallerIdFriendlyName() {
-  const friendlyName = this.options[this.selectedIndex].getAttribute(
-    'data-friendly-name'
-  )
+  const friendlyName =
+    this.options[this.selectedIndex].getAttribute('data-friendly-name')
   callerIdFriendlyName.textContent = friendlyName
   callerIdInput.value = this.value
 }

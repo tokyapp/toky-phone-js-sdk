@@ -127,16 +127,42 @@
             <header class="card-header">
               <p class="card-header-title">
                 <span class="tag is-info is-light">2</span>
-                <span class="ml-2">SSO Authorization Code</span>
+                <span class="ml-2">Access Token</span>
               </p>
             </header>
             <div class="card-content">
               <div class="content">
-                <p>Get a new Authorization Code.<br /><span class="is-size-7">* this would redirect your browser to the
-                    SSO URL and refresh the entire page.</span></p>
-                <div class="buttons">
-                  <button id="get-auth-code-btn" class="button is-info is-disabled is-light is-fullwidth" disabled>Get a
-                    new Authorization Code</button>
+                <div class="field">
+                  <label class="label">Access Token Type</label>
+                  <div class="control has-icons-left">
+                    <div class="select is-fullwidth">
+                      <select id="access-token-type-select">
+                        <option value="sso">Single Sign-On</option>
+                        <option value="app-id">App ID</option>
+                      </select>
+                    </div>
+                    <div class="icon is-small is-left">
+                      <em class="fas fa-id-card"></em>
+                    </div>
+                  </div>
+                </div>
+                <hr />
+                <div id="access-token-sso">
+                  <div class="buttons">
+                    <button id="get-auth-code-btn" class="button is-info is-disabled is-light is-fullwidth" disabled>Get a
+                      new Authorization Code</button>
+                      <span class="is-size-7">* this would redirect your browser to the
+                        SSO URL and refresh the entire page.</span>
+                  </div>
+                  
+                  <button id="get-access-token-sso-btn" class="button is-info is-disabled is-light is-fullwidth"
+                      disabled>Get a new Access Token</button>
+                </div>
+                <div id="access-token-app-id" style="display: none;">
+                  <div class="buttons">
+                    <button id="get-access-token-app-id-btn" class="button is-info is-disabled is-light is-fullwidth"
+                      disabled>Get Access Token with App ID</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -147,16 +173,14 @@
           <div class="card">
             <header class="card-header">
               <p class="card-header-title">
-                <span class="tag is-info is-light">3</span>
-                <span class="ml-2">Access Token</span>
+                <span class="tag is-info is-light">4</span>
+                <span class="ml-2">Refresh Access Token</span>
               </p>
             </header>
             <div class="card-content">
               <div class="content">
-                <p>Get a new Access Token.</p>
+                <p>Refresh the Access Token.</p>
                 <div class="buttons">
-                  <button id="get-access-token-btn" class="button is-info is-disabled is-light is-fullwidth"
-                    disabled>Get a new Access Token</button>
                   <button id="refresh-access-token-btn" class="button is-warning is-disabled is-light is-fullwidth"
                     disabled>Refresh Access Token</button>
                 </div>
