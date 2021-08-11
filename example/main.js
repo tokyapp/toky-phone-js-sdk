@@ -133,8 +133,8 @@ const inboundCallIvrExtension = document.getElementById(
 /**
  * Configuration
  */
-const tokyApiUrl = ''
-const tokySsoURL = ''
+const tokyApiUrl = 'https://api.toky.co'
+const tokySsoURL = 'https://app.toky.co'
 
 const currentAppId = ''
 const currentAppKey = ''

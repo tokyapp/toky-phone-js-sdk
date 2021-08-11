@@ -54,6 +54,7 @@ In the `main.js` in the `example` folder, replace the variable `currentAppId` wi
 
 ```javascript
 const currentAppId = 'yourappid'
+const currentAppKey = 'yourappkey'
 ```
 
 Then you can run:
