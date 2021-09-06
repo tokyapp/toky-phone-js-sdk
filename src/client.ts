@@ -350,6 +350,8 @@ export class Client extends EventEmitter implements IClient {
 
     const companyID = incomingSession.request.getHeader('X-Company')
 
+    const from = incomingSession.request.getHeader('From')
+
     const isIncomingWarmTransfer =
       incomingSession.request.getHeader('X-Warm') === 'yes'
 
@@ -377,9 +379,8 @@ export class Client extends EventEmitter implements IClient {
     const customerHasInfo =
       incomingSession.request.getHeader('X-Has-Info') !== undefined
 
-    const customerUsername = incomingSession.request.getHeader(
-      'X-Toky-Username'
-    )
+    const customerUsername =
+      incomingSession.request.getHeader('X-Toky-Username')
 
     const customerUri = incomingSession.remoteIdentity.uri.user
 
@@ -442,8 +443,16 @@ export class Client extends EventEmitter implements IClient {
       }
 
       let callData: ICallDataEvent = {
-        remoteUserId: customerUri,
+        remoteUserId: customerIsAnon ? '' : customerUri,
         remoteUserType: userType,
+      }
+
+      if (customerIsAnon) {
+        const remoteUserName = from.split('"')
+        callData = {
+          ...callData,
+          remoteUserName: remoteUserName.length > 2 ? remoteUserName[1] : '',
+        }
       }
 
       // Location
@@ -478,6 +487,8 @@ export class Client extends EventEmitter implements IClient {
           userAgent: getUserAgentKey(isFromPSTN, userAgent),
         }
       }
+
+      console.info(callData)
 
       this._currentSession = new SessionUA(
         incomingSession,

@@ -84,6 +84,7 @@ export interface ICallDataEvent {
   remoteUserId: string | URI
   remoteUserType: 'agent' | 'anon' | 'contact'
   remoteUserLocation?: string
+  remoteUserName?: string
   did?: string
   ivrId?: string
   ivrOptionPressed?: string
