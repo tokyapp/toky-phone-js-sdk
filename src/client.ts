@@ -447,7 +447,7 @@ export class Client extends EventEmitter implements IClient {
         remoteUserType: userType,
       }
 
-      if (customerIsAnon) {
+      if (userType === 'agent' || userType === 'anon') {
         const remoteUserName = from.split('"')
         callData = {
           ...callData,
@@ -487,8 +487,6 @@ export class Client extends EventEmitter implements IClient {
           userAgent: getUserAgentKey(isFromPSTN, userAgent),
         }
       }
-
-      console.info(callData)
 
       this._currentSession = new SessionUA(
         incomingSession,
@@ -889,8 +887,7 @@ export class Client extends EventEmitter implements IClient {
         this.emit(ClientStatus.INVITE_REJECTED, {
           code: 412,
           status: 'Conditional Request Failed',
-          msg:
-            'Unable to acquire media, you need to grant media permissions in navigator settings.',
+          msg: 'Unable to acquire media, you need to grant media permissions in navigator settings.',
         })
         return null
       }
