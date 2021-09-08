@@ -110,6 +110,9 @@ const accessTokenAppId = document.getElementById('access-token-app-id')
 const outboundCallGroup = document.getElementById('outbound-call-group')
 const inboundCallGroup = document.getElementById('inbound-call-group')
 const inboundCallId = document.getElementById('inbound-call-id')
+const inboundCallCallerName = document.getElementById(
+  'inbound-call-caller-name'
+)
 const inboundCallContactName = document.getElementById(
   'inbound-call-contact-name'
 )
@@ -433,6 +436,7 @@ transferTypeWarm.addEventListener('click', transferTypeSelection)
 
 function clearInboundCallDetails() {
   inboundCallId.textContent = '*'
+  inboundCallCallerName.textContent = '*'
   inboundCallContactName.textContent = '*'
   inboundCallType.textContent = '*'
   inboundCallLocation.textContent = '*'
@@ -446,6 +450,7 @@ function clearInboundCallDetails() {
 
 function updateInboundCallDetails(callData) {
   inboundCallId.textContent = callData.remoteUserId
+  inboundCallCallerName.textContent = callData.remoteUserName
   inboundCallType.textContent = callData.remoteUserType
   inboundCallLocation.textContent = callData.remoteUserLocation
   inboundCallUserAgent.textContent = callData.userAgent
