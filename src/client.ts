@@ -410,7 +410,7 @@ export class Client extends EventEmitter implements IClient {
      */
     const isWarmTransfer =
       transferred &&
-      transferredBy === this._account.sipUsername &&
+      transferredTo === this._account.sipUsername &&
       isIncomingWarmTransfer
 
     /**
