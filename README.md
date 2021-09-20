@@ -117,6 +117,11 @@ The **Invite** event is emitted when you are receiving a call (only if the ***ac
 ```javascript
 Client.on(ClientStatus.INVITE, () => { /* Your code here */ })
 ```
+The **Session Updated** event is emitted when a call session changed. This event give us a session (`tokySession`) of that call and
+later we will use it to make other operations
+```javascript
+Client.on(ClientStatus.SESSION_UPDATED, () => { /* Your code here */ })
+```
 ### Media status events
 ```javascript
 const { MediaStatus } = TokySDK
@@ -135,15 +140,14 @@ You can list the available **Phone Numbers** of the company, pick one, and estab
 https://toky-js-sdk.toky.co/reference#agentsdids
 
 ```javascript
-let tokySession = Client.startCall({
+Client.startCall({
   phoneNumber: '+595217288659' /* example number */,
   callerId: '+13344413569' /* example caller id from the company */,
 })
 ```
-Once the call is established, we get a session (`tokySession`) of that call and
-later we will use it to make the following operations
 
 ## Session instance methods
+You should use your session (`tokySession`) received on the event `ClientStatus.SESSION_UPDATED` to perform these operations
 ### Mute call
 
 ```javascript
