@@ -11,6 +11,7 @@ export enum ClientStatus {
   DEFAULT = 'default',
   READY = 'ready',
   DISCONNECTED = 'disconnected',
+  SESSION_UPDATED = 'session_updated',
 }
 
 export enum SessionStatus {

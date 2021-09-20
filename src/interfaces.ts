@@ -36,7 +36,7 @@ export interface IIceServer {
 
 export interface IClient {
   init: () => Promise<{ connectionCountry: string }>
-  startCall: (options: { phoneNumber: string; callerId: string }) => ISession
+  startCall: (options: { phoneNumber: string; callerId: string }) => void
   on: (event: ClientStatus, listener: () => void) => void
 }
 
@@ -89,6 +89,8 @@ export interface ICallDataEvent {
   ivrId?: string
   ivrOptionPressed?: string
   userAgent?: string
+  transferredType?: 'blind' | 'warm'
+  transferredBy?: string
 }
 
 export interface ISettings {
