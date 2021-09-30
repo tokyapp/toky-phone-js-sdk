@@ -567,7 +567,7 @@ export class Client extends EventEmitter implements IClient {
           remoteUserId: customerUri,
           remoteUserType: 'agent',
           transferredType: 'blind',
-          transferredBy: transferredBy,
+          transferredBy: transferredTo,
           cause: 'rejected',
         },
       })
