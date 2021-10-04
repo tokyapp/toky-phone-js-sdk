@@ -64,6 +64,7 @@ const holdBtn = document.getElementById('hold-btn')
 const recordBtn = document.getElementById('record-btn')
 const makeTransferBtn = document.getElementById('make-transfer-btn')
 const cancelTransferBtn = document.getElementById('cancel-transfer-btn')
+const completeTransferBtn = document.getElementById('complete-transfer-btn')
 
 /**
  * Labels
@@ -109,32 +110,15 @@ const accessTokenAppId = document.getElementById('access-token-app-id')
  */
 const outboundCallGroup = document.getElementById('outbound-call-group')
 const inboundCallGroup = document.getElementById('inbound-call-group')
-const inboundCallId = document.getElementById('inbound-call-id')
-const inboundCallContactName = document.getElementById(
-  'inbound-call-contact-name'
-)
-const inboundCallContactNameLine = document.getElementById(
-  'inbound-call-contact-name-line'
-)
-const inboundCallType = document.getElementById('inbound-call-type')
-const inboundCallLocation = document.getElementById('inbound-call-location')
-const inboundCallUserAgent = document.getElementById('inbound-call-user-agent')
-const inboundCallIvrNameLine = document.getElementById(
-  'inbound-call-ivr-name-line'
-)
-const inboundCallIvrName = document.getElementById('inbound-call-ivr-name')
-const inboundCallIvrExtensionLine = document.getElementById(
-  'inbound-call-ivr-extension-line'
-)
-const inboundCallIvrExtension = document.getElementById(
-  'inbound-call-ivr-extension'
+const inboundCallDetailsList = document.getElementById(
+  'inbound-call-details-list'
 )
 
 /**
  * Configuration
  */
-const tokyApiUrl = 'https://api.toky.co'
-const tokySsoURL = 'https://app.toky.co'
+const tokyApiUrl = ''
+const tokySsoURL = ''
 
 const currentAppId = ''
 const currentAppKey = ''
@@ -409,6 +393,8 @@ const callOptionsDisabled = (disabled) => {
 const transferOptionsDisabled = (disabled) => {
   transferOptions.forEach((htmlElement) => (htmlElement.disabled = disabled))
   makeTransferBtn.disabled = disabled
+  makeTransferBtn.style.display = 'block'
+  completeTransferBtn.style.display = 'none'
   if (disabled) {
     makeTransferBtn.classList.remove('is-success')
     cancelTransferBtn.classList.remove('is-danger')
@@ -432,23 +418,47 @@ transferTypeBlind.addEventListener('click', transferTypeSelection)
 transferTypeWarm.addEventListener('click', transferTypeSelection)
 
 function clearInboundCallDetails() {
-  inboundCallId.textContent = '*'
-  inboundCallContactName.textContent = '*'
-  inboundCallType.textContent = '*'
-  inboundCallLocation.textContent = '*'
-  inboundCallUserAgent.textContent = '*'
-  inboundCallIvrName.textContent = '*'
-  inboundCallIvrExtension.textContent = '*'
-  inboundCallContactNameLine.style.display = 'none'
-  inboundCallIvrNameLine.style.display = 'none'
-  inboundCallIvrExtensionLine.style.display = 'none'
+  inboundCallDetailsList.textContent = ''
+}
+
+function addInboundCallDetail(id, title, description) {
+  let listItem = document.getElementById(id)
+  if (!listItem) {
+    listItem = document.createElement('li')
+    listItem.id = id
+  }
+  listItem.innerHTML = `<strong>${title}</strong>&nbsp;<span>${description}</span>`
+  inboundCallDetailsList.appendChild(listItem)
 }
 
 function updateInboundCallDetails(callData) {
-  inboundCallId.textContent = callData.remoteUserId
-  inboundCallType.textContent = callData.remoteUserType
-  inboundCallLocation.textContent = callData.remoteUserLocation
-  inboundCallUserAgent.textContent = callData.userAgent
+  if (callData.remoteUserId) {
+    addInboundCallDetail('ic-caller-id', 'Caller ID:', callData.remoteUserId)
+  }
+
+  if (callData.remoteUserName) {
+    addInboundCallDetail(
+      'ic-caller-name',
+      'Caller Name:',
+      callData.remoteUserName
+    )
+  }
+
+  if (callData.remoteUserType) {
+    addInboundCallDetail('ic-type', 'Caller Type:', callData.remoteUserType)
+  }
+
+  if (callData.remoteUserLocation) {
+    addInboundCallDetail(
+      'ic-location',
+      'Location:',
+      callData.remoteUserLocation
+    )
+  }
+
+  if (callData.userAgent) {
+    addInboundCallDetail('ic-user-agent', 'User Agent:', callData.userAgent)
+  }
 
   if (callData.remoteUserType === 'contact') {
     const agentId = getItem(AGENT_ID_KEY)
@@ -465,8 +475,11 @@ function updateInboundCallDetails(callData) {
     )
       .then((response) => response.json())
       .then((result) => {
-        inboundCallContactName.textContent = result.data[0].name
-        inboundCallContactNameLine.style.display = 'block'
+        addInboundCallDetail(
+          'ic-contact-name',
+          'Contact name:',
+          result.data[0].name
+        )
       })
       .catch((err) => console.error(err))
   }
@@ -481,12 +494,28 @@ function updateInboundCallDetails(callData) {
     })
       .then((response) => response.json())
       .then((result) => {
-        inboundCallIvrName.textContent = result.ivr.name
-        inboundCallIvrExtension.textContent = callData.ivrOptionPressed
-        inboundCallIvrNameLine.style.display = 'block'
-        inboundCallIvrExtensionLine.style.display = 'block'
+        addInboundCallDetail('ic-ivr-name', 'IVR name:', result.ivr.name)
+        addInboundCallDetail(
+          'ic-ivr-extension',
+          'IVR extension:',
+          callData.ivrOptionPressed
+        )
       })
       .catch((err) => console.error(err))
+  }
+
+  if (callData.transferredType) {
+    addInboundCallDetail(
+      'ic-transferred-type',
+      'Transferred type:',
+      callData.transferredType
+    )
+
+    addInboundCallDetail(
+      'ic-transferred-by',
+      'Transferred by:',
+      callData.transferredBy
+    )
   }
 }
 
@@ -496,6 +525,8 @@ function updateInboundCallDetails(callData) {
  * @param {tokySession} currentSession Current Toky Session
  */
 function setupTokySessionEventListeners(currentSession) {
+  tokySession = currentSession
+
   currentSession.on(SessionStatus.CONNECTED, () => {
     clientStatusDesc.textContent = 'In call'
 
@@ -616,7 +647,7 @@ function setupTokySessionEventListeners(currentSession) {
 
   currentSession.on(SessionStatus.RECORDING_NOT_AVAILABLE, () => {
     recordBtn.disabled = true
-    recordCallLabel.textContent = 'No disponible'
+    recordCallLabel.textContent = 'Not available'
   })
 
   currentSession.on(SessionStatus.TRANSFER_BLIND_INIT, (data) => {
@@ -628,6 +659,7 @@ function setupTokySessionEventListeners(currentSession) {
   currentSession.on(SessionStatus.TRANSFER_WARM_INIT, (data) => {
     console.warn('--- warm transfer init.', data)
 
+    endCallBtn.disabled = true
     makeTransferBtn.disabled = true
 
     cancelTransferBtn.classList.add('is-danger')
@@ -636,14 +668,32 @@ function setupTokySessionEventListeners(currentSession) {
 
   currentSession.on(SessionStatus.TRANSFER_WARM_ANSWERED, (data) => {
     console.warn('--- warm transfer answered.', data)
+
+    if (data) {
+      makeTransferBtn.style.display = 'none'
+      completeTransferBtn.style.display = 'block'
+      completeTransferBtn.disabled = false
+      completeTransferBtn.classList.add('is-info')
+
+      cancelTransferBtn.disabled = true
+    } else {
+      transferOptionsDisabled(true)
+    }
   })
 
   currentSession.on(SessionStatus.TRANSFER_WARM_NOT_ANSWERED, (data) => {
     console.warn('--- warm transfer not answered.', data)
+
+    endCallBtn.disabled = false
+
+    makeTransferBtn.disabled = false
+    cancelTransferBtn.disabled = true
   })
 
   currentSession.on(SessionStatus.TRANSFER_WARM_COMPLETED, (data) => {
     console.warn('--- warm transfer completed.', data)
+
+    transferOptionsDisabled(false)
   })
 
   currentSession.on(SessionStatus.TRANSFER_WARM_NOT_COMPLETED, (data) => {
@@ -654,6 +704,8 @@ function setupTokySessionEventListeners(currentSession) {
 
   currentSession.on(SessionStatus.TRANSFER_WARM_CANCELED, () => {
     console.warn('--- warm transfer canceled.')
+
+    endCallBtn.disabled = false
 
     makeTransferBtn.disabled = false
     cancelTransferBtn.disabled = true
@@ -691,10 +743,12 @@ function setupTokyClientEventListeners() {
     clientStatusDesc.textContent = 'Reconnecting'
   })
 
+  Client.on(ClientStatus.SESSION_UPDATED, (data) => {
+    setupTokySessionEventListeners(data.session)
+  })
+
   Client.on(ClientStatus.INVITE, (data) => {
     clientStatusDesc.textContent = 'Invite'
-
-    const incomingSession = data.session
 
     TokyMedia.source.incomingRingAudio.play()
 
@@ -708,9 +762,6 @@ function setupTokyClientEventListeners() {
 
     outboundCallGroup.style.display = 'none'
     inboundCallGroup.style.display = 'block'
-
-    tokySession = incomingSession
-    setupTokySessionEventListeners(tokySession)
   })
 
   TokyMedia.on(MediaStatus.READY, () => {
@@ -724,6 +775,7 @@ function setupTokyClientEventListeners() {
         console.log('Input device updated successfully!')
       })
     })
+
     createDeviceOptions(TokyMedia.inputs, TokyMedia.outputs)
     inputDeviceDesc.textContent = `${TokyMedia.selectedInputDevice.name}`
     outputDeviceDesc.textContent = `${TokyMedia.selectedOutputDevice.name}`
@@ -792,14 +844,10 @@ function firstRun() {
     }
 
     if (!tokySession) {
-      tokySession = Client.startCall({
+      Client.startCall({
         phoneNumber: phoneNumberInput.value,
         callerId: callerIdSelect.value,
       })
-
-      if (tokySession) {
-        setupTokySessionEventListeners(tokySession)
-      }
     }
   })
 
@@ -871,6 +919,12 @@ function firstRun() {
         .catch(() => {
           console.warn('--- CANCEL TRANSFER action unsuccess')
         })
+    }
+  })
+
+  completeTransferBtn.addEventListener('click', () => {
+    if (tokySession) {
+      tokySession.endCall()
     }
   })
 

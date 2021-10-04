@@ -350,6 +350,8 @@ export class Client extends EventEmitter implements IClient {
 
     const companyID = incomingSession.request.getHeader('X-Company')
 
+    const from = incomingSession.request.getHeader('From')
+
     const isIncomingWarmTransfer =
       incomingSession.request.getHeader('X-Warm') === 'yes'
 
@@ -377,9 +379,8 @@ export class Client extends EventEmitter implements IClient {
     const customerHasInfo =
       incomingSession.request.getHeader('X-Has-Info') !== undefined
 
-    const customerUsername = incomingSession.request.getHeader(
-      'X-Toky-Username'
-    )
+    const customerUsername =
+      incomingSession.request.getHeader('X-Toky-Username')
 
     const customerUri = incomingSession.remoteIdentity.uri.user
 
@@ -430,7 +431,7 @@ export class Client extends EventEmitter implements IClient {
      * })
      * ```
      */
-    if (!isIncomingWarmTransfer && this.acceptInboundCalls) {
+    if (!isWarmTransfer && this.acceptInboundCalls) {
       // User Type
       let userType: 'contact' | 'agent' | 'anon' = 'contact'
       if (isFromAgent) {
@@ -442,8 +443,16 @@ export class Client extends EventEmitter implements IClient {
       }
 
       let callData: ICallDataEvent = {
-        remoteUserId: customerUri,
+        remoteUserId: customerIsAnon ? '' : customerUri,
         remoteUserType: userType,
+      }
+
+      if (userType === 'agent' || userType === 'anon') {
+        const remoteUserName = from.split('"')
+        callData = {
+          ...callData,
+          remoteUserName: remoteUserName.length > 2 ? remoteUserName[1] : '',
+        }
       }
 
       // Location
@@ -479,6 +488,15 @@ export class Client extends EventEmitter implements IClient {
         }
       }
 
+      // Call Transferred
+      if (transferredBy) {
+        callData = {
+          ...callData,
+          transferredBy: transferredBy,
+          transferredType: isIncomingWarmTransfer ? 'warm' : 'blind',
+        }
+      }
+
       this._currentSession = new SessionUA(
         incomingSession,
         Media.source,
@@ -496,8 +514,11 @@ export class Client extends EventEmitter implements IClient {
         }
       )
 
-      this.emit(ClientStatus.INVITE, {
+      this.emit(ClientStatus.SESSION_UPDATED, {
         session: this._currentSession,
+      })
+
+      this.emit(ClientStatus.INVITE, {
         agentData: {
           agentId: this._account.user,
           sipUsername: this._account.sipUsername,
@@ -532,8 +553,11 @@ export class Client extends EventEmitter implements IClient {
         }
       )
 
-      this.emit(ClientStatus.INVITE, {
+      this.emit(ClientStatus.SESSION_UPDATED, {
         session: this._currentSession,
+      })
+
+      this.emit(ClientStatus.INVITE, {
         agentData: {
           agentId: this._account.user,
           sipUsername: this._account.sipUsername,
@@ -543,6 +567,7 @@ export class Client extends EventEmitter implements IClient {
           remoteUserId: customerUri,
           remoteUserType: 'agent',
           transferredType: 'blind',
+          transferredBy: transferredTo,
           cause: 'rejected',
         },
       })
@@ -570,19 +595,8 @@ export class Client extends EventEmitter implements IClient {
         }
       )
 
-      this.emit(ClientStatus.INVITE, {
+      this.emit(ClientStatus.SESSION_UPDATED, {
         session: this._currentSession,
-        agentData: {
-          agentId: this._account.user,
-          sipUsername: this._account.sipUsername,
-          companyId: this._companyId,
-        },
-        callData: {
-          remoteUserUri: customerUri,
-          remoteUserType: 'agent',
-          transferredType: 'warm',
-          action: 'establish',
-        },
       })
 
       this.prepateActiveSession()
@@ -799,8 +813,6 @@ export class Client extends EventEmitter implements IClient {
    * @param {Object} callData - Object with call data params
    * @param {string} callData.phoneNumber - Phone Number to call
    * @param {string} callData.callerId - Caller Id to use for the call
-   *
-   * @returns {ISession} - Returns a successfully established session or null if something went wrong
    */
   public startCall({
     phoneNumber,
@@ -808,7 +820,7 @@ export class Client extends EventEmitter implements IClient {
   }: {
     phoneNumber: string
     callerId: string
-  }): ISession {
+  }): void {
     if (this.isRegistered) {
       const extraHeaders: string[] = [
         `X-Connection-Country: ${this._connectionCountry}`,
@@ -867,7 +879,9 @@ export class Client extends EventEmitter implements IClient {
 
         this.prepateActiveSession()
 
-        return this._currentSession
+        this.emit(ClientStatus.SESSION_UPDATED, {
+          session: this._currentSession,
+        })
       } else {
         if (isDevelopment) {
           console.error(
@@ -878,8 +892,7 @@ export class Client extends EventEmitter implements IClient {
         this.emit(ClientStatus.INVITE_REJECTED, {
           code: 412,
           status: 'Conditional Request Failed',
-          msg:
-            'Unable to acquire media, you need to grant media permissions in navigator settings.',
+          msg: 'Unable to acquire media, you need to grant media permissions in navigator settings.',
         })
         return null
       }

@@ -240,6 +240,14 @@ export class MediaSingleton extends EventEmitter {
     return this._deviceList.find((d) => d.id === id)
   }
 
+  private getInputDeviceById(id: string): IDeviceList {
+    return this._deviceList.find((d) => d.id === id && d.kind === 'audioinput')
+  }
+
+  private getOutputDeviceById(id: string): IDeviceList {
+    return this._deviceList.find((d) => d.id === id && d.kind === 'audiooutput')
+  }
+
   public async setOutputDevice(
     id: string
   ): Promise<{ success: boolean; message?: any }> {
@@ -384,9 +392,11 @@ export class MediaSingleton extends EventEmitter {
   get selectedInputDevice(): IDeviceList {
     if (typeof Storage !== 'undefined') {
       if (sessionStorage.getItem('toky_default_input')) {
-        return this.getDeviceById(sessionStorage.getItem('toky_default_input'))
+        return this.getInputDeviceById(
+          sessionStorage.getItem('toky_default_input')
+        )
       } else {
-        return this.getDeviceById(this.defaultInputDevice.id)
+        return this.getInputDeviceById(this.defaultInputDevice.id)
       }
     } else {
       throw new Error('Browser does not support session storage.')
@@ -396,9 +406,11 @@ export class MediaSingleton extends EventEmitter {
   get selectedOutputDevice(): IDeviceList {
     if (typeof Storage !== 'undefined') {
       if (sessionStorage.getItem('toky_default_output')) {
-        return this.getDeviceById(sessionStorage.getItem('toky_default_output'))
+        return this.getOutputDeviceById(
+          sessionStorage.getItem('toky_default_output')
+        )
       } else {
-        return this.getDeviceById(this.defaultOutputDevice.id)
+        return this.getOutputDeviceById(this.defaultOutputDevice.id)
       }
     } else {
       throw new Error('Browser does not support session storage.')

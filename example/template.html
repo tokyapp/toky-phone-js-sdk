@@ -275,36 +275,7 @@
             </div>
 
             <div id="inbound-call-group" style="display: none;">
-              <ul>
-                <li>
-                  <strong>Caller ID:</strong>
-                  <span id="inbound-call-id">*</span>
-                </li>
-                <li id="inbound-call-contact-name-line" style="display: none;">
-                  <strong>Contact name:</strong>
-                  <span id="inbound-call-contact-name">*</span>
-                </li>
-                <li>
-                  <strong>Type:</strong>
-                  <span id="inbound-call-type">*</span>
-                </li>
-                <li>
-                  <strong>Location:</strong>
-                  <span id="inbound-call-location">*</span>
-                </li>
-                <li>
-                  <strong>User Agent:</strong>
-                  <span id="inbound-call-user-agent">*</span>
-                </li>
-                <li id="inbound-call-ivr-name-line" style="display: none;">
-                  <strong>IVR name:</strong>
-                  <span id="inbound-call-ivr-name">*</span>
-                </li>
-                <li id="inbound-call-ivr-extension-line" style="display: none;">
-                  <strong>IVR extension:</strong>
-                  <span id="inbound-call-ivr-extension">*</span>
-                </li>
-              </ul>
+              <ul id="inbound-call-details-list"></ul>
               <hr />
             </div>
 
@@ -388,6 +359,12 @@
                   <em class="fas fa-random"></em>
                 </span>
                 <span>Transfer call</span>
+              </button>
+              <button id="complete-transfer-btn" class="button" disabled style="display: none;">
+                <span class="icon is-small">
+                  <em class="fas fa-random"></em>
+                </span>
+                <span>Complete transfer</span>
               </button>
               <button id="cancel-transfer-btn" class="button" disabled>
                 <span class="icon is-small">
