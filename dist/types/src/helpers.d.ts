@@ -12,4 +12,6 @@ export declare function appendMediaElements(): void;
 export declare function stopAudio(sound: HTMLAudioElement): void;
 export declare function eqSet<T>(a: Set<T>, b: Set<T>): boolean;
 export declare function getAudio(id: string): HTMLAudioElement;
+export declare function toKebabCase(str: string): string;
+export declare function getUserAgentKey(isFromPstn: boolean, userAgent: string): string;
 //# sourceMappingURL=helpers.d.ts.map

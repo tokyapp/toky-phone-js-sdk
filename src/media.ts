@@ -6,6 +6,7 @@ import { IDeviceList, ISource, HTMLMediaElementExp } from './interfaces'
 
 import { MediaStatus } from './constants'
 
+declare const navigator: any;
 export class MediaSingleton extends EventEmitter {
   _devicesInfoRaw: MediaDeviceInfo[]
   _deviceList: IDeviceList[]

@@ -84,11 +84,11 @@ export const getCallParams = ({
       agent_id: agentId,
     },
   })
-    .then((response) => {
+    .then((response: any) => {
       const data: CallParamsAPIResponse = response.data
 
       if (data && data.success) {
-        return response.data
+        return data
       } else {
         throw new Error('Something went wrong on toky service call')
       }
@@ -123,11 +123,11 @@ export const holdCall = ({
       agent_id: agentId,
     },
   })
-    .then((response) => {
+    .then((response: any) => {
       const data: APIResponse = response.data
 
       if (data && data.success) {
-        return response.data
+        return data
       } else {
         throw new Error('Something went wrong on toky service call')
       }
@@ -163,11 +163,11 @@ export const callRecording = ({
       agent_id: agentId,
     },
   })
-    .then((response) => {
+    .then((response: any) => {
       if (response.data) {
-        const successResponse = response.data.success
+        const successResponse: boolean = response.data.success
 
-        const recordingEnabled = response.data.recording_enabled
+        const recordingEnabled: boolean = response.data.recording_enabled
 
         if (
           successResponse &&
@@ -220,11 +220,11 @@ export const cancelTransferAction = ({
       agent_id: agentId,
     },
   })
-    .then((response) => {
+    .then((response: any) => {
       const data: APIResponse = response.data
 
       if (data && data.success) {
-        return response.data
+        return data
       } else {
         throw new Error('Something went wrong on toky service call')
       }
@@ -252,7 +252,7 @@ export const callDetails = ({
       agent_id: agentId,
     },
   })
-    .then((response) => {
+    .then((response: any) => {
       const data: CallDetailsAPIResponse = response.data
 
       if (data && data.success) {

@@ -31,6 +31,22 @@ interface CallParamsAPIData {
     anon_contact_info: boolean;
     connection_country: string;
     referer: string;
+    recording_change: boolean;
+    registered_app_name: string;
+    channel_id: string;
+}
+interface CallDetailsAPIData {
+    cdr: {
+        direction: string;
+        duration: string;
+        start_dt: string;
+        child_call: {
+            callid: string;
+        };
+        parent_call?: {
+            callid: string;
+        };
+    };
 }
 interface CallRecordingAPIResponse extends APIResponse {
     recording_enabled: boolean;
@@ -38,30 +54,47 @@ interface CallRecordingAPIResponse extends APIResponse {
 interface CallParamsAPIResponse extends APIResponse {
     data: CallParamsAPIData;
 }
-export declare const getCallParams: ({ agentId, apiKey, }: {
+interface CallDetailsAPIResponse extends APIResponse {
+    result: CallDetailsAPIData;
+}
+export declare const getCallParams: ({ agentId, accessToken, }: {
     agentId: string;
-    apiKey: string;
+    accessToken: string;
 }) => Promise<CallParamsAPIResponse>;
 export declare enum HoldActionEnum {
     HOLD = "hold",
     UNHOLD = "unhold"
 }
-export declare const holdCall: ({ callId, action, apiKey, agentId, }: {
+export declare const holdCall: ({ callId, action, agentId, accessToken, }: {
     callId: string;
-    action: HoldActionEnum;
-    apiKey: string;
     agentId: string;
+    action: HoldActionEnum;
+    accessToken: string;
 }) => Promise<APIResponse>;
 export declare enum RecordingActionEnum {
     REC_STATUS = "recstatus",
     REC_PAUSE = "recpause",
     REC_CONTINUE = "reccontinue"
 }
-export declare const callRecording: ({ callId, action, apiKey, agentId, }: {
+export declare const callRecording: ({ callId, agentId, action, accessToken, }: {
     callId: string;
-    action: RecordingActionEnum;
-    apiKey: string;
     agentId: string;
-}) => Promise<APIResponse | CallRecordingAPIResponse>;
+    action: RecordingActionEnum;
+    accessToken: string;
+}) => Promise<CallRecordingAPIResponse | APIResponse>;
+export declare enum TransferActionEnum {
+    cancel = "cancel_transfer"
+}
+export declare const cancelTransferAction: ({ callId, action, agentId, accessToken, }: {
+    callId: string;
+    agentId: string;
+    action: TransferActionEnum;
+    accessToken: string;
+}) => Promise<APIResponse>;
+export declare const callDetails: ({ agentId, callId, accessToken, }: {
+    agentId: string;
+    callId: string;
+    accessToken: string;
+}) => Promise<CallDetailsAPIResponse>;
 export {};
 //# sourceMappingURL=toky-services.d.ts.map
