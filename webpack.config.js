@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
+const path = require('path')
 const webpack = require('webpack')
 const Dotenv = require('dotenv-webpack')
-const webpackMerge = require('webpack-merge')
-const GitRevisionPlugin = require('git-revision-webpack-plugin')
+const { merge } = require('webpack-merge')
+const { GitRevisionPlugin } = require('git-revision-webpack-plugin')
 const gitRevisionPlugin = new GitRevisionPlugin()
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 const libraryName = 'toky-sdk-alpha'
 
-const modeConfig = (env, dotenv) =>
-  require(`./build-utils/webpack.${env}`)(env, dotenv)
+const modeConfig = (env) =>
+  require(`./build-utils/webpack.${env}`)()
 
 const getEnvFile = function (key) {
   const files = {
@@ -22,12 +24,16 @@ const getEnvFile = function (key) {
   return files[key] || files.dev
 }
 
-module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
+module.exports = (env, argv) => {
+  const mode = argv.mode
+
+  const envFilePath = path.resolve(__dirname, getEnvFile(gitRevisionPlugin.branch()))
   const dotenv = new Dotenv({
-    path: getEnvFile(gitRevisionPlugin.branch()),
+    path: envFilePath,
+    allowEmptyValues: true,
   })
 
-  return webpackMerge(
+  return merge(
     {
       target: 'web',
       mode,
@@ -47,6 +53,12 @@ module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
             loader: 'babel-loader',
             exclude: /node_modules/,
           },
+          {
+            test: /\.m?js$/,
+            resolve: {
+              fullySpecified: false, // solve SIP.JS import problems
+            },
+          },
         ],
       },
       resolve: {
@@ -59,10 +71,15 @@ module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
           VERSION: JSON.stringify(gitRevisionPlugin.version()),
           COMMITHASH: JSON.stringify(gitRevisionPlugin.commithash()),
           BRANCH: JSON.stringify(gitRevisionPlugin.branch()),
+          LASTCOMMITDATETIME: JSON.stringify(gitRevisionPlugin.lastcommitdatetime()),
         }),
         new webpack.ProgressPlugin(),
         new GitRevisionPlugin({
           branch: true,
+        }),
+        new CleanWebpackPlugin({
+          protectWebpackAssets: false,
+          cleanAfterEveryBuildPatterns: ['*.LICENSE.txt'],
         }),
       ],
       /**
@@ -71,6 +88,6 @@ module.exports = ({ mode, presets } = { mode: 'production', presets: [] }) => {
        */
       // externals: ['sip.js'],
     },
-    modeConfig(mode, dotenv)
+    modeConfig(mode)
   )
 }
