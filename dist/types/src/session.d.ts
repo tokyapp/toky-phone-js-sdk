@@ -1,102 +1,52 @@
 /// <reference types="node" />
 import { EventEmitter } from 'events';
 import { Session } from 'sip.js';
-import { URI } from 'sip.js/lib/core';
-import { IMediaAttribute } from './client';
-export interface IGetConnection {
-    pc: RTCPeerConnection;
-    localStream: MediaStream;
-}
-export declare enum SessionStatus {
-    TRYING = "trying",
-    CONNECTING = "connecting",
-    RINGING = "ringing",
-    ACCEPTED = "accepted",
-    REJECTED = "rejected",
-    DISCONNECTED = "disconnected",
-    HOLD = "hold",
-    UNHOLD = "unhold",
-    MUTED = "muted",
-    UNMUTED = "unmuted",
-    RECORDING = "recording",
-    NOT_RECORDING = "not_recording",
-    FAILED = "failed",
-    BYE = "bye"
-}
-export declare enum TransferEnum {
-    AGENT = "agent",
-    GROUP = "group",
-    NUMBER = "number"
-}
-export declare enum TransferOptionsEnum {
-    BLIND = "blind",
-    WARM = "warm"
-}
-export declare enum CallDirectionEnum {
-    INBOUND = "inbound",
-    OUTBOUND = "outbound"
-}
-export declare interface ISessionImpl {
-    callId: string;
-    pauseRecordingActivated: boolean;
-    mute: () => void;
-    hold?: () => void;
-    record?: () => void;
-    endCall: () => void;
-    getConnection: () => IGetConnection;
-    on: (event: SessionStatus, listener: () => void) => void;
-}
-interface ICallData {
-    /** URI Data can be Agent SIP Username, in an outbound call
-     * can be the URI generated for the Invitation
-     */
-    uri: string | URI;
-    /** Type of user involved in the call */
-    type: 'agent' | 'anon' | 'contact';
-    /**
-     * Applicable for outbound calls or maybe inbound calls
-     * with phone data
-     */
-    phone?: string;
-    /** Transferred Types Blind or Warm */
-    transferredType?: 'blind' | 'warm';
-    /** Applicable for Transferred calls, cause by a rejected blind transferred
-     * or an Invite from a Warm transferred that requires to establish the call
-     * inmediately
-     */
-    cause?: 'rejected' | 'establish';
-}
-interface ISettings {
-    agentId: string;
-    apiKey: string;
-    sipUsername: string;
-    companyId: string;
-}
-export declare class SessionUA extends EventEmitter implements ISessionImpl {
+import { Channel } from 'pusher-js';
+import { ISource, ISession, ISettings, ICallData, IGetConnection } from './interfaces';
+import { CallDirectionEnum, TransferOptionsEnum, TransferEnum } from './constants';
+export declare class SessionUA extends EventEmitter implements ISession {
     private _callId;
     private _peerConnection;
     private _currentSession;
     private _media;
     private _localStream;
     private _senderEnabled;
+    private _isConnected;
     private _hold;
-    private _apiKey;
-    private _agentId;
+    private _accessToken;
     private _sipUsername;
+    private _agentId;
     private _companyId;
     private _callDirection;
+    /**
+     * _recordingFeatureActivated
+     * Refers to the Agents ability to pause Session recording
+     */
     private _recordingFeatureActivated;
+    /**
+     * _sessionBeingRecorded
+     * Refers to the Agents settings about calls being recorded
+     */
+    private _sessionBeingRecorded;
+    /**
+     * _recording
+     * Call state for recording
+     */
     private _recording;
     private _established;
     private _callData;
     private _wantToWarmTransfer;
     private _to;
     private _from;
-    constructor(session: Session, media: IMediaAttribute, direction: CallDirectionEnum, tokySettings: ISettings, inboundData?: ICallData);
+    private _hangupByCurrentAgent;
+    private _tokyChannel;
+    constructor(session: Session, media: ISource, tokyChannel: Channel, direction: CallDirectionEnum, tokySettings: ISettings, inboundData?: ICallData);
     get callId(): string;
-    get pauseRecordingActivated(): boolean;
+    get callRecordingEnabled(): boolean;
     get to(): any;
     get from(): any;
+    get isConnected(): boolean;
+    private pusherEventsHandler;
     private sessionStateListener;
     private onRejectHandler;
     private acceptedHandler;
@@ -105,15 +55,17 @@ export declare class SessionUA extends EventEmitter implements ISessionImpl {
     private cleanupMedia;
     /**
      * Send DTMF.
-     * @remarks
      * Send an INFO request with content type application/dtmf-relay.
-     * @param tone - Tone to send.
+     *
+     * @param {string} tone - Tone to send to current session
+     * @returns {Promise<void>}
      */
     processDTMF(tone: string): Promise<void>;
     getConnection(): IGetConnection;
     mute(): void;
     hold(): Promise<void>;
     record(): Promise<void>;
+    cancelTransfer(): Promise<void>;
     endCall(): void;
     acceptCall(): void;
     makeTransfer({ type, destination, option, }: {
@@ -121,6 +73,6 @@ export declare class SessionUA extends EventEmitter implements ISessionImpl {
         destination: string;
         option?: TransferOptionsEnum;
     }): void;
+    refreshAccessToken(accessToken: string): void;
 }
-export {};
 //# sourceMappingURL=session.d.ts.map
