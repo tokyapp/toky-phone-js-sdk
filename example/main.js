@@ -32,6 +32,8 @@ const agentIdInput = document.getElementById('agent-id-input')
 const callerIdInput = document.getElementById('caller-id-input')
 const phoneNumberInput = document.getElementById('phone-number-input')
 const transferToInput = document.getElementById('transfer-to-input')
+const addNoteInput = document.getElementById('add-note-input')
+const addTagInput = document.getElementById('add-tag-input')
 
 /**
  * Selects
@@ -65,6 +67,8 @@ const recordBtn = document.getElementById('record-btn')
 const makeTransferBtn = document.getElementById('make-transfer-btn')
 const cancelTransferBtn = document.getElementById('cancel-transfer-btn')
 const completeTransferBtn = document.getElementById('complete-transfer-btn')
+const addNoteBtn = document.getElementById('add-note-btn')
+const addTagBtn = document.getElementById('add-tag-btn')
 
 /**
  * Labels
@@ -113,6 +117,20 @@ const inboundCallGroup = document.getElementById('inbound-call-group')
 const inboundCallDetailsList = document.getElementById(
   'inbound-call-details-list'
 )
+const callNotesList = document.getElementById('call-notes-list')
+const callTagsList = document.getElementById('call-tags-list')
+
+/**
+ * Tabs
+ */
+const callOptionsTabs = document.getElementById('call-options-tabs')
+
+/**
+ * Box
+ */
+const transferBox = document.getElementById('transfer-box')
+const notesTagsBox = document.getElementById('notes-tags-box')
+const dtfmBox = document.getElementById('dtfm-box')
 
 /**
  * Configuration
@@ -229,7 +247,7 @@ function getAccessTokenSsoMethod() {
   const authorizationCode = getItem(AUTH_CODE_KEY)
 
   /**
-   * ref: https://toky-js-sdk.toky.co/reference#access_token
+   * ref: https://toky-js-sdk.toky.co/reference/access_token
    */
   fetch(`${tokyApiUrl}/v1/access_token`, {
     headers: {
@@ -260,7 +278,7 @@ getAccessTokenSsoBtn.addEventListener('click', getAccessTokenSsoMethod)
 function getAccessTokenAppIdMethod() {
   const agentId = getItem(AGENT_ID_KEY)
   /**
-   * ref: https://toky-js-sdk.toky.co/reference#access_token
+   * ref: https://toky-js-sdk.toky.co/reference/access_token
    */
   fetch(`${tokyApiUrl}/v1/access_token`, {
     headers: {
@@ -294,7 +312,7 @@ function refreshAccessToken() {
   const refreshToken = getItem(REFRESH_TOKEN_KEY)
 
   /**
-   * ref: https://toky-js-sdk.toky.co/reference#refresh
+   * ref: https://toky-js-sdk.toky.co/reference/refresh
    */
   fetch(`${tokyApiUrl}/v1/access_token/refresh`, {
     headers: {
@@ -347,6 +365,9 @@ async function getDidsForAgent() {
   const agentId = getItem(AGENT_ID_KEY)
   const accessToken = getItem(ACCESS_TOKEN_KEY)
 
+  /**
+   * ref: https://toky-js-sdk.toky.co/reference/agentsdids
+   */
   fetch(`${tokyApiUrl}/v1/sdk/agents/dids?agent_id=${agentId}`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -381,6 +402,159 @@ function createDeviceOptions(inputs, outputs) {
   })
 }
 
+/**
+ * Notes
+ */
+ function createNotesList(notesList) {
+  callNotesList.textContent = ''
+  if (notesList) {
+    notesList.result.forEach((e) => {
+      const note = document.createElement('li')
+      note.textContent = e._source.content
+      callNotesList.appendChild(note)
+    })
+  }
+  addNoteInput.value = ''
+}
+
+function getNotes() {
+  if (tokySession) {
+    const agentId = getItem(AGENT_ID_KEY)
+    const accessToken = getItem(ACCESS_TOKEN_KEY)
+    const callId = tokySession.callId
+
+    /**
+     * ref: https://toky-js-sdk.toky.co/reference/notes
+     */
+    fetch(`${tokyApiUrl}/v1/sdk/notes?agent_id=${agentId}&call_id=${callId}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        createNotesList(result)
+      })
+      .catch((err) => console.error(err))
+  } else {
+    console.warn('Error retrieving the notes. No session available.')
+  }
+}
+
+function createNote(noteValue) {
+  if (tokySession) {
+    const agentId = getItem(AGENT_ID_KEY)
+    const accessToken = getItem(ACCESS_TOKEN_KEY)
+    const callId = tokySession.callId
+
+    /**
+     * ref: https://toky-js-sdk.toky.co/reference/notes-1
+     */
+    fetch(`${tokyApiUrl}/v1/sdk/notes`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({
+        agent_id: agentId,
+        call_id: callId,
+        note: noteValue,
+      }),
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.success) {
+          getNotes()
+        }
+      })
+      .catch((err) => console.error(err))
+  } else {
+    console.warn('Error adding a note. No session available.')
+  }
+}
+
+function addNote() {
+  const noteValue = addNoteInput.value
+  if (noteValue) {
+    createNote(noteValue)
+  }
+}
+addNoteBtn.addEventListener('click', addNote)
+
+/**
+ * Tags
+ */
+function createTagsList(tagsList) {
+  callTagsList.textContent = ''
+  if (tagsList) {
+    tagsList.result.forEach((e) => {
+      const tag = document.createElement('li')
+      tag.textContent = e
+      callTagsList.appendChild(tag)
+    })
+  }
+  addTagInput.value = ''
+}
+
+function getTags() {
+  if (tokySession) {
+    const agentId = getItem(AGENT_ID_KEY)
+    const accessToken = getItem(ACCESS_TOKEN_KEY)
+    const callId = tokySession.callId
+
+    /**
+     * ref: https://toky-js-sdk.toky.co/reference/tags
+     */
+    fetch(`${tokyApiUrl}/v1/sdk/tags?agent_id=${agentId}&call_id=${callId}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        createTagsList(result)
+      })
+      .catch((err) => console.error(err))
+  } else {
+    console.warn('Error retrieving the tags. No session available.')
+  }
+}
+
+function createTag(tagValue) {
+  if (tokySession) {
+    const agentId = getItem(AGENT_ID_KEY)
+    const accessToken = getItem(ACCESS_TOKEN_KEY)
+    const callId = tokySession.callId
+
+    /**
+     * ref: https://toky-js-sdk.toky.co/reference/tags-1
+     */
+    fetch(`${tokyApiUrl}/v1/sdk/tags`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({
+        agent_id: agentId,
+        call_id: callId,
+        tag: tagValue,
+      }),
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.success) {
+          getTags()
+        }
+      })
+      .catch((err) => console.error(err))
+  } else {
+    console.warn('Error adding a tag. No session available.')
+  }
+}
+
+function addTag() {
+  const tagValue = addTagInput.value
+  if (tagValue) {
+    createTag(tagValue)
+  }
+}
+addTagBtn.addEventListener('click', addTag)
+
+
 // Keypad helper function
 const keypadDisabled = (disabled) => {
   keypad.forEach((button) => (button.disabled = disabled))
@@ -404,6 +578,14 @@ const transferOptionsDisabled = (disabled) => {
   }
 }
 
+const notesAndTagsDisabled = (disabled) => {
+  addNoteInput.disabled = disabled
+  addNoteBtn.disabled = disabled
+
+  addTagInput.disabled = disabled
+  addTagBtn.disabled = disabled
+}
+
 function transferTypeSelection() {
   transferTypeBlind.checked = false
   transferTypeWarm.checked = false
@@ -419,6 +601,11 @@ transferTypeWarm.addEventListener('click', transferTypeSelection)
 
 function clearInboundCallDetails() {
   inboundCallDetailsList.textContent = ''
+}
+
+function clearNotesAndTags() {
+  callNotesList.textContent = ''
+  callTagsList.textContent = ''
 }
 
 function addInboundCallDetail(id, title, description) {
@@ -526,6 +713,7 @@ function updateInboundCallDetails(callData) {
  */
 function setupTokySessionEventListeners(currentSession) {
   tokySession = currentSession
+  console.warn('tokySession', tokySession)
 
   currentSession.on(SessionStatus.CONNECTED, () => {
     clientStatusDesc.textContent = 'In call'
@@ -541,6 +729,7 @@ function setupTokySessionEventListeners(currentSession) {
     keypadDisabled(false)
     callOptionsDisabled(false)
     transferOptionsDisabled(false)
+    notesAndTagsDisabled(false)
   })
 
   currentSession.on(SessionStatus.RINGING, () => {
@@ -582,10 +771,12 @@ function setupTokySessionEventListeners(currentSession) {
     inboundCallGroup.style.display = 'none'
 
     clearInboundCallDetails()
+    clearNotesAndTags()
 
     keypadDisabled(true)
     callOptionsDisabled(true)
     transferOptionsDisabled(true)
+    notesAndTagsDisabled(true)
   })
 
   currentSession.on(SessionStatus.REJECTED, () => {
@@ -940,6 +1131,34 @@ function firstRun() {
     })
   })
 }
+
+// Select a tab and switch content
+callOptionsTabs.querySelectorAll('li > a').forEach((e, i) => {
+  e.addEventListener('click', () => {
+    transferBox.style.display = 'none'
+    notesTagsBox.style.display = 'none'
+    dtfmBox.style.display = 'none'
+
+    callOptionsTabs.querySelectorAll('li').forEach(li => li.classList.remove('is-active'))
+
+    switch (i) {
+      case 1:
+        notesTagsBox.style.display = 'block'
+        e.parentElement.classList.add('is-active')
+        break
+
+      case 2:
+        dtfmBox.style.display = 'block'
+        e.parentElement.classList.add('is-active')
+        break
+
+      default:
+        transferBox.style.display = 'block'
+        e.parentElement.classList.add('is-active')
+        break
+    }
+  })
+})
 
 /**
  * Toky Client initialization

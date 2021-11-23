@@ -206,7 +206,7 @@
                   <button id="start-sdk-btn" class="button is-primary is-fullwidth" disabled>Start the SDK</button>
                 </div>
 
-                <hr |>
+                <hr />
 
                 <div class="field">
                   <label class="label">Caller ID</label>
@@ -221,7 +221,7 @@
                   </div>
                 </div>
 
-                <hr |>
+                <hr />
 
                 <div class="field">
                   <label class="label">Audio Input</label>
@@ -317,88 +317,157 @@
           </div>
 
           <div class="box">
-            <div class="field">
-              <label class="label">Transfer Call</label>
-              <div class="control">
-                <label class="checkbox">
-                  <input id="transfer-type-blind" type="checkbox" class="transfer-options" checked disabled>
-                  Blind transfer
-                </label>
-                <label class="checkbox">
-                  <input id="transfer-type-warm" type="checkbox" class="transfer-options" disabled>
-                  Warm transfer
-                </label>
-              </div>
+            <div class="tabs is-small is-toggle is-fullwidth">
+              <ul id="call-options-tabs">
+                <li class="is-active">
+                  <a id="call-options-tab">
+                    <span class="icon is-small"><i class="fas fa-random" aria-hidden="true"></i></span>
+                    <span>Transfer</span>
+                  </a>
+                </li>
+                <li>
+                  <a>
+                    <span class="icon is-small"><i class="fas fa-sticky-note" aria-hidden="true"></i></span>
+                    <span>Notes & Tags</span>
+                  </a>
+                </li>
+                <li>
+                  <a>
+                    <span class="icon is-small"><i class="fas fa-th" aria-hidden="true"></i></span>
+                    <span>DTFM</span>
+                  </a>
+                </li>
+              </ul>
             </div>
 
-            <div class="field">
-              <label class="label">Transfer to</label>
-              <div class="control has-icons-left">
-                <div class="select is-fullwidth">
-                  <select id="transfer-to-select" class="transfer-options" disabled>
-                    <option value="agent">Agent</option>
-                    <option value="group">Group</option>
-                    <option value="number">Number</option>
-                  </select>
+            <div id="transfer-box" style="min-height: 360px;">
+              <div class="field">
+                <label class="label">Transfer Call</label>
+                <div class="control">
+                  <label class="checkbox">
+                    <input id="transfer-type-blind" type="checkbox" class="transfer-options" checked disabled>
+                    Blind transfer
+                  </label>
+                  <label class="checkbox">
+                    <input id="transfer-type-warm" type="checkbox" class="transfer-options" disabled>
+                    Warm transfer
+                  </label>
                 </div>
-                <div class="icon is-small is-left has-text-info">
-                  <em class="fas fa-random"></em>
+              </div>
+  
+              <div class="field">
+                <label class="label">Transfer to</label>
+                <div class="control has-icons-left">
+                  <div class="select is-fullwidth">
+                    <select id="transfer-to-select" class="transfer-options" disabled>
+                      <option value="agent">Agent</option>
+                      <option value="group">Group</option>
+                      <option value="number">Number</option>
+                    </select>
+                  </div>
+                  <div class="icon is-small is-left has-text-info">
+                    <em class="fas fa-random"></em>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div class="field">
-              <div class="control">
-                <input id="transfer-to-input" class="transfer-options input" type="text" placeholder="agent id" disabled>
+  
+              <div class="field">
+                <div class="control">
+                  <input id="transfer-to-input" class="transfer-options input" type="text" placeholder="agent id" disabled>
+                </div>
+              </div>
+  
+              <div class="buttons is-centered">
+                <button id="make-transfer-btn" class="button" disabled>
+                  <span class="icon is-small">
+                    <em class="fas fa-random"></em>
+                  </span>
+                  <span>Transfer call</span>
+                </button>
+                <button id="complete-transfer-btn" class="button" disabled style="display: none;">
+                  <span class="icon is-small">
+                    <em class="fas fa-random"></em>
+                  </span>
+                  <span>Complete transfer</span>
+                </button>
+                <button id="cancel-transfer-btn" class="button" disabled>
+                  <span class="icon is-small">
+                    <em class="fas fa-ban"></em>
+                  </span>
+                  <span>Cancel transfer</span>
+                </button>
               </div>
             </div>
 
-            <div class="buttons is-centered">
-              <button id="make-transfer-btn" class="button" disabled>
-                <span class="icon is-small">
-                  <em class="fas fa-random"></em>
-                </span>
-                <span>Transfer call</span>
-              </button>
-              <button id="complete-transfer-btn" class="button" disabled style="display: none;">
-                <span class="icon is-small">
-                  <em class="fas fa-random"></em>
-                </span>
-                <span>Complete transfer</span>
-              </button>
-              <button id="cancel-transfer-btn" class="button" disabled>
-                <span class="icon is-small">
-                  <em class="fas fa-ban"></em>
-                </span>
-                <span>Cancel transfer</span>
-              </button>
-            </div>
-          </div>
+            <div id="notes-tags-box" style="min-height: 360px; display: none;">
+              <div class="field">
+                <label class="label">Notes</label>
+              </div>
 
-          <div class="box">
-            <div class="field">
-              <label class="label">DMTF tones</label>
+              <div class="field has-addons">
+                <div class="control is-expanded">
+                  <input id="add-note-input" class="input" type="text" placeholder="Create a Note" disabled>
+                </div>
+                <div class="control">
+                  <button id="add-note-btn" class="button is-info" disabled>
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              <div class="content is-small">
+                <ul id="call-notes-list">
+                </ul>
+              </div>
+
+              <hr />
+
+              <div class="field">
+                <label class="label">Tags</label>
+              </div>
+
+              <div class="field has-addons">
+                <div class="control is-expanded">
+                  <input id="add-tag-input" class="input" type="text" placeholder="Create a Tag" disabled>
+                </div>
+                <div class="control">
+                  <button id="add-tag-btn" class="button is-info" disabled>
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              <div class="content is-small">
+                <ul id="call-tags-list">
+                </ul>
+              </div>
             </div>
 
-            <div class="buttons is-centered">
-              <button class="keypad button is-family-monospace" disabled>1</button>
-              <button class="keypad button is-family-monospace" disabled>2</button>
-              <button class="keypad button is-family-monospace" disabled>3</button>
-            </div>
-            <div class="buttons is-centered">
-              <button class="keypad button is-family-monospace" disabled>4</button>
-              <button class="keypad button is-family-monospace" disabled>5</button>
-              <button class="keypad button is-family-monospace" disabled>6</button>
-            </div>
-            <div class="buttons is-centered">
-              <button class="keypad button is-family-monospace" disabled>7</button>
-              <button class="keypad button is-family-monospace" disabled>8</button>
-              <button class="keypad button is-family-monospace" disabled>9</button>
-            </div>
-            <div class="buttons is-centered">
-              <button class="keypad button is-family-monospace" disabled>*</button>
-              <button class="keypad button is-family-monospace" disabled>0</button>
-              <button class="keypad button is-family-monospace" disabled>#</button>
+            <div id="dtfm-box" style="min-height: 360px; display: none;">
+              <div class="field">
+                <label class="label">DTFM tones</label>
+              </div>
+  
+              <div class="buttons is-centered">
+                <button class="keypad button is-family-monospace" disabled>1</button>
+                <button class="keypad button is-family-monospace" disabled>2</button>
+                <button class="keypad button is-family-monospace" disabled>3</button>
+              </div>
+              <div class="buttons is-centered">
+                <button class="keypad button is-family-monospace" disabled>4</button>
+                <button class="keypad button is-family-monospace" disabled>5</button>
+                <button class="keypad button is-family-monospace" disabled>6</button>
+              </div>
+              <div class="buttons is-centered">
+                <button class="keypad button is-family-monospace" disabled>7</button>
+                <button class="keypad button is-family-monospace" disabled>8</button>
+                <button class="keypad button is-family-monospace" disabled>9</button>
+              </div>
+              <div class="buttons is-centered">
+                <button class="keypad button is-family-monospace" disabled>*</button>
+                <button class="keypad button is-family-monospace" disabled>0</button>
+                <button class="keypad button is-family-monospace" disabled>#</button>
+              </div>
             </div>
           </div>
         </div>
