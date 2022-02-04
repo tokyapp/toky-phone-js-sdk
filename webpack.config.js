@@ -76,6 +76,7 @@ module.exports = (env, argv) => {
         new webpack.ProgressPlugin(),
         new GitRevisionPlugin({
           branch: true,
+          versionCommand: 'describe --always --tags',
         }),
         new CleanWebpackPlugin({
           protectWebpackAssets: false,
