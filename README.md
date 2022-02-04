@@ -120,7 +120,10 @@ Client.on(ClientStatus.INVITE, () => { /* Your code here */ })
 The **Session Updated** event is emitted when a call session changed. This event give us a session (`tokySession`) of that call and
 later we will use it to make other operations
 ```javascript
-Client.on(ClientStatus.SESSION_UPDATED, () => { /* Your code here */ })
+Client.on(ClientStatus.SESSION_UPDATED, (data) => { 
+  tokySession = data.session;
+  /* Your code here */ 
+})
 ```
 ### Media status events
 ```javascript
