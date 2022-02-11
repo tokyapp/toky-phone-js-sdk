@@ -1041,6 +1041,7 @@ export class SessionUA extends EventEmitter implements ISession {
 
     // TODO: maybe we can verify the agent existence
     if (type === TransferEnum.AGENT) {
+      destination = destination.replace('@', '__')
       extraHeaders.push(`X-Referred-To-Agent: ${destination}`)
     }
 

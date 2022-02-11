@@ -1,4 +1,5 @@
 import { Client } from './client'
+import { SessionUA } from './session'
 import {
   ClientStatus,
   SessionStatus,
@@ -10,6 +11,7 @@ import { Media } from './media'
 
 export default {
   TokyClient: Client,
+  TokySession: SessionUA,
   TokyMedia: Media,
   ClientStatus,
   SessionStatus,

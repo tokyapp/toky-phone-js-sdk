@@ -4,7 +4,10 @@
   "description": "Toky Phone JS SDK v1",
   "main": "./dist/toky-sdk-alpha.js",
   "module": "./dist/toky-sdk-alpha.js",
-  "types": "./dist/types/index.d.ts",
+  "types": "./dist/types/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "author": "Toky Team",
   "directories": {
     "example": "example",
