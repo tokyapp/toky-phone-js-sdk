@@ -372,9 +372,17 @@
               </div>
   
               <div class="field">
-                <div class="control">
-                  <input id="transfer-to-input" class="transfer-options input" type="text" placeholder="agent id" disabled>
+                <div class="control has-icons-left">
+                  <input id="transfer-to-input" class="transfer-options input" type="text" placeholder="agent id" disabled style="display: none;"> 
+                  <div id="transfer-to-agent-list" class="select is-fullwidth">
+                    <select id="transfer-to-agent-select" class="transfer-options" disabled>
+                    </select>
+                  </div>
+                  <div id="transfer-to-agent-icon" class="icon is-small is-left">
+                    <i class="fas fa-user"></i>
+                  </div>
                 </div>
+                <p id="transfer-to-agent-status" class="help"></p>
               </div>
   
               <div class="buttons is-centered">

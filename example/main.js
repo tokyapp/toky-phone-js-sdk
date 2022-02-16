@@ -45,6 +45,9 @@ const transferToSelect = document.getElementById('transfer-to-select')
 const accessTokenTypeSelect = document.getElementById(
   'access-token-type-select'
 )
+const transferToAgentSelect = document.getElementById(
+  'transfer-to-agent-select'
+)
 
 /**
  * Buttons
@@ -108,6 +111,9 @@ const callOptions = getHtmlCollectionAsArray('call-options')
 const transferOptions = getHtmlCollectionAsArray('transfer-options')
 const accessTokenSso = document.getElementById('access-token-sso')
 const accessTokenAppId = document.getElementById('access-token-app-id')
+const transferToAgentList = document.getElementById('transfer-to-agent-list')
+const transferToAgentIcon = document.getElementById('transfer-to-agent-icon')
+const transferToAgentStatus = document.getElementById('transfer-to-agent-status')
 
 /**
  * Call details
@@ -554,6 +560,55 @@ function addTag() {
 }
 addTagBtn.addEventListener('click', addTag)
 
+function updateAgentsList(agents) {
+  const agentId = getItem(AGENT_ID_KEY)
+  transferToAgentSelect.options.length = 0
+
+  if (agents?.data) {
+    agents.data.forEach((agent) => {
+      if (!agent.self) {
+        const option = document.createElement('option')
+        option.value = agent.email 
+        option.text = `${agent.info?.fullname} [${agent.email}]` 
+        let agentStatus = 'offline'
+        if (agent.online) {
+          agentStatus = 'online'
+        }
+        if (!agent.online && agent.forwardable) {
+          agentStatus = 'forwardable'
+        }
+        if (agent.busy) {
+          agentStatus = 'busy'
+        }
+        option.setAttribute('data-status', agentStatus) 
+        transferToAgentSelect.appendChild(option)
+      }
+    })
+  }
+
+  transferToAgentSelect.options.selectedIndex = -1
+  transferToAgentStatus.textContent = ''
+}
+
+function getAgentsList() {
+  const agentId = getItem(AGENT_ID_KEY)
+  const accessToken = getItem(ACCESS_TOKEN_KEY)
+
+  /**
+   * ref:  https://toky-js-sdk.toky.co/reference/agents  
+   */
+  fetch(`${tokyApiUrl}/v1/sdk/agents?agent_id=${agentId}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+    .then((response) => response.json())
+    .then((result) => {
+      if (result.success) {
+        updateAgentsList(result)  
+      }
+    })
+    .catch((err) => console.error(err))
+}
 
 // Keypad helper function
 const keypadDisabled = (disabled) => {
@@ -569,6 +624,9 @@ const transferOptionsDisabled = (disabled) => {
   makeTransferBtn.disabled = disabled
   makeTransferBtn.style.display = 'block'
   completeTransferBtn.style.display = 'none'
+  transferToAgentList.classList.remove('is-primary', 'is-info', 'is-warning', 'is-danger')
+  transferToAgentIcon.classList.remove('has-text-success', 'has-text-info', 'has-text-warning', 'has-text-danger')
+  transferToAgentSelect.options.selectedIndex = -1
   if (disabled) {
     makeTransferBtn.classList.remove('is-success')
     cancelTransferBtn.classList.remove('is-danger')
@@ -713,7 +771,9 @@ function updateInboundCallDetails(callData) {
  */
 function setupTokySessionEventListeners(currentSession) {
   tokySession = currentSession
-  console.warn('tokySession', tokySession)
+
+  // Update the online agents list for possible transfers
+  getAgentsList()
 
   currentSession.on(SessionStatus.CONNECTED, () => {
     clientStatusDesc.textContent = 'In call'
@@ -1068,6 +1128,45 @@ function firstRun() {
     }
   })
 
+  transferToSelect.addEventListener('change', () => {
+    transferToAgentList.classList.remove('is-primary', 'is-info', 'is-warning', 'is-danger')
+    transferToAgentIcon.classList.remove('has-text-success', 'has-text-info', 'has-text-warning', 'has-text-danger')
+    transferToAgentStatus.textContent = ''
+    transferToAgentSelect.options.selectedIndex = -1
+    if (transferToSelect.value === 'agent') {
+      transferToAgentList.style.display = 'block'
+      transferToInput.style.display = 'none'
+    } else {
+      transferToAgentList.style.display = 'none'
+      transferToInput.style.display = 'block'
+      transferToInput.placeholder = transferToSelect.value
+      makeTransferBtn.disabled = false
+    }
+  })
+
+  transferToAgentSelect.addEventListener('change', () => {
+    const agentStatus = transferToAgentSelect.options[transferToAgentSelect.selectedIndex].getAttribute('data-status')
+    transferToAgentList.classList.remove('is-primary', 'is-info', 'is-warning', 'is-danger')
+    transferToAgentIcon.classList.remove('has-text-success', 'has-text-info', 'has-text-warning', 'has-text-danger')
+    makeTransferBtn.disabled = false
+    if (agentStatus === 'online') {
+      transferToAgentList.classList.add('is-primary')
+      transferToAgentIcon.classList.add('has-text-success')
+    } else if (agentStatus === 'offline') {
+      transferToAgentList.classList.add('is-danger')
+      transferToAgentIcon.classList.add('has-text-danger')
+      makeTransferBtn.disabled = true
+    } else if (agentStatus === 'forwardable') {
+      transferToAgentList.classList.add('is-info')
+      transferToAgentIcon.classList.add('has-text-info')
+    } else {
+      transferToAgentList.classList.add('is-warning')
+      transferToAgentIcon.classList.add('has-text-warning')
+      makeTransferBtn.disabled = true
+    }
+    transferToAgentStatus.textContent = `Status: ${agentStatus}`
+  })
+
   makeTransferBtn.addEventListener('click', () => {
     const transferType = transferTypeBlind.checked
       ? TransferOptionsEnum.BLIND
@@ -1077,7 +1176,7 @@ function firstRun() {
       if (transferToSelect.value === 'agent') {
         tokySession.makeTransfer({
           type: TransferEnum.AGENT,
-          destination: transferToInput.value,
+          destination: transferToAgentSelect.value,
           option: transferType,
         })
       }
