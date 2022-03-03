@@ -36,7 +36,7 @@ export declare class Client extends EventEmitter implements IClient {
         accessToken: string;
         account: IAccount;
         transportLib: 'sip.js' | 'jsSIP';
-        media: IMediaSpec;
+        media?: IMediaSpec;
     });
     /**
      * Toky Client .init() is were we get the Toky Phone Params to establish communication with the Toky Phone System

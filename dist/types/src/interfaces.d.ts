@@ -8,7 +8,7 @@ export interface IAccount {
     /** Option to accept inbound calls */
     acceptInboundCalls?: boolean;
     /** Recording permissions */
-    callRecordingEnabled: boolean;
+    callRecordingEnabled?: boolean;
 }
 export interface IClientSetting {
     connectionCountry: string;
