@@ -108,7 +108,7 @@ export class Client extends EventEmitter implements IClient {
     accessToken: string
     account: IAccount
     transportLib: 'sip.js' | 'jsSIP'
-    media: IMediaSpec
+    media?: IMediaSpec
   }) {
     super()
 
