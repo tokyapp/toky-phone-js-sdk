@@ -5,12 +5,11 @@ const Dotenv = require('dotenv-webpack')
 const { merge } = require('webpack-merge')
 const { GitRevisionPlugin } = require('git-revision-webpack-plugin')
 const gitRevisionPlugin = new GitRevisionPlugin()
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 
 const libraryName = 'toky-sdk-alpha'
 
-const modeConfig = (env) =>
-  require(`./build-utils/webpack.${env}`)()
+const modeConfig = (env) => require(`./build-utils/webpack.${env}`)()
 
 const getEnvFile = function (key) {
   const files = {
@@ -27,7 +26,10 @@ const getEnvFile = function (key) {
 module.exports = (env, argv) => {
   const mode = argv.mode
 
-  const envFilePath = path.resolve(__dirname, getEnvFile(gitRevisionPlugin.branch()))
+  const envFilePath = path.resolve(
+    __dirname,
+    getEnvFile(gitRevisionPlugin.branch())
+  )
   const dotenv = new Dotenv({
     path: envFilePath,
     allowEmptyValues: true,
@@ -71,7 +73,9 @@ module.exports = (env, argv) => {
           VERSION: JSON.stringify(gitRevisionPlugin.version()),
           COMMITHASH: JSON.stringify(gitRevisionPlugin.commithash()),
           BRANCH: JSON.stringify(gitRevisionPlugin.branch()),
-          LASTCOMMITDATETIME: JSON.stringify(gitRevisionPlugin.lastcommitdatetime()),
+          LASTCOMMITDATETIME: JSON.stringify(
+            gitRevisionPlugin.lastcommitdatetime()
+          ),
         }),
         new webpack.ProgressPlugin(),
         new GitRevisionPlugin({

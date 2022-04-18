@@ -113,7 +113,9 @@ const accessTokenSso = document.getElementById('access-token-sso')
 const accessTokenAppId = document.getElementById('access-token-app-id')
 const transferToAgentList = document.getElementById('transfer-to-agent-list')
 const transferToAgentIcon = document.getElementById('transfer-to-agent-icon')
-const transferToAgentStatus = document.getElementById('transfer-to-agent-status')
+const transferToAgentStatus = document.getElementById(
+  'transfer-to-agent-status'
+)
 
 /**
  * Call details
@@ -411,7 +413,7 @@ function createDeviceOptions(inputs, outputs) {
 /**
  * Notes
  */
- function createNotesList(notesList) {
+function createNotesList(notesList) {
   callNotesList.textContent = ''
   if (notesList) {
     notesList.result.forEach((e) => {
@@ -561,15 +563,14 @@ function addTag() {
 addTagBtn.addEventListener('click', addTag)
 
 function updateAgentsList(agents) {
-  const agentId = getItem(AGENT_ID_KEY)
   transferToAgentSelect.options.length = 0
 
   if (agents?.data) {
     agents.data.forEach((agent) => {
       if (!agent.self) {
         const option = document.createElement('option')
-        option.value = agent.email 
-        option.text = `${agent.info?.fullname} [${agent.email}]` 
+        option.value = agent.email
+        option.text = `${agent.info?.fullname} [${agent.email}]`
         let agentStatus = 'offline'
         if (agent.online) {
           agentStatus = 'online'
@@ -580,7 +581,7 @@ function updateAgentsList(agents) {
         if (agent.busy) {
           agentStatus = 'busy'
         }
-        option.setAttribute('data-status', agentStatus) 
+        option.setAttribute('data-status', agentStatus)
         transferToAgentSelect.appendChild(option)
       }
     })
@@ -595,7 +596,7 @@ function getAgentsList() {
   const accessToken = getItem(ACCESS_TOKEN_KEY)
 
   /**
-   * ref:  https://toky-js-sdk.toky.co/reference/agents  
+   * ref:  https://toky-js-sdk.toky.co/reference/agents
    */
   fetch(`${tokyApiUrl}/v1/sdk/agents?agent_id=${agentId}`, {
     method: 'GET',
@@ -604,7 +605,7 @@ function getAgentsList() {
     .then((response) => response.json())
     .then((result) => {
       if (result.success) {
-        updateAgentsList(result)  
+        updateAgentsList(result)
       }
     })
     .catch((err) => console.error(err))
@@ -624,8 +625,18 @@ const transferOptionsDisabled = (disabled) => {
   makeTransferBtn.disabled = disabled
   makeTransferBtn.style.display = 'block'
   completeTransferBtn.style.display = 'none'
-  transferToAgentList.classList.remove('is-primary', 'is-info', 'is-warning', 'is-danger')
-  transferToAgentIcon.classList.remove('has-text-success', 'has-text-info', 'has-text-warning', 'has-text-danger')
+  transferToAgentList.classList.remove(
+    'is-primary',
+    'is-info',
+    'is-warning',
+    'is-danger'
+  )
+  transferToAgentIcon.classList.remove(
+    'has-text-success',
+    'has-text-info',
+    'has-text-warning',
+    'has-text-danger'
+  )
   transferToAgentSelect.options.selectedIndex = -1
   if (disabled) {
     makeTransferBtn.classList.remove('is-success')
@@ -1129,8 +1140,18 @@ function firstRun() {
   })
 
   transferToSelect.addEventListener('change', () => {
-    transferToAgentList.classList.remove('is-primary', 'is-info', 'is-warning', 'is-danger')
-    transferToAgentIcon.classList.remove('has-text-success', 'has-text-info', 'has-text-warning', 'has-text-danger')
+    transferToAgentList.classList.remove(
+      'is-primary',
+      'is-info',
+      'is-warning',
+      'is-danger'
+    )
+    transferToAgentIcon.classList.remove(
+      'has-text-success',
+      'has-text-info',
+      'has-text-warning',
+      'has-text-danger'
+    )
     transferToAgentStatus.textContent = ''
     transferToAgentSelect.options.selectedIndex = -1
     if (transferToSelect.value === 'agent') {
@@ -1145,9 +1166,22 @@ function firstRun() {
   })
 
   transferToAgentSelect.addEventListener('change', () => {
-    const agentStatus = transferToAgentSelect.options[transferToAgentSelect.selectedIndex].getAttribute('data-status')
-    transferToAgentList.classList.remove('is-primary', 'is-info', 'is-warning', 'is-danger')
-    transferToAgentIcon.classList.remove('has-text-success', 'has-text-info', 'has-text-warning', 'has-text-danger')
+    const agentStatus =
+      transferToAgentSelect.options[
+        transferToAgentSelect.selectedIndex
+      ].getAttribute('data-status')
+    transferToAgentList.classList.remove(
+      'is-primary',
+      'is-info',
+      'is-warning',
+      'is-danger'
+    )
+    transferToAgentIcon.classList.remove(
+      'has-text-success',
+      'has-text-info',
+      'has-text-warning',
+      'has-text-danger'
+    )
     makeTransferBtn.disabled = false
     if (agentStatus === 'online') {
       transferToAgentList.classList.add('is-primary')
@@ -1238,7 +1272,9 @@ callOptionsTabs.querySelectorAll('li > a').forEach((e, i) => {
     notesTagsBox.style.display = 'none'
     dtfmBox.style.display = 'none'
 
-    callOptionsTabs.querySelectorAll('li').forEach(li => li.classList.remove('is-active'))
+    callOptionsTabs
+      .querySelectorAll('li')
+      .forEach((li) => li.classList.remove('is-active'))
 
     switch (i) {
       case 1:
